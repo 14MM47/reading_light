@@ -114,8 +114,12 @@ def _sample(img, lon, lat):
     return ndimage.map_coordinates(img, [np.clip(v, 0, h - 1), np.mod(u, w)], order=1, mode="grid-wrap")
 
 
-def organic(p):
-    """Textured lithophane shell, trimmed at the opening plane, plus the 45 deg outer collar."""
+def thickness_field(p):
+    """(theta, phi, t): polar angle from the bottom pole, azimuth (before the B10 rotation), wall thickness (mm)."""
+    return _field(p)[:3]
+
+
+def _field(p):
     dark = _maps(p.smooth_px, p.albedo_w, p.gamma)
     th0 = math.radians(L.opening_half_angle_deg() - 6)       # start a little below the cut; trimmed later
     th = np.linspace(th0, math.pi, p.n_lat)                    # polar angle from the bottom pole
@@ -144,6 +148,12 @@ def organic(p):
     lim = np.tan(beta) * ds
     for i in range(1, len(th)):
         t[i] = np.minimum(t[i], t[i - 1] + lim[i - 1])
+    return th, ph, t, T, P, deg
+
+
+def organic(p):
+    """Textured lithophane shell, trimmed at the opening plane, plus the 45 deg outer collar."""
+    th, ph, t, T, P, deg = _field(p)
     r_in = L.R_OUT - t                                         # relief on the inside (B11)
     r_out = np.full_like(t, L.R_OUT)
     # outer collar: r_out at least the 45deg cone tangent to R_OUT at theta=45deg (B8)
