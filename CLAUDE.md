@@ -17,6 +17,7 @@ Read [`PLAN.md`](PLAN.md) first: requirements (R-numbers), architecture, decisio
 | BOM / order | `bom/` | Farnell UK order list + off-board items |
 | Design notes, reviews | `docs/design/`, `docs/verification/` | |
 | Laptop handoffs | `docs/handoffs/` | for Claude Code in VS Code |
+| Build pack (generated) | `deliverable/` | `python3 tools/build_deliverable.py` copies fab/, print/, bom/, firmware hex and renders docs to PDF |
 
 ## Rules
 - The Python design files are the source of truth. `hardware/<board>/design.py` generates the schematic **and** the
@@ -28,5 +29,7 @@ Read [`PLAN.md`](PLAN.md) first: requirements (R-numbers), architecture, decisio
   `include/board_map.h` is generated from the LED board design - never edit either by hand.
 - CAD: `python -m cad.tools.pipeline cad/parts/<part>.py --out out/<part>` (or `python cad/tools/pipeline.py ...`).
   Never relax a check to get a PASS; per-part overrides need a `why` (3dprint rule).
+- `deliverable/` is generated: never edit it by hand. After any change to boards, parts, BOM, firmware or docs,
+  regenerate the sources first, then `PIO=<pio path> python3 tools/build_deliverable.py`, and commit both.
 - Never order, pay, or upload to a fab or distributor. Produce files; Matt orders.
 - Any value nobody has measured is a VERIFY item (gooseneck thread, nut size, LED bins, PLA transmission...).
