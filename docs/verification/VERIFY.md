@@ -32,10 +32,13 @@ Tick an item by noting the measured value and the date here.
 |---|---|---|---|---|
 | E7 | TLC59116 quiescent current (T0) | All outputs off, VLED 4.20 V: current into J3 pin 2 | ≤ 20 mA | Recompute the runtimes and the caps with the measured value |
 | E8 | Channel current (REXT 750 Ω) | 1 Ω in series with one white LED, 100 % PWM, CG 0.992 | 25.0 mA ± 8 % | Check R1; update `I_CHANNEL_MA` *and* the test |
-| E9 | G/B regulation (M1, F10) | Green mode at max, VLED swept 4.2 → 3.4 V, current through one G die | Holds 12.4 mA down to VLED ≈ 3.55–3.6 V | Accept, or try REXT 910 Ω (20.6 mA) |
+| E9 | G/B regulation (M1, F10) | Green mode at max, VLED swept 4.2 → 3.4 V. Scope across 1 Ω in series with one G die: read the **peak**, not the average (PWM) | Peak 12.5 mA, held down to VLED ≈ 3.55–3.6 V | Accept, or try REXT 910 Ω (20.6 mA) |
 | E10 | Charge current | USB in, cell at ~3.7 V: current into J2 | 256 mA ± 10 % | Check R3 3.9 k |
 | E11 | USB current draw (M4) | USB meter, charging + 4000 K full | Note the value (expect ~0.5–0.6 A) | Use a ≥ 1 A charger (handoff 02) |
 | E12 | Unplug handover (m1) | Scope VSYS while pulling USB at 3.6 V battery | Dip ≤ 0.3 V, no reset | Lower R5 further (4.7 k) |
+| E13 | Q4 soft turn-on (round2 R2-E1) | Scope VSYS (TP3) and VLED (TP7) at power-on, on the empty-sleep wake, and while hot-plugging J3, at 3.5 V battery | VLED ramps over ~1–2 ms; VSYS dips ≤ 0.2 V; no reset | Raise C8 (220 nF) or add 47 µF bulk on VSYS |
+| E14 | F1 PTC when warm (round2 R2-E3) | USB in, charging, 4000 K full for 30 min, pack closed; contact thermometer on F1 | No trip; F1 ≤ 60 °C | Move F1 away from U1/D3 in v0.2 |
+| E15 | VSYS on USB (round2 note) | USB in, 4000 K full: meter TP3; then let the lamp reach empty sleep on a weak USB source | VSYS ≥ 3.9 V; wakes from empty sleep on USB | Lower `VBAT_RESUME_MV` to 3600 in `lightcore.h` |
 
 ## 4. Thermal (thermal review §7; thermocouples TC1 board top, TC2 TLC, TC3 PLA skirt, TC4 PLA dome, TC7 cup)
 
@@ -67,13 +70,16 @@ Tick an item by noting the measured value and the date here.
 | # | Item | Part | Check |
 |---|---|---|---|
 | M1 | Gooseneck end thread M10×1, nut 14 AF × 3.0 mm | `moon_base`, `pack_front` | Calipers on the delivered gooseneck. Change `NUT_AF`, `NUT_T`, `NECK_THREAD_D` in `moonlib.py` / `packlib.py` |
+| M12 | Thread protrusion in the moon base (round2 R2-D3) | `moon_base` | With the nut tight, the thread must not stand more than 0.5 mm above the nut top. File it flush; the board's underside is 4.5 mm above |
+| M13 | Battery lead path (round2 R2-D18) | `pack_back`, main board slot | Lead exit end and length on the real cell. The plug passes the 6.4 × 5.0 slot; the slack must lie flat in the bay's end gap without crossing the screw heads. If it doesn't, Claude adds a lead channel to `pack_back` |
+| M14 | LED-board jig (round2 R2-D12) | `jig_led_board` | The board drops in flush, and the bottom parts don't touch the relief floor |
 | M2 | Neck socket 9.3 mm for self-tapping into PETG | `pack_front` | Print `coupon_fit` first |
 | M3 | Printed slip fit 0.15 mm radial | all | `coupon_fit` |
 | M4 | Bayonet: lugs enter, turn 30°, pull down onto a 1.0 mm disc | `moon_shell`, `moon_base` | `coupon_bayonet` |
 | M5 | Ring preload: board must not rattle with the moon locked | `moon_ring` | Add a 0.2 mm shim ring if it rattles |
 | M6 | LED board thickness 1.0 mm as ordered | `moon_base` | Calipers on the delivered board |
 | M7 | Battery 64.0 × 35.5 × 5.3 mm (listing) | `pack_back` | Calipers on the delivered cell; bay is 36.0 × 64.5 × 5.6 + 0.6 swell |
-| M8 | USB-C receptacle centre 1.63 mm above the PCB; PCM12 knob 0.9 mm above, 1.0 mm past the edge; PH plug ≤ 5.2 mm tall | `pack_front` | Calipers on the assembled main board before printing the shell |
+| M8 | USB-C receptacle centre 1.63 mm above the PCB; PCM12 knob 0.9 mm above, 1.0 mm past the edge; J2 header 5.5 mm tall (JST), under a 0.8 mm face pocket; your USB-C cables seat fully in the 13.4 × 7.6 window | `pack_front` | Calipers on the assembled main board before printing the shell; try your cables in the printed shell |
 | M9 | Clip force ~5 N at 3 mm | `pack_clip` | Holds on a hardback and a paperback without marking them |
 | M10 | Button caps 7.0 mm in 7.4 mm holes | `button_caps` | Slide freely; sand if tight |
 | M11 | Lithophane 0.9–2.6 mm reads well at 0.12 mm layers | `moon_shell` | First print, lit and unlit |

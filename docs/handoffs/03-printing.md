@@ -19,6 +19,7 @@ so don't let the slicer re-orient it. Settings, sizes and check results: [`print
 | 8 | `pack_clip` | PETG | 0.20 mm | Flat, layers along the arm |
 | 9 | `button_caps` | PETG | 0.12 mm | One plate of 3 caps, flange down. Use a brim |
 | 10 | `moon_shell` | **white PLA** | 0.12 mm, 6 walls, 100 % infill | 3 mm outer brim (only the skirt ring touches the bed). The inner dome closes as a short bridge at the top, which is expected |
+| — | `jig_led_board` | PETG | 0.20 mm | Assembly aid for the LED board's second side (handoff 05 §2). Print it before the boards arrive |
 
 ## Steps
 1. Print the coupons first (rows 1–3). Record which fits work in `docs/verification/VERIFY.md` (M2–M4, O1). If they

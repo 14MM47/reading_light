@@ -7,20 +7,25 @@
    ```bash
    cd firmware && pio test -e native && pio run
    ```
-   The host tests must pass (25 tests), and the ATtiny3216 build must succeed.
+   The host tests must pass (29 tests), and the ATtiny3216 build must succeed.
 2. **Programmer on J4.** Pins: 1 = VREF (VSYS through 1 kΩ, *sense only*), 2 = UPDI, 3 = TX, 4 = GND. The square
    pad is pin 1. J4 is not fitted on the board: hold a 4-pin 2.54 mm header in the holes, or solder one temporarily.
-   * **Power the board from its own battery (slide switch ON) or from USB-C.** Never power it from the programmer.
-     J4 pin 1 cannot feed the board safely; it would back-feed the LiPo through 1 k (round1 M3).
-   * **SerialUPDI:** a 3.3 V USB-UART. Wire UART TX → 470 Ω → UPDI, UART RX → UPDI directly, GND ↔ GND. Leave the
-     adapter's VCC unconnected.
-   * **MPLAB SNAP / PICkit 4:** set `upload_protocol = snap_updi` (avrdude) in the env, or use MPLAB IPE.
+   * **Power the board from its own battery (slide switch ON).** USB-C also works, but the battery is better with a
+     3.3 V adapter (see below). Never power it from the programmer: J4 pin 1 cannot feed the board safely, and it
+     would back-feed the LiPo through 1 k (round1 M3).
+   * **SerialUPDI (recommended):** a 3.3 V USB-UART. Wire UART TX → 470 Ω → UPDI, UART RX → UPDI directly,
+     GND ↔ GND. Leave the adapter's VCC unconnected. SerialUPDI doesn't use VREF at all.
+   * **MPLAB SNAP / PICkit 4:** set `upload_protocol = snap_updi` (avrdude) in the env, or use MPLAB IPE. It senses
+     the target voltage through J4.1's 1 kΩ. That should work, but SNAP's sense current is unspecified (round2
+     note). An Atmel-ICE draws up to 1 mA there and can fail at low battery.
+   * Prefer the battery (3.7–4.2 V) over USB (VSYS ~4.0 V) when using a 3.3 V adapter: the UPDI levels then sit
+     closer together.
 3. **Fuses, once per chip (FW-09).** `upload` does not write fuses: without this step BOD stays off and the saved
    default is erased on every reflash.
    ```bash
    pio run -e attiny3216 -t fuses --upload-port /dev/ttyUSB0
    ```
-   This sets BOD 2.6 V (enabled, sampled in sleep), EESAVE on, and a 10 MHz clock.
+   This sets BOD 2.6 V (enabled while running, off in sleep: fuse BODCFG 0x54), EESAVE on, and a 10 MHz clock.
 4. Flash:
    ```bash
    pio run -e attiny3216 -t upload --upload-port /dev/ttyUSB0

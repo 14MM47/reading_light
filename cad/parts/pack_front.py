@@ -14,6 +14,12 @@ Requirements (newest last; never renumber):
   B8  ASSUMED  slide-switch knob reached through a 5.0 x 2.6 mm window with a 45 deg outer chamfer
   B9  ASSUMED  charge LED shows through a 1.8 mm hole in the face
   B10 RULE     printed face-down (outer face on the bed), PETG; holes in vertical walls are teardrops or bridges <= 20 mm
+  B11 RULE     (round2 R2-D5) 0.8 mm pocket in the face's inner surface over J2: the JST PH side-entry header is
+               5.5 mm tall (JST catalogue) against TOP_CLEAR 5.6
+  B12 RULE     (round2 R2-D6, implements B8) the switch window sits in a 0.9 mm deep, 45 deg-tapered recess, so the
+               knob tip is <= 0.5 mm below the local outer surface
+  B13 RULE     (round2 R2-D14, supersedes B7's size) USB-C window 13.4 x 7.6 mm with 0.8 mm corner chamfers, so a
+               square-cornered 12.35 x 6.5 mm overmold can seat fully
 """
 from __future__ import annotations
 
@@ -34,10 +40,14 @@ VERIFY = {
     "usb_centre_height": "USB4125 receptacle centre 1.63 mm above the PCB top (GCT drawing: 3.26 mm tall body)",
     "pcm12_knob": "PCM12 knob centre ~0.9 mm above the PCB, protrudes ~1.0 mm past the board edge",
     "neck_socket": "9.3 mm socket for the M10x1 gooseneck thread: test on a coupon before printing the shell",
-    "jst_ph_height": "S2B-PH-SM4-TB + plug height <= 5.2 mm (TOP_CLEAR 5.6 mm)",
+    "jst_ph_height": "S2B-PH-SM4-TB is 5.5 mm tall (JST); 0.8 mm face pocket over it gives 0.9 mm (R2-D5)",
+    "usb_plug": "the USB-C cables you will use seat fully through the 13.4 x 7.6 window (R2-D14)",
 }
 USB_Z = K.Z_PCB_TOP + 1.63
 KNOB_Z = K.Z_PCB_TOP + 0.9
+KNOB_TIP_X = K.placed("SW1")[0] + 3.15     # PCM12 actuator tip: 3.15 mm from the footprint origin (R2-D6)
+SW_RECESS = 0.9                            # tapered finger recess depth: leaves a 0.9 mm wall (>= 0.84 rule)
+J2_POCKET = (-17.0, -7.5, -25.8, -18.2, 0.8)   # X0, X1, Y0, Y1, depth: over the J2 header body (board x 1.7-9.3)
 NECK_Z = (K.Z_BACK + K.Z_FACE_IN) / 2
 
 
@@ -80,18 +90,26 @@ def part(*, btn_hole=K.BTN_HOLE_D):
         X, Y, _ = K.placed("J1")
         with Locations(Pos(X, K.OUT_Y_BOT - 0.1, USB_Z) * Rot(-90, 0, 0)):
             with BuildSketch():
-                _chamfered_rect(12.8, 7.0, 1.5)   # (X, Z) window; 45 deg corners print without support
+                _chamfered_rect(13.4, 7.6, 0.8)   # (X, Z) window; 45 deg corners print without support
             extrude(amount=K.WALL + 0.3, mode=Mode.SUBTRACT)
         with Locations(Pos(X, K.OUT_Y_BOT - 0.1, USB_Z) * Rot(-90, 0, 0)):
             with BuildSketch():
-                _chamfered_rect(15.0, 7.0, 1.5)
+                _chamfered_rect(15.6, 7.6, 0.8)
             extrude(amount=K.WALL - 1.2 + 0.1, mode=Mode.SUBTRACT)
-        # slide-switch window in the right wall, with a 45 deg outer chamfer (a pyramid frustum cut)
+        # slide-switch window in the right wall, inside a 45 deg-tapered finger recess (B8, B12)
         X, Y, _ = K.placed("SW1")
         with Locations(Pos(K.IN_X - 0.1, Y, KNOB_Z) * Rot(0, 90, 0)):
             with BuildSketch():
                 Rectangle(2.6, 5.0)
             extrude(amount=K.WALL + 0.3, mode=Mode.SUBTRACT)
+        recess_plane = Plane(origin=(K.OUT_X + 0.01, Y, KNOB_Z), x_dir=(0, 1, 0), z_dir=(-1, 0, 0))
+        with BuildSketch(recess_plane):
+            Rectangle(5.0 + 2 * (SW_RECESS + 1.0), 2.6 + 2 * (SW_RECESS + 1.0))
+        extrude(amount=SW_RECESS + 0.01, taper=45, mode=Mode.SUBTRACT)
+        # J2 header headroom pocket in the face's inner surface (B11)
+        x0, x1, y0p, y1p, dp = J2_POCKET
+        with Locations(((x0 + x1) / 2, (y0p + y1p) / 2, K.Z_FACE_IN - 0.01)):
+            Box(x1 - x0, y1p - y0p, dp + 0.01, align=(Align.CENTER, Align.CENTER, Align.MIN), mode=Mode.SUBTRACT)
         # neck socket block inside the top wall (full cavity depth: vertical walls only, prints without overhangs)
         y0 = K.PCB_H / 2 + 5.0
         with Locations((0, (y0 + K.IN_Y_TOP) / 2 + 0.05, K.Z_BACK + 0.6)):
@@ -156,9 +174,21 @@ def spec(m, p):
         X, Y, _ = K.placed(ref)
         out.append(claim("B2", f"button hole open at {ref}", not bool(m.contains([[-X, Y, 0.9]])[0]), (round(X, 2), round(Y, 2))))
     X, Y, _ = K.placed("J1")
+    X_USB = X
     out.append(claim("B7", "USB window open", not bool(m.contains([[-X, K.OUT_Y_BOT + 0.9, K.Z_TOP - USB_Z]])[0])))
     X, Y, _ = K.placed("SW1")
     out.append(claim("B8", "slide-switch window open", not bool(m.contains([[-(K.IN_X + 0.9), Y, K.Z_TOP - KNOB_Z]])[0])))
     out.append(claim("B6", "neck socket open", not bool(m.contains([[0, K.OUT_Y_TOP - 0.9, K.Z_TOP - NECK_Z]])[0])))
     out.append(claim("B5", "PCB mounting bosses present", len(K.mount_holes()) >= 2, len(K.mount_holes())))
+    local_surface = K.OUT_X - SW_RECESS
+    out.append(claim("B12", "switch knob tip <= 0.5 mm below the local outer surface", local_surface - KNOB_TIP_X <= 0.5,
+                     round(local_surface - KNOB_TIP_X, 2)))
+    out.append(claim("B12", "finger recess open around the window",
+                     not bool(m.contains([[-(K.OUT_X - 0.5), Y + 3.4, K.Z_TOP - KNOB_Z]])[0])))
+    x0, x1, y0p, y1p, dp = J2_POCKET
+    out.append(claim("B11", "J2 headroom pocket open (header 5.5 mm, clearance >= 0.8 mm)",
+                     not bool(m.contains([[-(x0 + x1) / 2, (y0p + y1p) / 2, K.Z_TOP - (K.Z_FACE_IN + dp / 2)]])[0]) and
+                     K.TOP_CLEAR + dp - 5.5 >= 0.8, round(K.TOP_CLEAR + dp - 5.5, 2)))
+    out.append(claim("B13", "USB window 13.4 mm wide open at its edge",
+                     not bool(m.contains([[-(X_USB + 6.4), K.OUT_Y_BOT + 0.9, K.Z_TOP - USB_Z]])[0])))
     return out

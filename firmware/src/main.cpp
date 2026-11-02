@@ -9,7 +9,7 @@
 #include "lightcore.h"
 
 static core_t core;
-static uint8_t iref_code = 0xFF;
+static uint8_t cg_idx = CG_STEP_COUNT;             // IREF step in use (index into CG_CODE), CG_STEP_COUNT = unknown
 static uint8_t last_pwm[16];
 static bool tlc_ok = false;
 static uint8_t tlc_fails = 0;
@@ -45,57 +45,44 @@ static bool tlc_init() {
     for (uint8_t o = 0; o < 16; o++)
         if (OUT_GROUP[o] >= 0) ledout[o / 4] |= (uint8_t)(0x2 << (2 * (o % 4)));   // LDRx = 10: individual PWM
     ok &= tlc_write(0x14, ledout, 4);
-    iref_code = 0xFF;
-    const uint8_t iref = iref_code;              // CM=1 HC=1 CC=63 -> CG 0.992 (full scale)
+    cg_idx = CG_STEP_COUNT - 1;
+    const uint8_t iref = CG_CODE[cg_idx];         // CM=1 HC=1 CC=63 -> CG 0.992 (full scale)
     ok &= tlc_write(0x1C, &iref, 1);
     memset(last_pwm, 0, sizeof(last_pwm));
     return ok;                                   // any failed write -> caller retries the whole init
 }
 
-// current-gain steps (IREF register {CM,HC,CC[5:0]}): CG = (1+HC)(1+CC/64)/4 * 3^(CM-1)
-// Only steps inside the datasheet's output-current ranges (CM=0: 5-40 mA, CM=1: 10-120 mA) at 25 mA full scale:
-// 0x7F -> 8.3 mA (CM=0), 0xBF -> 12.4 mA, 0xFF -> 24.8 mA (thermal review: 2.1 mA was below the 5 mA minimum)
-static const struct { uint8_t code; float cg; } CG_STEPS[] = {
-    {0x7F, 0.3307f}, {0xBF, 0.4961f}, {0xFF, 0.9922f}};
-#define CG_N (sizeof(CG_STEPS) / sizeof(CG_STEPS[0]))
-
+// IREF current-gain steps and their selection live in lib/core (cg_select, host-tested): 8.3 / 12.5 / 25.0 mA
 static bool tlc_output(const float drive[G_COUNT]) {   // false on a bus error: caller re-initialises
     float mx = 0;
     for (uint8_t g = 0; g < G_COUNT; g++) if (drive[g] > mx) mx = drive[g];
-    uint8_t k = 0;
-    while (k < CG_N - 1 && CG_STEPS[k].cg < mx) k++;
-    // hysteresis: only step down when the max is comfortably below the lower gain
-    if (CG_STEPS[k].code != iref_code) {
-        uint8_t cur = 0;
-        while (cur < CG_N - 1 && CG_STEPS[cur].code != iref_code) cur++;
-        if (k < cur && mx > 0.8f * CG_STEPS[k].cg) k = cur;   // stay
-    }
-    float cg = CG_STEPS[k].cg;
+    const uint8_t k = cg_select(mx, cg_idx);
+    const float cg = CG_GAIN[k];
     uint8_t pwm[16];
     bool changed = false;
     for (uint8_t o = 0; o < 16; o++) {
         int8_t g = OUT_GROUP[o];
-        float v = (g >= 0) ? drive[g] * 0.9922f / cg : 0.0f;  // drive is a fraction of full scale (CG 0.992)
+        float v = (g >= 0) ? drive[g] * CG_FULL / cg : 0.0f;   // drive is a fraction of full scale (CG 0.992)
         int p = (int)(v * 255.0f + 0.5f);
         pwm[o] = (uint8_t)(p > 255 ? 255 : (p < 0 ? 0 : p));
         changed |= pwm[o] != last_pwm[o];
     }
-    const uint8_t code = CG_STEPS[k].code;
-    if (code != iref_code) {
+    if (k != cg_idx) {
+        const uint8_t code = CG_CODE[k];
         // IREF acts when written; PWM acts at STOP (MODE2.OCH=0 covers 02h..17h only). Order the writes so the
         // in-between state is never brighter than either end: gain up -> PWM first, gain down -> IREF first.
-        const bool gain_up = code > iref_code;   // codes in CG_STEPS increase with gain
+        const bool gain_up = cg_idx >= CG_STEP_COUNT || k > cg_idx;
         if (gain_up) {
             if (!tlc_write(0x02, pwm, 16)) return false;
             memcpy(last_pwm, pwm, 16);
             if (!tlc_write(0x1C, &code, 1)) return false;
         } else {
             if (!tlc_write(0x1C, &code, 1)) return false;
-            iref_code = code;
+            cg_idx = k;
             if (!tlc_write(0x02, pwm, 16)) return false;
             memcpy(last_pwm, pwm, 16);
         }
-        iref_code = code;
+        cg_idx = k;
         return true;
     }
     if (changed) {
@@ -140,6 +127,21 @@ static bool lm75_setup() {
     return lm75_ok;
 }
 
+// Read back Conf and Tos (R2-F5): a bus glitch that loosened the hardware thermostat is re-armed within 10 s
+static bool lm75_config_intact() {
+    Wire.beginTransmission(ADDR_LM75);
+    Wire.write((uint8_t)0x01);
+    if (Wire.endTransmission(false) != 0 || Wire.requestFrom((uint8_t)ADDR_LM75, (uint8_t)1) != 1) return false;
+    if ((uint8_t)Wire.read() != 0x08) return false;
+    Wire.beginTransmission(ADDR_LM75);
+    Wire.write((uint8_t)0x03);
+    if (Wire.endTransmission(false) != 0 || Wire.requestFrom((uint8_t)ADDR_LM75, (uint8_t)2) != 2) return false;
+    const uint8_t msb = (uint8_t)Wire.read();
+    const uint8_t lsb = (uint8_t)Wire.read();
+    const uint16_t tos = (uint16_t)((int16_t)(LM75_TOS_C * 2) << 7);
+    return msb == (uint8_t)(tos >> 8) && (lsb & 0x80) == (uint8_t)(tos & 0x80);
+}
+
 static bool lm75_read(float *t) {
     Wire.beginTransmission(ADDR_LM75);
     Wire.write((uint8_t)0x00);
@@ -179,29 +181,49 @@ ISR(RTC_PIT_vect) { RTC.PITINTFLAGS = RTC_PI_bm; }
 
 static void i2c_bus_recover();
 
-static void led_board_off() {
+static uint32_t lm75_valid_after;                // first LM75B conversion (~100 ms) after the LED board powers up
+
+// bleed = true for a recovery power-cycle: SDA/SCL are driven low so VLED discharges through the 3.3 k pull-ups
+// (tau ~16 ms with ~9 uF) and the TLC59116 really sees VCC < 0.2 V, its POR threshold (round2 R2-E2).
+static void led_board_off(bool bleed) {
     tlc_sleep();                                 // outputs off before the rail goes
     Wire.end();
-    pinMode(PIN_PB0, INPUT);                     // SCL / SDA: the pull-ups sit on VLED, which is about to drop
-    pinMode(PIN_PB1, INPUT);
-    PORTB.PIN0CTRL = PORT_ISC_INPUT_DISABLE_gc;  // no input-buffer current while the bus floats
-    PORTB.PIN1CTRL = PORT_ISC_INPUT_DISABLE_gc;
-    digitalWriteFast(PIN_LED_EN_N, HIGH);        // Q4 off: TLC59116 + LM75B unpowered (R12 keeps it off in reset)
+    digitalWriteFast(PIN_LED_EN_N, HIGH);        // Q4 off (soft, R13/C8): TLC59116 + LM75B unpowered; R12 holds it
+    if (bleed) {
+        pinMode(PIN_PB0, OUTPUT);                // PORT OUT is 0: both lines low, sinking VLED through the pull-ups
+        pinMode(PIN_PB1, OUTPUT);
+    } else {
+        pinMode(PIN_PB0, INPUT);                 // SCL / SDA: the pull-ups sit on VLED, which is about to drop
+        pinMode(PIN_PB1, INPUT);
+        PORTB.PIN0CTRL = PORT_ISC_INPUT_DISABLE_gc;   // no input-buffer current while the bus floats
+        PORTB.PIN1CTRL = PORT_ISC_INPUT_DISABLE_gc;
+    }
 }
 
 static void led_board_on() {
+    pinMode(PIN_PB0, INPUT);                     // release the bus before VLED comes up
+    pinMode(PIN_PB1, INPUT);
     pinMode(PIN_LED_EN_N, OUTPUT);
-    digitalWriteFast(PIN_LED_EN_N, LOW);          // Q4 on: power the LED board (the I2C pull-ups are on VLED too)
+    digitalWriteFast(PIN_LED_EN_N, LOW);          // Q4 on: ~2 ms soft ramp (R13/C8) to VLED, pull-ups included
     delay(10);                                    // VLED rise + TLC59116 / LM75B power-on reset
     PORTB.PIN0CTRL = 0;                           // input buffers back on (led_board_off() disabled them)
     PORTB.PIN1CTRL = 0;
     i2c_bus_recover();
     Wire.begin();
     Wire.setClock(I2C_HZ);
+    lm75_valid_after = millis() + 300;            // ignore the LM75B until its first conversion is done
+}
+
+// TLC59116 software reset (SWRST call address 0x6B, bytes A5h 5Ah): registers back to power-on defaults
+static void tlc_swrst() {
+    Wire.beginTransmission((uint8_t)0x6B);
+    Wire.write((uint8_t)0xA5);
+    Wire.write((uint8_t)0x5A);
+    Wire.endTransmission();
 }
 
 static void sleep_until_resumed() {
-    led_board_off();
+    led_board_off(false);
     while (RTC.STATUS) {}
     RTC.CLKSEL = RTC_CLKSEL_INT32K_gc;
     RTC.PER = 0xFFFF;
@@ -224,7 +246,7 @@ static void sleep_until_resumed() {
 }
 
 // ---------------------------------------------------------------------- main
-// A reset in the middle of a transfer can leave a slave holding SDA low (the TLC59116 has no bus time-out):
+// A reset in the middle of a transfer can leave a slave holding SDA low until its own time-out (TLC59116: ~25 ms):
 // clock SCL until SDA is released, then send a STOP. Pins are open-drain here (PORT OUT = 0, external pull-ups).
 static void i2c_bus_recover() {
     pinMode(PIN_PB0, INPUT);
@@ -275,7 +297,7 @@ void loop() {
         if (now - last_t >= 1000) {
             last_t = now;
             float t = 0.0f;
-            bool ok = lm75_read(&t);
+            bool ok = (int32_t)(now - lm75_valid_after) >= 0 && lm75_read(&t);
 #if defined(FAULT_T_NACK)                         // bench fault injection only (VERIFY T5a/T5b): never in a release
             ok = false;
 #elif defined(FAULT_T_STUCK)
@@ -283,8 +305,13 @@ void loop() {
             t = 25.0f;
 #endif
             if (ok) last_temp_c = t;
+            static uint8_t lm75_check_div;
             if (!ok) lm75_ok = false;
             else if (!lm75_ok) lm75_setup();      // sensor came back: re-arm the thermostat thresholds
+            else if (++lm75_check_div >= 10) {    // every 10 s: is the thermostat still armed as we set it?
+                lm75_check_div = 0;
+                if (!lm75_config_intact()) lm75_setup();
+            }
             core_temperature(&core, ok, t, now);
 #ifdef DEBUG_SERIAL
             Serial.print(F("T=")); Serial.print(ok ? t : -99.0f); Serial.print(F(" V=")); Serial.print(core.vbat_mv);
@@ -306,8 +333,9 @@ void loop() {
             tlc_fails = tlc_ok ? 0 : (uint8_t)(tlc_fails + 1);
             if (tlc_fails >= 4 && (!lm75_ok || last_temp_c < (float)LM75_THYST_C)) {
                 tlc_fails = 0;
-                led_board_off();
-                delay(500);                       // under the 2 s watchdog; VLED (10 uF) decays through the board load
+                tlc_swrst();                      // cheap first: a TLC that still listens is reset without a power cut
+                led_board_off(true);
+                delay(200);                       // >10 tau of the VLED bleed; well under the 2 s watchdog
                 led_board_on();
                 lm75_setup();
                 tlc_ok = tlc_init();

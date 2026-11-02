@@ -6,6 +6,9 @@ Requirements (newest last; never renumber):
   B3  ASSUMED  two bottom tabs hook into slots in the front shell's bottom wall; two M2 screws at the top go through
                the clip root and this plate into the front shell's bosses
   B4  RULE     printed outer face down (PETG); tab undersides slope 45 deg
+  B5  RULE     (round2 R2-D2) everything on the plate stays inside the front shell's cavity (|X| <= IN_X - clear; above
+               the bottom wall except the two tabs). The shell's side and bottom walls locate the pouch; only the
+               top-end locators remain
 """
 from __future__ import annotations
 
@@ -36,14 +39,11 @@ def part(*, clear=0.2):
             with Locations((0, (y0 + y1) / 2)):
                 RectangleRounded(w, y1 - y0, K.CORNER_R - K.WALL - clear)
         extrude(amount=K.BACK_T)
-        # battery corner locators (L shapes), 2.0 mm tall
+        # top-end battery locators, 2.0 mm tall, inside the cavity (the shell walls locate the sides and bottom end)
+        x_in = K.IN_X - clear
         for sx in (-1, 1):
-            for (yy, sy) in ((bay_y0, 1), (bay_y0 + bl, -1)):
-                x_out = sx * (bw / 2 + 0.8)
-                with Locations((x_out - sx * 0.4 + sx * 0.0, yy + sy * 3.0, K.BACK_T)):
-                    Box(1.0, 6.0, 2.0, align=(Align.CENTER, Align.CENTER, Align.MIN))
-                with Locations((sx * (bw / 2 - 2.6), yy - sy * 0.4, K.BACK_T)):
-                    Box(6.0, 1.0, 2.0, align=(Align.CENTER, Align.CENTER, Align.MIN))
+            with Locations((sx * (x_in - 3.2), bay_y0 + bl + 0.5, K.BACK_T)):
+                Box(6.0, 1.0, 2.0, align=(Align.CENTER, Align.CENTER, Align.MIN))
         # screw clearance holes
         for (x, y) in SCREWS:
             with Locations((x, y, -0.1)):
@@ -70,4 +70,8 @@ def spec(m, p):
                  round(K.IN_Y_BOT + 0.5 + K.BAT[1], 2))]
     out.append(claim("B3", "screw holes open", all(not m.contains([[x, y, 0.9]])[0] for x, y in SCREWS)))
     out.append(claim("B4", "plate thickness", abs(K.BACK_T - 1.8) < 1e-6, K.BACK_T))
+    out.append(claim("B5", "nothing beyond the shell's inner side walls", float(hi[0]) <= K.IN_X - 0.15 and
+                     float(-lo[0]) <= K.IN_X - 0.15, round(float(max(hi[0], -lo[0])), 2)))
+    probes = [[x, K.IN_Y_BOT - 0.05, K.BACK_T + 1.0] for x in (-17.0, -14.0, -2.0, 0.0, 2.0, 14.0, 17.0)]
+    out.append(claim("B5", "nothing in the bottom wall above the plate except the tabs", not any(m.contains(probes))))
     return out

@@ -1,19 +1,19 @@
 Item #,Designator,Qty,Manufacturer,Mfg Part #,Description / Value,Package/Footprint,Type,Your Instructions / Notes,Farnell
-1,J1,1,GCT,USB4125-GF-A,"USB4125-GF-A - USB-C receptacle, 6-pin power only, top mount, SMT + THT shell",USB_C_Receptacle_GCT_USB4125-xx-x_6P_TopMnt_Horizontal,SMD,,3648642
-2,F1,1,Bourns,MF-MSMF075-2,"0.75A PTC - Resettable fuse 0.75 A hold / 1.5 A trip, 13.2 V, 1812 (VBUS: trips on TVS conduction or a short in the neck)",Fuse_1812_4532Metric,SMD,,
+1,J1,1,GCT,USB4125-GF-A,"USB4125-GF-A - USB-C receptacle, 6-pin power only, top mount, SMT + THT shell",USB_C_Receptacle_GCT_USB4125-xx-x_6P_TopMnt_Horizontal,SMD + THT (shell slots),,3648642
+2,F1,1,Bourns,MF-MSMF110/16X-2,"1.1A PTC - Resettable fuse 1.1 A hold / 2.2 A trip, 16 V, 0.06-0.20 Ohm, 1812 (VBUS: limits a short in the neck cable on USB; 0.75 A part had too little hold margin when warm, round2 R2-E3)",Fuse_1812_4532Metric,SMD,,
 3,"R1,R2",2,Multicomp Pro,MCWR06X5101FTL,5.1k - Resistor 5.1 kOhm 1% 0603,R_0603_1608Metric,SMD,,
-4,D1,1,Littelfuse,SMF5.0A,"SMF5.0A - TVS unidirectional 5.0 V standoff, 200 W, SOD-123FL",D_SOD-123F,SMD,check pin-1 / orientation in preview,2691565
+4,D1,1,Littelfuse,SMF5.0A,"SMF5.0A - TVS unidirectional 5.0 V standoff, 200 W, SOD-123FL",D_SOD-123F,SMD,polarity: cathode bar to the silk bar (pad 1 = K),2691565
 5,"C1,C2,C3,C4",4,Samsung,CL21A106KOQNNNE,10u 16V 0805 - MLCC 10 uF 16 V X5R 0805 (0603 10 V part keeps only 2.9 uF at 5 V),C_0805_2012Metric,SMD,,
 6,U1,1,Microchip,MCP73831T-2ACI/OT,"MCP73831-2ACI/OT - Li-ion/LiPo linear charger 4.20 V, up to 500 mA, SOT-23-5",SOT-23-5,SMD,check pin-1 / orientation in preview,1332158
 7,R3,1,Multicomp Pro,MCWR06X3901FTL,3.9k - Resistor 3.9 kOhm 1% 0603 (charge current 256 mA),R_0603_1608Metric,SMD,,
 8,"R4,R11",2,Multicomp Pro,MCWR06X1001FTL,1k - Resistor 1 kOhm 1% 0603,R_0603_1608Metric,SMD,,
-9,D2,1,Kingbright,APT1608SURCK,"red - Hyper-red chip LED 0603, 230 mcd @ 20 mA, pin 1 = K (charge indicator, ~3 mA)",LED_0603_1608Metric,SMD,polarity: pad 1 = cathode (large pad on 2835); check pin-1 / orientation in preview,
+9,D2,1,Kingbright,APT1608SURCK,"red - Hyper-red chip LED 0603, 230 mcd @ 20 mA, pin 1 = K (charge indicator, ~3 mA)",LED_0603_1608Metric,SMD,polarity: cathode mark to pad 1 (K),
 10,J2,1,JST,S2B-PH-SM4-TB(LF)(SN),BATTERY (+ = pin 1) - JST PH 2-pin side-entry SMD header (battery),JST_PH_S2B-PH-SM4-TB_1x02-1MP_P2.00mm_Horizontal,SMD,,9492615
 11,"Q1,Q2,Q3,Q4",4,Diodes Inc,DMG2305UX-7,"DMG2305UX - P-MOSFET -20 V -4.2 A, Rds(on) 52 mOhm @ -4.5 V (max), SOT-23 (G=1 S=2 D=3)",SOT-23,SMD,check pin-1 / orientation in preview,2543533
-12,"R5,R7,R10",3,Multicomp Pro,MCWR06X1002FTL,10k - Resistor 10 kOhm 1% 0603,R_0603_1608Metric,SMD,,2447230
-13,D3,1,Vishay,S1J-E3/61T,"S1J - Silicon rectifier 1 A 600 V, SMA (DO-214AC); Vf ~0.85 V @ 0.3 A; leakage nA at 4 V reverse (USB -> VSYS OR-ing)",D_SMA,SMD,check pin-1 / orientation in preview,
+12,"R5,R7,R10,R13",4,Multicomp Pro,MCWR06X1002FTL,10k - Resistor 10 kOhm 1% 0603,R_0603_1608Metric,SMD,,2447230
+13,D3,1,Vishay,S1J-E3/61T,"S1J - Silicon rectifier 1 A 600 V, SMA (DO-214AC); Vf ~0.85 V @ 0.3 A; leakage nA at 4 V reverse (USB -> VSYS OR-ing)",D_SMA,SMD,polarity: cathode bar to the silk bar (pad 1 = K),
 14,R6,1,Multicomp Pro,MCWR06X1004FTL,1M - Resistor 1 MOhm 1% 0603,R_0603_1608Metric,SMD,,
-15,"C5,C6",2,Multicomp Pro,MC0603B104K500CT,100n - MLCC 100 nF 50 V X7R 0603,C_0603_1608Metric,SMD,,1759122
+15,"C5,C6,C8",3,Multicomp Pro,MC0603B104K500CT,100n - MLCC 100 nF 50 V X7R 0603,C_0603_1608Metric,SMD,,1759122
 16,SW1,1,C&K,PCM12SMTR,"PCM12 ON/OFF - Mini slide switch SPDT, right-angle SMD (side actuated)",SW_SPDT_PCM12,SMD,,9575146
 17,U2,1,Microchip,ATTINY3216-SN,"ATtiny3216-SN - 8-bit AVR MCU, 32 KB flash, 256 B EEPROM, UPDI, 1.8-5.5 V, SOIC-20 (300 mil)",SOIC-20W_7.5x12.8mm_P1.27mm,SMD,check pin-1 / orientation in preview,3018703
 18,C7,1,Samsung,CL10A105KB8NNNC,1u - MLCC 1 uF 50 V X5R 0603,C_0603_1608Metric,SMD,,3013385

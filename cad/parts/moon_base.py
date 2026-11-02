@@ -16,6 +16,10 @@ Requirements (newest last; never renumber):
                thread-locker: round1 m-7)
   B7  ASSUMED  the 4-wire cable runs up the gooseneck bore, through the nut, to the board's underside pads
   B8  RULE     printed upright (floor on the bed) in PETG (warmer than PLA: sits against the LED board)
+  B10 RULE     (round2 R2-D3) >= 4.5 mm free height between the nut top and the board underside: the wires leave the
+               gooseneck bore above the nut and turn to the pads; the thread must end at or below the nut top (VERIFY)
+  B11 RULE     (round2 R2-D15) board pocket 0.88 deep (board 1.0 +/- 0.1): the board top stands proud of the step, so
+               the clamp ring always bears on the board and the bayonet's cam drop preloads it
 """
 from __future__ import annotations
 
@@ -41,6 +45,7 @@ VERIFY = {
     "NUT_AF": f"{L.NUT_AF} mm across flats, {L.NUT_T} mm thick: measure the nut supplied with the gooseneck",
     "NECK_THREAD_D": "M10x1 thread on the gooseneck ends (seller listing): measure with calipers",
     "BOARD_T": "LED board thickness 1.0 mm as ordered",
+    "thread_protrusion": "gooseneck thread must not stand more than 0.5 mm above the nut top: file it flush (R2-D3)",
 }
 
 
@@ -62,12 +67,12 @@ def part(*, wall=L.CUP_WALL, lug_clear=0.4, groove_turn=L.BAYONET_TURN_DEG):
         # outer body: cylinder with a 45 deg chamfer at the bed edge
         Cylinder(L.CUP_R_OUT, H, align=(Align.CENTER, Align.CENTER, Align.MIN))
         chamfer(p.edges().filter_by(Axis.Z, reverse=True).sort_by(Axis.Z)[0], 1.2)
-        # skirt bore (from the board top up to the rim)
-        with Locations((0, 0, d["board_top"])):
+        # skirt bore (from the pocket step up to the rim; the board top stands 0.12 above the step)
+        with Locations((0, 0, d["ledge_z"] + L.POCKET_DEPTH)):
             Cylinder(L.BORE_UPPER_R, H, align=(Align.CENTER, Align.CENTER, Align.MIN), mode=Mode.SUBTRACT)
         # LED board pocket
         with Locations((0, 0, d["ledge_z"])):
-            Cylinder(L.POCKET_R, L.BOARD_T + 0.01, align=(Align.CENTER, Align.CENTER, Align.MIN), mode=Mode.SUBTRACT)
+            Cylinder(L.POCKET_R, L.POCKET_DEPTH + 0.01, align=(Align.CENTER, Align.CENTER, Align.MIN), mode=Mode.SUBTRACT)
         # cavity under the board (parts + wires), down to the floor
         with Locations((0, 0, d["floor_top"])):
             Cylinder(L.BOARD_LEDGE_IN_R, d["ledge_z"] - d["floor_top"] + 0.01,
@@ -101,10 +106,7 @@ def part(*, wall=L.CUP_WALL, lug_clear=0.4, groove_turn=L.BAYONET_TURN_DEG):
         with BuildSketch(Plane.XY.offset(d["floor_top"])):
             RegularPolygon((L.NUT_AF + 0.4) / math.sqrt(3), 6, major_radius=True)
         extrude(amount=L.NUT_T + 0.01, mode=Mode.SUBTRACT)
-        # cable notch so wires can leave the nut's bore sideways toward the pads
-        with Locations((0, (L.NUT_AF / 2 + L.BOARD_LEDGE_IN_R) / 2, d["floor_top"])):
-            Box(4.0, L.BOARD_LEDGE_IN_R, L.NUT_T + 0.02, align=(Align.CENTER, Align.CENTER, Align.MIN),
-                mode=Mode.SUBTRACT)
+        # (no cable notch: the wires leave the bore above the nut, in the 4.5 mm space under the board, R2-D3)
     return cup + hx.part
 
 
@@ -155,4 +157,10 @@ def spec(m, p):
     # material ring under the board ledge must exist (probe a point in the ledge)
     r_probe = (L.BOARD_LEDGE_IN_R + L.POCKET_R) / 2
     out.append(claim("B4", "ledge present under the board edge", bool(m.contains([[r_probe, 0, d["ledge_z"] - 0.3]])[0])))
+    out.append(claim("B10", ">= 4.5 mm between the nut top and the board underside", d["ledge_z"] - d["nut_top"] >= 4.5 - 1e-6,
+                     round(d["ledge_z"] - d["nut_top"], 2)))
+    out.append(claim("B11", "board top proud of the pocket step for a 0.9 mm board", L.POCKET_DEPTH < 0.9 - 0.01,
+                     L.POCKET_DEPTH))
+    out.append(claim("B11", "pocket step open above the pocket (bore starts at the step)",
+                     not bool(m.contains([[L.POCKET_R + 0.5, 0, d["ledge_z"] + L.POCKET_DEPTH + 0.05]])[0])))
     return out

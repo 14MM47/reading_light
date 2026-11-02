@@ -5,7 +5,7 @@ Single source of truth for the schematic (kigen.schematic) and the board (kigen.
 the pcb repo conventions (upper-case, + for positive rails avoided because KiCad labels treat it literally).
 
 Power tree (see docs/design/electronics.md):
-  USB-C VBUS_IN --PTC 0.75 A--> VBUS --TVS--+--> MCP73831 VDD --(CC/CV 4.20 V, ~256 mA)--> BAT --Q3 (rev-batt FET)--> cell
+  USB-C VBUS_IN --PTC 1.1 A--> VBUS --TVS--+--> MCP73831 VDD --(CC/CV 4.20 V, ~256 mA)--> BAT --Q3 (rev-batt FET)--> cell
                     +--> D3 silicon rectifier (low leakage) -----+
                                                                  +--> VSYS_RAW --Q2 (slide-switch load switch)--> VSYS
   BAT --Q1 (load-share P-FET, off while VBUS present)-----------+
@@ -99,7 +99,7 @@ def parts():
                      "MPN": "DNP", "Farnell": ""}, in_bom=False, dnp=True),
     ]
     for i, (net, x) in enumerate([("VBUS", 130), ("BAT_RAW", 142), ("VSYS", 154), ("GND", 166), ("SDA", 178),
-                                  ("SCL", 190)], 1):
+                                  ("SCL", 190), ("VLED", 202)], 1):
         v.append(Part(f"TP{i}", "Connector:TestPoint", net, "TestPoint:TestPoint_Pad_D1.5mm", {"1": net},
                       sch=(x, 250, 0), fields={"Description": "Test pad", "MPN": "-", "Farnell": ""}, in_bom=False))
     # ---- D: buttons, I2C pull-ups, moon connector (sheet bottom-right)
@@ -110,8 +110,12 @@ def parts():
         # LED-board supply switch: the MCU (PB2 low) powers the LED board; off at reset (R12) and when the battery
         # is empty, so a flat cell is not drained by the TLC59116's ~25 mA (review M2). Pull-ups sit on the switched
         # rail so the unpowered LED board is never back-fed through SDA/SCL.
-        P("Q4", "PFET", {"1": "LED_EN_N", "2": "VSYS", "3": "VLED"}, (280, 240, 0), value="DMG2305UX"),
-        P("R12", "R_100K", {"1": "VSYS", "2": "LED_EN_N"}, (265, 245, 0)),
+        P("Q4", "PFET", {"1": "Q4_G", "2": "VSYS", "3": "VLED"}, (280, 240, 0), value="DMG2305UX"),
+        P("R12", "R_100K", {"1": "VSYS", "2": "Q4_G"}, (265, 245, 0)),
+        # soft turn-on (round2 R2-E1): R13 into C8 gate-drain sets dV/dt ~2.5 V/ms on VLED, so charging the LED board's
+        # ~9 uF takes ~25 mA instead of a multi-amp spike that would sag VSYS (the MCU's supply) below its BOD level
+        P("R13", "R_10K", {"1": "LED_EN_N", "2": "Q4_G"}, (265, 230, 0)),
+        P("C8", "C_100N", {"1": "Q4_G", "2": "VLED"}, (295, 230, 0)),
         P("R8", "R_3K3", {"1": "VLED", "2": "SDA"}, (300, 200, 0)),
         P("R9", "R_3K3", {"1": "VLED", "2": "SCL"}, (310, 200, 0)),
         P("J3", "JST_SH4", {"1": "GND", "2": "VLED", "3": "SDA", "4": "SCL"}, (360, 205, 0),
@@ -170,6 +174,8 @@ PLACE = {
     "J3": (17.5, 3.6, 180, "F"),            # JST-SH to the moon, opening faces the top edge
     "R9": (12.5, 4.5, 90, "F"), "R8": (14.2, 8.6, 0, "F"),   # SCL / SDA pull-ups on the MCU side of J3
     "Q4": (25.5, 4.6, 0, "F"), "R12": (29.0, 3.4, 0, "F"),   # LED-board supply switch next to J3
+    "R13": (26.6, 7.6, 0, "F"), "C8": (29.7, 7.75, 0, "F"),   # Q4 gate RC (soft turn-on)
+    "TP7": (13.0, 11.5, 0, "F"),                               # VLED test pad
     "R11": (6.2, 7.5, 90, "F"),                               # J4 VREF series resistor
     "TP6": (8.5, 4.0, 0, "F"), "TP5": (9.0, 8.5, 0, "F"),
     "TP4": (9.6, 16.0, 0, "F"),
@@ -200,7 +206,7 @@ ROUTE = [
     ("CC1", 0.25), ("CC2", 0.25), ("PROG", 0.25), ("CHG_STAT", 0.25), ("CHG_LED", 0.25),
     ("Q3_G", 0.25), ("SW_GATE", 0.25), ("SW_COM", 0.25),
     ("BTN_UP", 0.25), ("BTN_MAIN", 0.25), ("BTN_DN", 0.25),
-    ("UPDI", 0.25), ("TX", 0.25), ("LED_EN_N", 0.25), ("VREF", 0.25),
+    ("UPDI", 0.25), ("TX", 0.25), ("LED_EN_N", 0.25), ("Q4_G", 0.25), ("VREF", 0.25),
 ]
 STITCH = [("GND", 0)]
 STITCH_GRID = [("GND", 3.0)]
@@ -211,14 +217,15 @@ SILK = [
     dict(s="MOON LIGHT main v0.1 2026-11", x=17.5, y=31.0, size=0.8, thick=0.12, layer="B.SilkS"),
     dict(s="+", x=0.9, y=55.4, size=0.9, thick=0.15),
     dict(s="-", x=0.9, y=50.6, size=0.9, thick=0.15),
-    dict(s="BATT", x=12.7, y=49.2, size=0.8, thick=0.13),
     dict(s="UPDI: 1=VREF(sense only) 2=UPDI 3=TX 4=GND", x=17.5, y=33.5, size=0.8, thick=0.13, layer="B.SilkS"),
 ]
 
 # M2 mounting holes (PCB hangs from two bosses on the inside of the pack's front face; keep Ø5.2 clear)
 MOUNT_HOLES = [(21.5, 10.0), (17.5, 46.5)]
 # battery wires: plug lies on the board, its wires pass down through this slot to the cell behind the PCB
-SLOTS = [(17.3, 52.2, 3.0, 2.8, 0.6)]      # (cx, cy, w, h, r)
+SLOTS = [(13.2, 51.9, 6.4, 5.0, 0.4)]      # (cx, cy, w, h, r): passes the PHR-2 plug (5.8 x 4.5) of the pre-terminated
+                                          # cell lead (round2 R2-D1); x 10.0-16.4, y 49.4-54.4, under the mated plug;
+                                          # 0.35 mm to the USB-C shell pad, 0.4 to J2's MP pad, 1.25 to D1
 # keep-outs: battery plug footprint on the board surface (no parts taller than 0.6 mm under it is fine; keep it clear)
 KEEPOUTS = [dict(layer="F", pts=[(9.6, 50.0), (15.8, 50.0), (15.8, 56.0), (9.6, 56.0)], tracks=False, vias=False, pour=False)]
 
@@ -229,9 +236,10 @@ FAB_NOTES = """# main-board v0.1 - fabrication notes (paste into the fab's order
 - DRC: 0 errors. Two silk warnings are intended: the SW1 slide-switch outline crosses the right board edge because
   its knob overhangs the edge by design (the fab clips silk at the edge).
 - Min track / space 0.20 / 0.20 mm; min via 0.6 / 0.3 mm (drill); min hole 0.3 mm; no blind/buried vias, no castellations
-- Plated slots: none. NPTH: 2 x 0.9 mm (slide-switch pegs), 2 x 2.2 mm (M2 mounting holes). PTH: USB-C shell pegs,
-  J4 header (DNP). Internal routed cut-out 3.0 x 2.8 mm, r 0.6 (battery-lead slot, on Edge.Cuts)
-- Quantity 5. Stencil: top side only, frameless
+- Plated slots: 4 x 0.6 x 1.2 mm (USB-C shell pegs), in the PTH drill file. NPTH: 2 x 0.9 mm (slide-switch pegs),
+  2 x 2.2 mm (M2 mounting holes). PTH: J4 header (DNP). Internal routed cut-out 6.4 x 5.0 mm, r 0.4 (battery-lead
+  slot, on Edge.Cuts)
+- Quantity 5. Stencil: top side only, frameless, 0.12 mm
 - Assembly (optional): all parts on TOP; BOM/CPL files: bom_pcbway.csv + cpl_pcbway.csv or bom_jlcpcb.csv + cpl_jlcpcb.csv.
-  J4 (programming header) and TP1-TP6 (test pads) are not populated.
+  J4 (programming header) and TP1-TP7 (test pads) are not populated.
 """

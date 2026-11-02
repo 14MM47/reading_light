@@ -10,7 +10,7 @@
 extern "C" {
 #endif
 
-// ----- tunables (see docs/design/firmware.md) -----
+// ----- tunables (reasoning in docs/design/electronics.md §2 and docs/verification/) -----
 #define LEVELS            16        // brightness steps 0..15
 #define LEVEL_MIN_FRAC    0.004f    // level 0 = 0.4 % of full drive; level 15 = 100 %
 #define HOLD_SAVE_MS      2000      // MAIN held this long = save current colour + level as power-on default
@@ -73,7 +73,18 @@ typedef struct {
     float blink_level;
     bool save_request;                // main loop writes EEPROM when set
     uint32_t last_slew;               // thermal slew timestamp (per instance, not a function static)
+    uint32_t load_since;              // when > 50 mA started flowing (0 = not loaded): the frozen-sensor timer
 } core_t;
+
+// TLC59116 current-gain steps (IREF register {CM,HC,CC}), all inside the datasheet's output-current ranges:
+// 8.3 / 12.5 / 25.0 mA at REXT 750 R. Drive values are fractions of the 25.0 mA full scale (CG_FULL).
+#define CG_STEP_COUNT 3
+#define CG_FULL 0.9922f
+extern const uint8_t CG_CODE[CG_STEP_COUNT];
+extern const float CG_GAIN[CG_STEP_COUNT];
+// Lowest gain step that can show max_drive without clipping; steps down only when max_drive is below 80 % of the
+// lower step (hysteresis). current = index in use, or CG_STEP_COUNT if unknown.
+uint8_t cg_select(float max_drive, uint8_t current);
 
 void core_init(core_t *c, const saved_t *saved, uint32_t now);
 void core_buttons(core_t *c, const bool pressed[BTN_COUNT], uint32_t now);

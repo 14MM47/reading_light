@@ -1,6 +1,6 @@
 Farnell Order Code,Manufacturer Part Number,Manufacturer,Quantity,Needed for builds,Indicative unit GBP (ex VAT),Indicative line GBP,Description,Line note
 3648642,USB4125-GF-A,GCT,3,2,0.590,1.77,"USB-C receptacle, 6-pin power only, top mount, SMT + THT shell",reading-light USBC
-(search MPN),MF-MSMF075-2,Bourns,5,2,0.400,2.00,"Resettable fuse 0.75 A hold / 1.5 A trip, 13.2 V, 1812 (VBUS: trips on TVS conduction or a short in the neck)",reading-light PTC
+(search MPN),MF-MSMF110/16X-2,Bourns,5,2,0.400,2.00,"Resettable fuse 1.1 A hold / 2.2 A trip, 16 V, 0.06-0.20 Ohm, 1812 (VBUS: limits a short in the neck cable on USB; 0.75 A part had too little hold margin when warm, round2 R2-E3)",reading-light PTC
 (search MPN),MCWR06X5101FTL,Multicomp Pro,50,4,0.010,0.50,Resistor 5.1 kOhm 1% 0603,reading-light R_5K1
 2691565,SMF5.0A,Littelfuse,5,2,0.150,0.75,"TVS unidirectional 5.0 V standoff, 200 W, SOD-123FL",reading-light TVS
 (search MPN),CL21A106KOQNNNE,Samsung,20,10,0.080,1.60,MLCC 10 uF 16 V X5R 0805 (0603 10 V part keeps only 2.9 uF at 5 V),reading-light C_10U
@@ -13,7 +13,7 @@ Farnell Order Code,Manufacturer Part Number,Manufacturer,Quantity,Needed for bui
 2447230,MCWR06X1002FTL,Multicomp Pro,50,8,0.010,0.50,Resistor 10 kOhm 1% 0603,reading-light R_10K
 (search MPN),S1J-E3/61T,Vishay,5,2,0.120,0.60,"Silicon rectifier 1 A 600 V, SMA (DO-214AC); Vf ~0.85 V @ 0.3 A; leakage nA at 4 V reverse (USB -> VSYS OR-ing)",reading-light RECT
 (search MPN),MCWR06X1004FTL,Multicomp Pro,50,2,0.010,0.50,Resistor 1 MOhm 1% 0603,reading-light R_1M
-1759122,MC0603B104K500CT,Multicomp Pro,50,8,0.010,0.50,MLCC 100 nF 50 V X7R 0603,reading-light C_100N
+1759122,MC0603B104K500CT,Multicomp Pro,50,10,0.010,0.50,MLCC 100 nF 50 V X7R 0603,reading-light C_100N
 9575146,PCM12SMTR,C&K,3,2,0.850,2.55,"Mini slide switch SPDT, right-angle SMD (side actuated)",reading-light SLIDE
 3018703,ATTINY3216-SN,Microchip,3,2,1.040,3.12,"8-bit AVR MCU, 32 KB flash, 256 B EEPROM, UPDI, 1.8-5.5 V, SOIC-20 (300 mil)",reading-light MCU
 3013385,CL10A105KB8NNNC,Samsung,10,2,0.030,0.30,MLCC 1 uF 50 V X5R 0603,reading-light C_1U
@@ -27,3 +27,4 @@ Farnell Order Code,Manufacturer Part Number,Manufacturer,Quantity,Needed for bui
 3119169,TLC59116IPWR,Texas Instruments,3,2,1.890,5.67,"16-ch I2C constant-current LED sink driver, 97 kHz PWM, TSSOP-28",reading-light LEDDRV
 (search MPN),MCWR06X7500FTL,Multicomp Pro,50,2,0.010,0.50,Resistor 750 Ohm 1% 0603 (TLC59116 REXT: 25.0 mA/channel),reading-light R_750
 (search MPN),"LM75BDP,118",NXP,5,2,0.550,2.75,"I2C digital temperature sensor, +/-2 C, 2.8-5.5 V, TSSOP-8 (same die/pinout as LM75BD SOIC-8)",reading-light TEMP
+(search MPN),MCWR06X2401FTL,Multicomp Pro,50,2,0.010,0.50,Resistor 2.4 kOhm 1% 0603 (LED board RESET_N pull-up),reading-light R_2K4

@@ -5229,7 +5229,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "10k"
+		(property "Value" "2.4k"
 			(at 46.466 142.57 0)
 			(effects
 				(font
@@ -5256,7 +5256,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Resistor 10 kOhm 1% 0603"
+		(property "Description" "Resistor 2.4 kOhm 1% 0603 (LED board RESET_N pull-up)"
 			(at 44.45 144.78 0)
 			(effects
 				(font
@@ -5265,7 +5265,7 @@
 				(hide yes)
 			)
 		)
-		(property "MPN" "MCWR06X1002FTL"
+		(property "MPN" "MCWR06X2401FTL"
 			(at 44.45 144.78 0)
 			(effects
 				(font
@@ -5283,7 +5283,7 @@
 				(hide yes)
 			)
 		)
-		(property "Farnell" "2447230"
+		(property "Farnell" ""
 			(at 44.45 144.78 0)
 			(effects
 				(font

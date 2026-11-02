@@ -249,7 +249,7 @@ class Board:
             t.SetMirrored(True)
         self.b.Add(t)
 
-    def place_refs(self, size=0.8, thick=0.13):
+    def place_refs(self, size=0.8, thick=0.13, circle=None):
         """Put each reference designator on silk where it clears pads, other refs and the edge; else Fab only."""
         import itertools
         edge = self.b.GetBoardEdgesBoundingBox()
@@ -298,14 +298,21 @@ class Board:
             rb = ref.GetBoundingBox()
             tw, th = pcbnew.ToMM(rb.GetWidth()) - 0.3, pcbnew.ToMM(rb.GetHeight()) - 0.3
             cands = [(cx, y0 - th / 2 - 0.05, 0), (cx, y1 + th / 2 + 0.05, 0), (x0 - th / 2 - 0.05, cy_, 90),
-                     (x1 + th / 2 + 0.05, cy_, 90), (x0 - tw / 2, y0 - th / 2, 0), (x1 + tw / 2, y0 - th / 2, 0),
-                     (x0 - tw / 2, y1 + th / 2, 0), (x1 + tw / 2, y1 + th / 2, 0), (cx, cy_, 0)]
+                     (x1 + th / 2 + 0.05, cy_, 90)]
+            # outward first: a reference is read as belonging to the part on its outside, away from the crowd
+            bx, by = pcbnew.ToMM(edge.GetCenter().x), pcbnew.ToMM(edge.GetCenter().y)
+            cands.sort(key=lambda c: -((c[0] - bx) ** 2 + (c[1] - by) ** 2))
+            cands += [(x0 - tw / 2, y0 - th / 2, 0), (x1 + tw / 2, y0 - th / 2, 0),
+                      (x0 - tw / 2, y1 + th / 2, 0), (x1 + tw / 2, y1 + th / 2, 0), (cx, cy_, 0)]
             ok = None
             for (tx, ty, ang) in cands:
                 w2, h2 = (tw / 2, th / 2) if ang == 0 else (th / 2, tw / 2)
                 box = (tx - w2, ty - h2, tx + w2, ty + h2)
                 if box[0] < pcbnew.ToMM(edge.GetX()) + 0.3 or box[2] > pcbnew.ToMM(edge.GetRight()) - 0.3 or \
                    box[1] < pcbnew.ToMM(edge.GetY()) + 0.3 or box[3] > pcbnew.ToMM(edge.GetBottom()) - 0.3:
+                    continue
+                if circle and any((px - circle[0]) ** 2 + (py - circle[1]) ** 2 > circle[2] ** 2
+                                  for px in (box[0], box[2]) for py in (box[1], box[3])):
                     continue
                 hit = False
                 for flipped, pb in pads:
@@ -331,9 +338,11 @@ class Board:
             else:
                 ref.SetLayer(pcbnew.B_Fab if back else pcbnew.F_Fab)
                 moved_to_fab.append(fp.GetReference())
-            val = fp.Value()
+            val = fp.Value()                                  # value on the Fab layer: shows on assembly drawings
             val.SetLayer(pcbnew.B_Fab if back else pcbnew.F_Fab)
-            val.SetVisible(False)
+            val.SetTextSize(V(0.5, 0.5))
+            val.SetTextThickness(MM(0.08))
+            val.SetVisible(True)
         return moved_to_fab
 
     def save(self, path, fill=True):

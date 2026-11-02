@@ -60,6 +60,12 @@ def _build_once(board: str, d, parts, order):
     kb.pcbnew.FootprintLoad = load
     for nc in getattr(d, "NETCLASSES", []):
         B.netclass(**nc)
+    # title block: reaches the Gerber job file, the drawings and the assembly PDFs (round2 R2-D23)
+    tb = B.b.GetTitleBlock()
+    tb.SetTitle(getattr(d, "TITLE", d.PROJECT))
+    tb.SetRevision(getattr(d, "REV", ""))
+    tb.SetDate(getattr(d, "DATE", "2026-11-02"))
+    tb.SetCompany("Moon reading light (14MM47/reading_light)")
     # board thickness goes into the STEP model and the fab notes (electrical review N9: the LED board is 1.0 mm)
     B.b.GetDesignSettings().SetBoardThickness(pcbnew.FromMM(getattr(d, "BOARD_THICKNESS", 1.6)))
     # outline
@@ -123,7 +129,9 @@ def _build_once(board: str, d, parts, order):
         print(f"  stitch grid: {stitch_grid(R, net, pitch)} {net} vias")
     for z in d.ZONES:
         B.zone(**z)
-    fab_refs = B.place_refs()
+    o = d.OUTLINE
+    # round board: keep silk inside the part-free radius (the LED board edge band is clamped by the moon ring)
+    fab_refs = B.place_refs(circle=(o[1], o[2], getattr(d, "SILK_R_MAX", o[3] - 0.5)) if o[0] == "circle" else None)
     if fab_refs:
         print(f"  refs moved to Fab (no room on silk): {fab_refs}")
     pcb = bdir / f"{d.PROJECT}.kicad_pcb"

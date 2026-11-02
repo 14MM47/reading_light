@@ -5,9 +5,11 @@
 The boards were generated, routed and checked in the cloud (KiCad 9.0.9, kicad-cli): ERC 0, DRC 0 errors,
 0 unconnected, schematic parity clean. That run was after verification round 1; see `docs/verification/round1.md`
 for what changed (Q4 LED-board switch, F1 PTC, R3 3.9 k, R5 10 k, R11 VREF, J2 moved with a lead slot, LM75B
-thermostat wiring). The fab packages are ready in `fab/main-board/v0.1/` and `fab/led-board/v0.1/`. The DRC
-warnings that remain are silk-only, and the reports list them: the main board's SW1 outline is clipped at the board
-edge, because the knob overhangs the edge by design.
+thermostat wiring), then round 2 (`docs/verification/round2.md`: battery-lead slot 6.4 × 5.0 mm, Q4 soft turn-on
+R13/C8, 1.1 A PTC, VLED test pad TP7, RESET pull-up 2.4 k, W/C silk next to the white LEDs). The fab packages are
+ready in `fab/main-board/v0.1/` and `fab/led-board/v0.1/`. The DRC warnings that remain are silk-only, and the
+reports list them: the main board's SW1 outline is clipped at the board edge, because the knob overhangs the edge
+by design.
 This handoff is the human look-over the pcb repo's process requires (steps 3, 4, 6, 7 of its fabrication process),
 then ordering.
 
@@ -21,6 +23,9 @@ then ordering.
      JST-SH opening faces the top edge. The JST-PH (battery) opening faces into the board, and the lead slot is
      beside it.
    * LED board: 1.0 mm thick, with the LEDs on top and the TLC59116, LM75B and G/V/D/C pads underneath.
+   * The cloud build had no KiCad 3D models for J1, J2, F1 and the 2835 LEDs, so they are missing from the
+     committed STEP files (round2 R2-D17). Re-export the STEP on your machine
+     (`kicad-cli pcb export step --subst-models`) before using it for fit checks. J2 is the tallest part, at 5.5 mm.
 5. **1:1 paper print** of both boards (File → Print, 100 %, check with a ruler). Sit real parts on it if they have
    arrived: tact switch, USB-C, PH header, 2835 LED. Check the LED board against the printed moon-base cup pocket.
 
@@ -46,7 +51,7 @@ Board specs (also in each `FAB_NOTES.md`):
   price comparison of all three routes). If Matt prefers assembly instead: upload `bom_pcbway.csv` + `cpl_pcbway.csv`
   (PCBWay) or `bom_jlcpcb.csv` + `cpl_jlcpcb.csv` (JLCPCB; fill the LCSC column from their search), and check every
   part's rotation in the fab's placement preview (KiCad zero-orientation ≠ reel orientation). Small boards may need
-  panelising for assembly at PCBWay (both are < 50 × 50 mm).
+  panelising for assembly at PCBWay (main 35 × 62 mm, LED Ø26 mm).
 * After ordering: commit with the order reference in the message, tag `main-board-v0.1` / `led-board-v0.1`.
 
 ## Done when

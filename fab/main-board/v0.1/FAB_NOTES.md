@@ -5,8 +5,9 @@
 - DRC: 0 errors. Two silk warnings are intended: the SW1 slide-switch outline crosses the right board edge because
   its knob overhangs the edge by design (the fab clips silk at the edge).
 - Min track / space 0.20 / 0.20 mm; min via 0.6 / 0.3 mm (drill); min hole 0.3 mm; no blind/buried vias, no castellations
-- Plated slots: none. NPTH: 2 x 0.9 mm (slide-switch pegs), 2 x 2.2 mm (M2 mounting holes). PTH: USB-C shell pegs,
-  J4 header (DNP). Internal routed cut-out 3.0 x 2.8 mm, r 0.6 (battery-lead slot, on Edge.Cuts)
-- Quantity 5. Stencil: top side only, frameless
+- Plated slots: 4 x 0.6 x 1.2 mm (USB-C shell pegs), in the PTH drill file. NPTH: 2 x 0.9 mm (slide-switch pegs),
+  2 x 2.2 mm (M2 mounting holes). PTH: J4 header (DNP). Internal routed cut-out 6.4 x 5.0 mm, r 0.4 (battery-lead
+  slot, on Edge.Cuts)
+- Quantity 5. Stencil: top side only, frameless, 0.12 mm
 - Assembly (optional): all parts on TOP; BOM/CPL files: bom_pcbway.csv + cpl_pcbway.csv or bom_jlcpcb.csv + cpl_jlcpcb.csv.
-  J4 (programming header) and TP1-TP6 (test pads) are not populated.
+  J4 (programming header) and TP1-TP7 (test pads) are not populated.

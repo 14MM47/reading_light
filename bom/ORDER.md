@@ -4,14 +4,14 @@ Indicative prices from Farnell UK listings and seller pages, 2026-11. **Matt pla
 record the actual codes and prices in `bom/ORDER_ACTUALS.md` (handoff 02).
 
 ## 1. Farnell UK basket
-Upload `bom/farnell_quickpaste.txt` (Quick Paste / BOM upload). 28 lines, quantities include spares and
+Upload `bom/farnell_quickpaste.txt` (Quick Paste / BOM upload). 29 lines, quantities include spares and
 MOQ rounding. Lines without an order code are listed by MPN: pick that exact MPN on the site (substitution rules
 in handoff 02).
 
 | Farnell code | MPN | Manufacturer | Qty | Needed | Line GBP ex VAT | What |
 |---|---|---|---|---|---|---|
 | 3648642 | USB4125-GF-A | GCT | 3 | 2 | 1.77 | USB-C receptacle |
-| (search MPN) | MF-MSMF075-2 | Bourns | 5 | 2 | 2.00 | Resettable fuse 0.75 A hold / 1.5 A trip |
+| (search MPN) | MF-MSMF110/16X-2 | Bourns | 5 | 2 | 2.00 | Resettable fuse 1.1 A hold / 2.2 A trip |
 | (search MPN) | MCWR06X5101FTL | Multicomp Pro | 50 | 4 | 0.50 | Resistor 5.1 kOhm 1% 0603 |
 | 2691565 | SMF5.0A | Littelfuse | 5 | 2 | 0.75 | TVS unidirectional 5.0 V standoff |
 | (search MPN) | CL21A106KOQNNNE | Samsung | 20 | 10 | 1.60 | MLCC 10 uF 16 V X5R 0805 (0603 10 V part keeps only 2.9 uF at 5 V) |
@@ -24,7 +24,7 @@ in handoff 02).
 | 2447230 | MCWR06X1002FTL | Multicomp Pro | 50 | 8 | 0.50 | Resistor 10 kOhm 1% 0603 |
 | (search MPN) | S1J-E3/61T | Vishay | 5 | 2 | 0.60 | Silicon rectifier 1 A 600 V |
 | (search MPN) | MCWR06X1004FTL | Multicomp Pro | 50 | 2 | 0.50 | Resistor 1 MOhm 1% 0603 |
-| 1759122 | MC0603B104K500CT | Multicomp Pro | 50 | 8 | 0.50 | MLCC 100 nF 50 V X7R 0603 |
+| 1759122 | MC0603B104K500CT | Multicomp Pro | 50 | 10 | 0.50 | MLCC 100 nF 50 V X7R 0603 |
 | 9575146 | PCM12SMTR | C&K | 3 | 2 | 2.55 | Mini slide switch SPDT |
 | 3018703 | ATTINY3216-SN | Microchip | 3 | 2 | 3.12 | 8-bit AVR MCU |
 | 3013385 | CL10A105KB8NNNC | Samsung | 10 | 2 | 0.30 | MLCC 1 uF 50 V X5R 0603 |
@@ -38,8 +38,9 @@ in handoff 02).
 | 3119169 | TLC59116IPWR | Texas Instruments | 3 | 2 | 5.67 | 16-ch I2C constant-current LED sink driver |
 | (search MPN) | MCWR06X7500FTL | Multicomp Pro | 50 | 2 | 0.50 | Resistor 750 Ohm 1% 0603 (TLC59116 REXT: 25.0 mA/channel) |
 | (search MPN) | LM75BDP,118 | NXP | 5 | 2 | 2.75 | I2C digital temperature sensor |
+| (search MPN) | MCWR06X2401FTL | Multicomp Pro | 50 | 2 | 0.50 | Resistor 2.4 kOhm 1% 0603 (LED board RESET_N pull-up) |
 
-**Farnell subtotal ≈ £44.03 ex VAT (≈ £52.84 inc VAT).**
+**Farnell subtotal ≈ £44.53 ex VAT (≈ £53.44 inc VAT).**
 
 ## 2. Other purchases (not Farnell)
 
@@ -76,4 +77,4 @@ JLCPCB (≈ £15–35). Upload `fab/<board>/v0.1/<board>-v0.1-gerbers.zip` and c
 
 ## 5. Total for this build (route 1)
 
-Farnell ≈ £53 + other ≈ £83 + programmer ≈ £15 (if needed) + PCBs ≈ £15–60 → **≈ £151–211 for 2 lamps.**
+Farnell ≈ £53 + other ≈ £83 + programmer ≈ £15 (if needed) + PCBs ≈ £15–60 → **≈ £152–212 for 2 lamps.**

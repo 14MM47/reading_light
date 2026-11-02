@@ -294,6 +294,59 @@ void test_channel_current_matches_rext_750(void) {
     TEST_ASSERT_FLOAT_WITHIN(0.1f, i_fs, I_CHANNEL_MA);
 }
 
+// ---- round 2: IREF step choice (R2-F1), faded cap changes and the frozen timer (R2-F2)
+void test_cg_step_never_clips_and_green_blue_stay_at_12mA(void) {
+    float d[G_COUNT];
+    for (int m = 0; m < MODE_COUNT; m++)
+        for (int l = 0; l < LEVELS; l++) {
+            mode_targets(m, l, 1.0f, I_CAP_MA, d);
+            float mx = 0;
+            for (int g = 0; g < G_COUNT; g++) if (d[g] > mx) mx = d[g];
+            uint8_t k = cg_select(mx, CG_STEP_COUNT);
+            // the chosen step shows mx at <= 255 PWM counts (no clipping) ...
+            TEST_ASSERT_TRUE(mx * CG_FULL / CG_GAIN[k] <= 1.0f + 1e-3f);
+            // ... and is the lowest such step
+            if (k > 0) TEST_ASSERT_TRUE(mx * CG_FULL / CG_GAIN[k - 1] > 1.0f);
+            if (strcmp(MODES[m].name, "Green") == 0 || strcmp(MODES[m].name, "Blue") == 0)
+                TEST_ASSERT_TRUE(CG_GAIN[k] <= 0.4961f + 1e-4f);    // never the 25 mA step
+        }
+}
+
+void test_cg_step_hysteresis(void) {
+    TEST_ASSERT_EQUAL_UINT8(2, cg_select(0.8f, CG_STEP_COUNT));
+    TEST_ASSERT_EQUAL_UINT8(2, cg_select(0.45f, 2));        // just below the 12.5 mA step: stay at 25 mA
+    TEST_ASSERT_EQUAL_UINT8(1, cg_select(0.39f, 2));        // well below (< 80 %): step down
+    TEST_ASSERT_EQUAL_UINT8(2, cg_select(0.51f, 1));        // above the step: step up at once
+}
+
+void test_trust_change_fades_instead_of_stepping(void) {
+    while (c.mode != 2) tap(BTN_MAIN, 100);                  // 4000 K
+    run(3000, true, false, false);                           // to max level
+    idle(500);
+    float before = total_current_ma(c.drive);
+    TEST_ASSERT_TRUE(before <= I_CAP_UNTRUSTED_MA + 0.01f);
+    core_temperature(&c, true, 30.0f, now);                  // first good reading: cap 110 -> 200
+    idle(1);
+    TEST_ASSERT_TRUE(total_current_ma(c.drive) < before + 5.0f);   // no step within 1 ms
+    idle(FADE_MS + 10);
+    TEST_ASSERT_TRUE(total_current_ma(c.drive) > before + 20.0f);  // reached the higher level by fading
+}
+
+void test_frozen_timer_starts_when_load_starts(void) {
+    // dim for 10 minutes with a perfectly steady reading, then full: still trusted for T_FROZEN_MS after the load
+    while (c.mode != 2) tap(BTN_MAIN, 100);
+    run(3000, false, false, true);                           // down to level 0 (< 50 mA)
+    idle(500);
+    TEST_ASSERT_TRUE(total_current_ma(c.drive) < 50.0f);
+    for (int s = 0; s < 600; s++) { core_temperature(&c, true, 30.0f, now); idle(1000); }
+    TEST_ASSERT_TRUE(c.t_trusted);
+    run(3000, true, false, false);
+    for (int s = 0; s < 120; s++) { core_temperature(&c, true, 30.0f, now); idle(1000); }
+    TEST_ASSERT_TRUE(c.t_trusted);
+    for (int s = 0; s < 240; s++) { core_temperature(&c, true, 30.0f, now); idle(1000); }
+    TEST_ASSERT_FALSE(c.t_trusted);                          // > 5 min under load with no change
+}
+
 int main(int, char **) {
     UNITY_BEGIN();
     RUN_TEST(test_levels_monotonic_and_endpoints);
@@ -321,5 +374,9 @@ int main(int, char **) {
     RUN_TEST(test_no_refade_after_49_7_days_on);
     RUN_TEST(test_thermal_slew_independent_per_instance);
     RUN_TEST(test_channel_current_matches_rext_750);
+    RUN_TEST(test_cg_step_never_clips_and_green_blue_stay_at_12mA);
+    RUN_TEST(test_cg_step_hysteresis);
+    RUN_TEST(test_trust_change_fades_instead_of_stepping);
+    RUN_TEST(test_frozen_timer_starts_when_load_starts);
     return UNITY_END();
 }

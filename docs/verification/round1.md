@@ -31,7 +31,7 @@ stated) · **ACCEPTED** (known limitation, documented) · **VERIFY** (only the p
 | M4 | MAJOR | USB draw (417 mA charge + lamp through D3) can exceed 500 mA default USB power | **FIXED / MITIGATED.** R3 3.9 k → 256 mA charge (0.21 C, also less charger heat, m4). Handoff 02 asks for a ≥ 1 A USB-C charger. The lamp load on USB is still additive: **ACCEPTED** (Rd-only sink, no PD negotiation) |
 | m1 | MINOR | Slow USB-unplug handover (R5 100 k τ ≈ 0.7 s) → brown-out | **FIXED.** R5 10 k (τ ≈ 70 ms); firmware empty-hold 5 s ≫ handover |
 | m2 | MINOR | Reverse battery not blocked while USB is present (Q3 biased by the charger) | **ACCEPTED.** Nothing is destroyed: about 42 mA precharge into the reversed cell, stopped by its PCM. The JST PH is keyed, and handoff 05 adds a polarity check with a meter before the first plug-in. v0.2: low-side N-FET reverse protection |
-| m3 | MINOR | TVS SMF5.0A clamps (~9 V) above MCP73831 VDD abs max 7 V | **MITIGATED.** F1 PTC 0.75 A hold (MF-MSMF075-2) ahead of the TVS: a sustained over-voltage makes the TVS conduct and trips the PTC. Fast transients above 7 V remain possible from non-compliant sources: **ACCEPTED** for a USB-C 5 V-only sink |
+| m3 | MINOR | TVS SMF5.0A clamps (~9 V) above MCP73831 VDD abs max 7 V | **MITIGATED.** F1 PTC 0.75 A hold (MF-MSMF075-2) ahead of the TVS: a sustained over-voltage makes the TVS conduct and trips the PTC. Fast transients above 7 V remain possible from non-compliant sources: **ACCEPTED** for a USB-C 5 V-only sink. *Round 2 (R2-E3/E4): F1 is now 1.1 A, and the "TVS trips the PTC" claim was withdrawn: this is not OVP* |
 | m4 | MINOR | Charger dissipation up to 1.2 W in SOT-23-5 next to the cell; no NTC | **MITIGATED.** 256 mA charge (≤ 0.5 W). U1 sits on the GND pour (both layers), and the pouch is separated by tape plus a 1.6 mm air gap (pack CAD). No NTC: charge at room temperature only (user note). v0.2: MCP73833 with NTC |
 | m5 | MINOR | Würth RGB 27 mA (worst tolerance) is allowed only to ~55 °C ambient | **MITIGATED.** Firmware derates from 45 °C board temperature (5 % at 58 °C), and the LM75B thermostat cuts the driver at 60 °C. Single-colour G/B run at 12.4 mA |
 | m6 | MINOR | TLC RESET hard-tied to VLED: a brown-out between 0.2 and 2.5 V can leave the driver undefined | **FIXED.** RESET is now driven by the LM75B OS (thermostat) with R2 10 k pull-up. Firmware re-initialises on any MODE1 mismatch. After 4 failed inits it power-cycles the LED board through Q4 |
@@ -45,13 +45,13 @@ stated) · **ACCEPTED** (known limitation, documented) · **VERIFY** (only the p
 |---|---|---|---|
 | B-1 | BLOCKER | After an empty-sleep reset the LM75B stayed in shutdown: derating silently frozen | **FIXED.** Firmware patch, and now the LED board is fully power-cycled by Q4 anyway. The LM75B is reconfigured at every init. A frozen reading under load is detected (`T_FROZEN_MS`) and the cap drops to 110 mA |
 | B-2 | BLOCKER | M2 screw heads on the PCB back face press into the pouch | **FIXED.** Pack stack gives 1.6 mm between the PCB bottom and the pouch top (pan head 1.3 mm), plus 0.6 mm swell space. Handoff 05: Kapton over the pouch; J4 not populated (pads only) |
-| B-3 | BLOCKER | J2 face 0.5 mm from the board edge: the PH plug cannot fit, battery leads pinched | **FIXED.** J2 rotated so the plug lies flat on the board (keep-out under it). The leads drop through a 3.0 × 2.8 mm slot to the cell behind the PCB |
+| B-3 | BLOCKER | J2 face 0.5 mm from the board edge: the PH plug cannot fit, battery leads pinched | **FIXED.** J2 rotated so the plug lies flat on the board (keep-out under it). The leads drop through a slot to the cell behind the PCB. *Round 2 (R2-D1): the slot is now 6.4 × 5.0 mm so the pre-fitted plug passes* |
 | M-1 | MAJOR | One I²C bus + cable for sensor and driver; no watchdog; a hang latches LEDs on without thermal control | **FIXED.** Hardware thermostat (LM75B OS → TLC RESET, Tos 60 / Thyst 52 °C) works with no MCU or bus. A 2 s WDT, I²C bus recovery, MODE1 check every 1 s, and a 110 mA cap without a trusted sensor |
 | M-2 | MAJOR | Derating 50/65/75 °C let the PLA skirt (the board clamp) sit at its HDT | **FIXED.** Derating 45/52/58 °C. A 0.6 mm PETG clamp ring (`moon_ring`) keeps the PLA off the board |
 | M-3 | MAJOR | Empty sleep left the TLC powered: cell drained to PCM cut-off | **FIXED** (Q4, as M2) |
 | M-4 | MAJOR | No charge temperature qualification (no NTC, no timer) | **MITIGATED** (see m4): 0.21 C charge, charger isolated from the pouch, user note "charge at room temperature". **MATT** for v0.2 (NTC charger + a 10 k NTC cell) |
 | M-5 | MAJOR | No VBUS over-voltage protection | **MITIGATED** (see m3): the PTC + TVS combination trips on a sustained fault. A real OVP (e.g. TPS2595) is a v0.2 option |
-| M-6 | MAJOR | No over-current protection on USB→D3→VSYS→cable | **MITIGATED.** F1 PTC (0.75 A hold, 1.5 A trip) limits the USB side. Battery side: the cell PCM (2–3 A, µs short-circuit cut) is the backstop. The neck cable is protected mechanically (M-7) |
+| M-6 | MAJOR | No over-current protection on USB→D3→VSYS→cable | **MITIGATED.** F1 PTC (0.75 A hold, 1.5 A trip; 1.1 A / 2.2 A since round 2) limits the USB side. Battery side: the cell PCM (2–3 A, µs short-circuit cut) is the backstop. The neck cable is protected mechanically (M-7) |
 | M-7 | MAJOR | No abrasion protection or strain relief for the cable in the neck, at the LED pads or at the JST-SH | **FIXED (process).** Handoff 05: PTFE/silicone sleeve through the gooseneck, heat-shrink over the thread ends, a glue fillet over the LED-board pads, and a cable-tie anchor before the JST-SH |
 | m-1 | MINOR | Reversed cell with USB present not blocked | **ACCEPTED** (as electrical m2) |
 | m-2 | MINOR | USB unplug brown-out | **FIXED** (R5 10 k) |
@@ -122,6 +122,7 @@ stated) · **ACCEPTED** (known limitation, documented) · **VERIFY** (only the p
 
 - `python3 hardware/build.py main-board` and `led-board`: ERC 0 / DRC 0 errors / 0 unconnected / 0 schematic parity
   (silk warnings only, listed in the fab notes).
-- `pio test -e native`: 25/25 pass. `pio run`: attiny3216 and attiny3216_debug build, project code warning-free.
+- `pio test -e native`: 25/25 pass (29/29 after round 2). `pio run`: attiny3216 and attiny3216_debug build, project code warning-free.
 - `python3 -m pytest tests`: board map, pins, REXT ↔ `I_CHANNEL_MA`, LED group counts all consistent.
 - `python cad/tools/export_print.py`: all 10 parts PASS the 3dprint checks and are exported to `print/`.
+- Round 2 re-checked these fixes and found the problems they introduced: see [round2.md](round2.md).

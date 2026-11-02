@@ -37,7 +37,10 @@ LUG_SLOT_R = LUG_R_OUT + 0.25                   # bayonet slot / groove radius
 CUP_R_OUT = LUG_SLOT_R + CUP_WALL               # outer radius of the cup
 POCKET_R = BOARD_R + FIT_PCB                    # LED board pocket
 BOARD_LEDGE_IN_R = COMPONENT_R_MAX + 0.2        # ledge under the board edge band (clear of bottom parts)
-UNDER_BOARD_DEPTH = 2.2                         # room for bottom-side parts (TSSOP/0805 <= 1.3 mm) + wires
+UNDER_BOARD_DEPTH = 4.5                         # nut top -> board underside: bottom parts (<= 1.45 mm) + the four
+                                                # wires leaving the gooseneck bore and turning to the pads (round2 R2-D3)
+POCKET_DEPTH = 0.88                             # board top stands 0.12 proud of the step: the ring always bears on
+                                                # the board, even for a 0.9 mm board (round2 R2-D15)
 NUT_AF = 14.0                                   # M10x1 lamp-thread hex nut across flats (VERIFY with the gooseneck kit)
 NUT_T = 3.0                                     # nut thickness (VERIFY)
 NECK_THREAD_D = 10.0                            # gooseneck end thread (M10x1, VERIFY)

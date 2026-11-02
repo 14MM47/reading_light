@@ -14,7 +14,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "cad" / "tools"))
 from pipeline import build, load_module  # noqa: E402
 
-PARTS = ["moon_shell", "moon_base", "moon_ring", "pack_front", "pack_back", "pack_clip", "button_caps",
+PARTS = ["moon_shell", "moon_base", "moon_ring", "pack_front", "pack_back", "pack_clip", "button_caps", "jig_led_board",
          "coupon_fit", "coupon_bayonet", "coupon_litho_wedge"]
 QTY = {"button_caps": "1 plate (3 caps)"}
 

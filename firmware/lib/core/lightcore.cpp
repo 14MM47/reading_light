@@ -5,6 +5,18 @@
 
 const uint8_t GROUP_LEDS[G_COUNT] = {4, 4, 2, 2, 2};
 
+// CG = (1+HC)(1+CC/64)/4 * 3^(CM-1): 0x7F -> 0.3307, 0xBF -> 0.4961, 0xFF -> 0.9922
+const uint8_t CG_CODE[CG_STEP_COUNT] = {0x7F, 0xBF, 0xFF};
+const float CG_GAIN[CG_STEP_COUNT] = {0.3307f, 0.4961f, 0.9922f};
+
+uint8_t cg_select(float mx, uint8_t cur) {
+    // compare in drive units (fraction of full scale), with a hair of tolerance so an exact step (e.g. 0.5) fits
+    uint8_t k = 0;
+    while (k < CG_STEP_COUNT - 1 && CG_GAIN[k] / CG_FULL * 1.0005f < mx) k++;
+    if (cur < CG_STEP_COUNT && k < cur && mx > 0.8f * CG_GAIN[k] / CG_FULL) k = cur;   // not far enough below: stay
+    return k;
+}
+
 #define SAVED_MAGIC 0xA5
 #define SAVED_VERSION 1
 
@@ -163,15 +175,20 @@ void core_temperature(core_t *c, bool ok, float temp_c, uint32_t now) {
         return;
     }
     // trusted = answering, in range, and not frozen while the LEDs are working hard (thermal review: a stuck or
-    // stale reading must not unlock the 200 mA cap)
+    // stale reading must not unlock the 200 mA cap). The frozen timer runs from the later of "reading last changed"
+    // and "load started", so a reading that sat still while the lamp was dim is not condemned the moment it brightens
+    bool loaded = total_current_ma(c->drive) > 50.0f;
+    if (!loaded) c->load_since = 0;
+    else if (!c->load_since) c->load_since = now ? now : 1;
+    uint32_t still_since = (loaded && (int32_t)(c->load_since - c->t_changed_at) > 0) ? c->load_since : c->t_changed_at;
+    bool frozen = loaded && (uint32_t)(now - still_since) > T_FROZEN_MS;
     bool fresh = (uint32_t)(now - c->t_last_ok) <= 3000;
-    bool frozen = total_current_ma(c->drive) > 50.0f && (uint32_t)(now - c->t_changed_at) > T_FROZEN_MS;
     bool trusted = c->t_valid && fresh && !frozen;
     float icap = trusted ? I_CAP_MA : I_CAP_UNTRUSTED_MA;
     if (trusted != c->t_trusted || icap != c->i_cap) {
         c->t_trusted = trusted;
         c->i_cap = icap;
-        mode_targets(c->mode, c->level[c->mode], limits(c), c->i_cap, c->target);
+        retarget(c, now);              // fade to the new cap, never a step (round2 R2-F2)
     }
     if (target < c->t_cap_target - 0.01f || target > c->t_cap_target + 0.01f) {
         c->t_cap_target = target;

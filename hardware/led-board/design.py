@@ -26,7 +26,7 @@ CX, CY, R_BOARD = 50.0, 50.0, 13.0
 RING_R = 8.0
 
 LIB = {"LEDDRV": "reading_light:TLC59116IPW", "TEMP": "reading_light:LM75BDP", "LED_WW": "Device:LED",
-       "LED_CW": "Device:LED", "LED_RGB": "Device:LED_ABRG", "R_750": "Device:R", "R_10K": "Device:R",
+       "LED_CW": "Device:LED", "LED_RGB": "Device:LED_ABRG", "R_750": "Device:R", "R_10K": "Device:R", "R_2K4": "Device:R",
        "C_100N": "Device:C", "C_10U": "Device:C", "C_1U": "Device:C"}
 
 
@@ -129,7 +129,9 @@ def parts():
         # TLC59116 in reset, so the LEDs go dark even if the MCU or the I2C bus has failed (review M-1)
         P("U2", "TEMP", {"8": "VLED", "4": "GND", "1": "SDA", "2": "SCL", "3": "RESET_N", "5": "GND", "6": "GND",
                          "7": "GND"}, (190, 160, 0), value="LM75BDP"),
-        P("R2", "R_10K", {"1": "VLED", "2": "RESET_N"}, (45, 145, 0)),
+        # 2.4 k, not 10 k: a stiffer RESET_N node near the metal neck (round2 R2-E5; a filter cap did not route on
+        # this 26 mm board). OS sinks 1.75 mA only while asserted (> 60 C): ~0.7 mW, negligible self-heating
+        P("R2", "R_2K4", {"1": "VLED", "2": "RESET_N"}, (45, 145, 0)),
         P("C3", "C_100N", {"1": "VLED", "2": "GND"}, (210, 145, 0)),
         Part("J1", "Connector_Generic:Conn_01x04", "MOON CABLE", "reading_light:LED_WirePads_1x04_P2.00mm",
              {"1": "GND", "2": "VLED", "3": "SDA", "4": "SCL"}, sch=(270, 160, 180),
@@ -158,9 +160,9 @@ def _circle(r, n=72):
 
 OUTLINE = ("circle", CX, CY, R_BOARD)
 BOARD_THICKNESS = 1.0   # mm: keeps the LED plane low in the moon base (optics stack, FAB_NOTES)
-RULES = {"clearance": 0.15, "track": 0.2, "track_min": 0.15, "via": 0.5, "drill": 0.25, "edge_clear": 1.0,
+RULES = {"clearance": 0.15, "track": 0.2, "track_min": 0.15, "via": 0.6, "drill": 0.3, "edge_clear": 1.0,
          "annular_min": 0.125, "hole_to_hole": 0.5}
-NETCLASSES = [dict(name="Power", track=0.4, clearance=0.15, via=0.5, drill=0.25, nets=["VLED"])]
+NETCLASSES = [dict(name="Power", track=0.4, clearance=0.15, via=0.6, drill=0.3, nets=["VLED"])]
 ROUTE_GRID = 0.05
 ROUTE_OPTS = {"layer_cost": (3.0, 1.0), "via_cost_mm": 0.5}   # keep the LED face (VLED pour) intact
 
@@ -201,7 +203,13 @@ ZONES = [dict(net="GND", layer="B", pts=_circle(R_BOARD - 0.2), clearance=0.2, m
 SILK = [dict(s=t, x=CX + 2.0 + 3.0 - 2.0 * i, y=CY - 6.9, size=0.8, thick=0.13, layer="B.SilkS")
         for i, t in enumerate("GVDC")] + \
        [dict(s="MOON LED v0.1", x=CX - 2.5, y=CY + 6.4, size=0.8, thick=0.13, layer="B.SilkS"),
-        dict(s="D=SDA C=SCL", x=CX - 2.5, y=CY + 7.8, size=0.8, thick=0.13, layer="B.SilkS")]
+        dict(s="D=SDA C=SCL", x=CX - 2.5, y=CY + 7.8, size=0.8, thick=0.13, layer="B.SilkS"),
+        dict(s="2026-11", x=CX - 2.5, y=CY + 9.2, size=0.8, thick=0.13, layer="B.SilkS")] + \
+       [dict(s="W" if grp == "WW" else "C",   # W = 2700 K, C = 5000 K beside each white LED (round2 R2-D10)
+             x=round(CX + 10.7 * math.cos(math.radians(ang + 14)), 3),
+             y=round(CY - 10.7 * math.sin(math.radians(ang + 14)), 3), size=0.8, thick=0.13, layer="F.SilkS")
+        for _ref, grp, ang in WHITE]
+SILK_R_MAX = 11.8            # silk stays inside the part-free radius (the r 12-13 band is clamped by the moon ring)
 PAD_MAP = {}
 
 FAB_NOTES = """# led-board v0.1 - fabrication notes (paste into the fab's order form)
@@ -209,8 +217,12 @@ FAB_NOTES = """# led-board v0.1 - fabrication notes (paste into the fab's order 
 - 2 layers, FR4, **1.0 mm**, 1 oz outer copper, round **26.0 mm** diameter
 - Surface finish: **ENIG** (flat pads for the 2835 LEDs and TSSOP-28)
 - Solder mask **WHITE** both sides (the top face is the reflector inside the moon), silkscreen black
-- Min track / space 0.20 / 0.15 mm; min via 0.5 / 0.25 mm (drill); no blind/buried vias
-- Quantity 5. Stencils: top AND bottom (frameless)
-- Assembly (optional): LEDs (D1-D10) on TOP; U1 TLC59116, U2 LM75BDP, R1, C1-C3 on BOTTOM. J1 = 4 solder pads for the cable
+- Min track / space 0.20 / 0.15 mm (design rule; narrowest gap on the board ~0.19 mm); vias 0.6 / 0.3 mm (drill),
+  min hole 0.3 mm; no blind/buried vias
+- Quantity 5. Stencils: top AND bottom (frameless, 0.12 mm; both on one foil if cheaper)
+- Small round board: please leave no breakaway-tab nubs on the edge (it sits in a 26.4 mm pocket), or we sand them
+- Silk: "W" = 2700 K and "C" = 5000 K next to each white LED; RGB LEDs: pad 1 ("1") = common anode, the package's
+  polarity mark (pin 3, red cathode) goes on the silk chamfer
+- Assembly (optional): LEDs (D1-D10) on TOP; U1 TLC59116, U2 LM75BDP, R1, R2, C1-C3 on BOTTOM. J1 = 4 solder pads for the cable
   (not a component). Two-sided assembly costs extra; or assemble the bottom only and hand-fit the ten LEDs.
 """

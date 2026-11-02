@@ -3557,7 +3557,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "0.75A PTC"
+		(property "Value" "1.1A PTC"
 			(at 67.04 55.448 0)
 			(effects
 				(font
@@ -3584,7 +3584,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Resettable fuse 0.75 A hold / 1.5 A trip, 13.2 V, 1812 (VBUS: trips on TVS conduction or a short in the neck)"
+		(property "Description" "Resettable fuse 1.1 A hold / 2.2 A trip, 16 V, 0.06-0.20 Ohm, 1812 (VBUS: limits a short in the neck cable on USB; 0.75 A part had too little hold margin when warm, round2 R2-E3)"
 			(at 62.23 54.61 0)
 			(effects
 				(font
@@ -3593,7 +3593,7 @@
 				(hide yes)
 			)
 		)
-		(property "MPN" "MF-MSMF075-2"
+		(property "MPN" "MF-MSMF110/16X-2"
 			(at 62.23 54.61 0)
 			(effects
 				(font
@@ -8503,6 +8503,111 @@
 		(uuid "a901e19d-45e2-5abf-a994-d38896c69b60")
 	)
 	(symbol
+		(lib_id "Connector:TestPoint")
+		(at 201.93 250.19 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom no)
+		(on_board yes)
+		(dnp no)
+		(uuid "a531033c-15d8-5908-918b-4988d3fd9c95")
+		(property "Reference" "TP7"
+			(at 202.93 249.69 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "VLED"
+			(at 202.93 251.79 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "TestPoint:TestPoint_Pad_D1.5mm"
+			(at 201.93 250.19 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 201.93 250.19 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Test pad"
+			(at 201.93 250.19 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MPN" "-"
+			(at 201.93 250.19 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Farnell" ""
+			(at 201.93 250.19 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "628df681-9d6c-50e5-871a-8b2df3546021")
+		)
+		(instances
+			(project "main-board"
+				(path "/c35f4bb0-442e-51c3-8fbc-1b2558b7604c"
+					(reference "TP7")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(wire
+		(pts
+			(xy 201.93 250.19)
+			(xy 201.93 252.73)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "41492337-d337-5265-9256-d190152c212e")
+	)
+	(label "VLED"
+		(at 201.93 252.73 270)
+		(effects
+			(font
+				(size 1 1)
+			)
+			(justify right bottom)
+		)
+		(uuid "1f934d1a-1104-5c44-9c4d-16c0953f17ed")
+	)
+	(symbol
 		(lib_id "Switch:SW_Push")
 		(at 240.03 180.34 0)
 		(unit 1)
@@ -9026,7 +9131,7 @@
 		)
 		(uuid "233f2d8c-bcdd-5919-b74c-88b9a52a1393")
 	)
-	(label "LED_EN_N"
+	(label "Q4_G"
 		(at 271.78 240.03 180)
 		(effects
 			(font
@@ -9206,7 +9311,7 @@
 		)
 		(uuid "07513f3c-85e7-5acd-ba57-88961209c27c")
 	)
-	(label "LED_EN_N"
+	(label "Q4_G"
 		(at 265.43 251.46 270)
 		(effects
 			(font
@@ -9215,6 +9320,282 @@
 			(justify right bottom)
 		)
 		(uuid "e5209547-f8ca-5774-8071-a090728f7466")
+	)
+	(symbol
+		(lib_id "Device:R")
+		(at 265.43 229.87 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "43d409ba-fe15-58d8-9f56-90b77c6431b0")
+		(property "Reference" "R13"
+			(at 267.446 225.56 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "10k"
+			(at 267.446 227.66 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "Resistor_SMD:R_0603_1608Metric"
+			(at 265.43 229.87 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 265.43 229.87 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Resistor 10 kOhm 1% 0603"
+			(at 265.43 229.87 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MPN" "MCWR06X1002FTL"
+			(at 265.43 229.87 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Manufacturer" "Multicomp Pro"
+			(at 265.43 229.87 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Farnell" "2447230"
+			(at 265.43 229.87 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "d2bc0354-2360-5fbd-905f-09b529726080")
+		)
+		(pin "2"
+			(uuid "c2ee7cf4-d51d-5ee5-b4bb-b3b3e46e1014")
+		)
+		(instances
+			(project "main-board"
+				(path "/c35f4bb0-442e-51c3-8fbc-1b2558b7604c"
+					(reference "R13")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(wire
+		(pts
+			(xy 265.43 226.06)
+			(xy 265.43 223.52)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "e263b859-0610-551d-83e3-6a1cfbcaa1a2")
+	)
+	(label "LED_EN_N"
+		(at 265.43 223.52 90)
+		(effects
+			(font
+				(size 1 1)
+			)
+			(justify left bottom)
+		)
+		(uuid "155646d7-21bd-563b-852b-d19ddabe46fb")
+	)
+	(wire
+		(pts
+			(xy 265.43 233.68)
+			(xy 265.43 236.22)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "8c1fd6d6-29e9-543e-ac17-fd3abf6934f4")
+	)
+	(label "Q4_G"
+		(at 265.43 236.22 270)
+		(effects
+			(font
+				(size 1 1)
+			)
+			(justify right bottom)
+		)
+		(uuid "efdf299f-1ceb-52a8-9c6e-713294107257")
+	)
+	(symbol
+		(lib_id "Device:C")
+		(at 294.64 229.87 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "d0db7779-8171-5b9f-8b2d-8ae6daedd915")
+		(property "Reference" "C8"
+			(at 295.64 225.56 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "100n"
+			(at 295.64 227.66 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "Capacitor_SMD:C_0603_1608Metric"
+			(at 294.64 229.87 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 294.64 229.87 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "MLCC 100 nF 50 V X7R 0603"
+			(at 294.64 229.87 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MPN" "MC0603B104K500CT"
+			(at 294.64 229.87 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Manufacturer" "Multicomp Pro"
+			(at 294.64 229.87 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Farnell" "1759122"
+			(at 294.64 229.87 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "e2547c14-a5b9-57c5-99b7-eba43f8d78ec")
+		)
+		(pin "2"
+			(uuid "a9839ee7-22fa-548e-b076-5b168d24fce4")
+		)
+		(instances
+			(project "main-board"
+				(path "/c35f4bb0-442e-51c3-8fbc-1b2558b7604c"
+					(reference "C8")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(wire
+		(pts
+			(xy 294.64 226.06)
+			(xy 294.64 223.52)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "047050b1-c6fb-52d0-8e09-12ab8cd980ac")
+	)
+	(label "Q4_G"
+		(at 294.64 223.52 90)
+		(effects
+			(font
+				(size 1 1)
+			)
+			(justify left bottom)
+		)
+		(uuid "9c24014e-a03c-5445-8eed-88dc4431e136")
+	)
+	(wire
+		(pts
+			(xy 294.64 233.68)
+			(xy 294.64 236.22)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "c163641e-61a7-5000-9dd9-c34cb0a93a8c")
+	)
+	(label "VLED"
+		(at 294.64 236.22 270)
+		(effects
+			(font
+				(size 1 1)
+			)
+			(justify right bottom)
+		)
+		(uuid "f8a2b16c-1854-5218-80bb-ca9e5241a657")
 	)
 	(symbol
 		(lib_id "Device:R")

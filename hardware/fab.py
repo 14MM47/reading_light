@@ -44,6 +44,8 @@ def export(board, d, parts):
     zp = out / f"{board}-v{rev}-gerbers.zip"
     with zipfile.ZipFile(zp, "w", zipfile.ZIP_DEFLATED) as z:
         for f in sorted((out / "gerbers").iterdir()):
+            if f.name.endswith("-drl_map.gbr") or f.stat().st_size < 600 and not _has_features(f):
+                continue                       # drill maps and empty layers confuse fab viewers (round2 R2-D20)
             z.write(f, f.name)
     # placement
     raw = out / "pos_raw.csv"
@@ -52,6 +54,8 @@ def export(board, d, parts):
     rows = list(csv.DictReader(raw.open()))
     raw.unlink()
     byref = {p.ref: p for p in parts}
+    # placement only for parts that are bought and placed (not the LED board's J1 cable pads, round2 R2-D9)
+    rows = [r for r in rows if r["Ref"] in byref and byref[r["Ref"]].in_bom and not byref[r["Ref"]].dnp]
     smd_refs = []
     with (out / "cpl_pcbway.csv").open("w", newline="") as f:
         w = csv.writer(f)
@@ -78,9 +82,10 @@ def export(board, d, parts):
         for i, ((mpn, val, fp), ps) in enumerate(groups.items(), 1):
             refs = sorted((p.ref for p in ps), key=_natkey)
             tht = any(fp.startswith(x) for x in ("Connector_PinHeader",))
+            kind = "THT" if tht else ("SMD + THT (shell slots)" if "USB_C" in fp else "SMD")
             w.writerow([i, ",".join(refs), len(ps), ps[0].fields.get("Manufacturer", ""), mpn,
                         f"{val} - {ps[0].fields.get('Description', '')}", fp.split(':')[-1],
-                        "THT" if tht else "SMD", _note(ps[0]), ps[0].fields.get("Farnell", "")])
+                        kind, _note(ps[0]), ps[0].fields.get("Farnell", "")])
     with (out / "bom_jlcpcb.csv").open("w", newline="") as f:
         w = csv.writer(f)
         w.writerow(["Comment", "Designator", "Footprint", "LCSC Part #", "Manufacturer Part Number"])
@@ -89,9 +94,9 @@ def export(board, d, parts):
                         ps[0].fields.get("LCSC", ""), mpn])
     sh(["kicad-cli", "sch", "export", "pdf", "-o", out / "schematic.pdf", sch])
     sh(["kicad-cli", "pcb", "export", "pdf", "--layers", "F.Fab,F.Silkscreen,Edge.Cuts", "--include-border-title",
-        "-o", out / "assembly_top.pdf", pcb])
+        "--crossout-DNP-footprints-on-fab-layers", "-o", out / "assembly_top.pdf", pcb])
     sh(["kicad-cli", "pcb", "export", "pdf", "--layers", "B.Fab,B.Silkscreen,Edge.Cuts", "--mirror",
-        "--include-border-title", "-o", out / "assembly_bottom.pdf", pcb])
+        "--include-border-title", "--crossout-DNP-footprints-on-fab-layers", "-o", out / "assembly_bottom.pdf", pcb])
     try:
         sh(["kicad-cli", "pcb", "export", "step", "--subst-models", "--force", "-o", out / f"{board}.step", pcb])
     except RuntimeError as e:
@@ -107,12 +112,28 @@ def export(board, d, parts):
 
 
 def _note(p):
+    """Per-part-type polarity notes for the assembler (round2 R2-D4 / R2-D9)."""
+    fp = p.footprint
     n = []
-    if p.lib_id.startswith("Device:LED") or "LED" in p.lib_id:
-        n.append("polarity: pad 1 = cathode (large pad on 2835)")
-    if p.ref.startswith(("U", "Q", "D")):
+    if "2835" in fp:
+        n.append("polarity: pad 1 = cathode (the large pad); cathode mark on silk")
+    elif "Wuerth" in fp or "RGB" in fp or "ABRG" in p.lib_id:
+        n.append("polarity: pad 1 (silk '1') = common anode; the package's polarity mark (chamfer/dot) is pin 3, "
+                 "red cathode, and goes on the silk chamfer")
+    elif "LED" in fp or p.lib_id.startswith("Device:LED"):
+        n.append("polarity: cathode mark to pad 1 (K)")
+    elif p.lib_id.startswith(("Device:D", "Device:D_")):
+        n.append("polarity: cathode bar to the silk bar (pad 1 = K)")
+    if p.ref.startswith(("U", "Q")):
         n.append("check pin-1 / orientation in preview")
     return "; ".join(n)
+
+
+def _has_features(path):
+    """True if a Gerber/Excellon file contains any flash, draw or hit (not just a header)."""
+    t = path.read_text(errors="ignore")
+    return any(tok in t for tok in ("D03*", "D01*", "D3*", "D1*")) or any(
+        line[:1] in ("X", "Y") for line in t.splitlines())
 
 
 def _natkey(s):

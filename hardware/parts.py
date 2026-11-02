@@ -54,8 +54,9 @@ CAT = {c.key: c for c in [
     Cat("RECT", "S1J", "S1J-E3/61T", "Vishay", "", "Diode_SMD:D_SMA",
         "Silicon rectifier 1 A 600 V, SMA (DO-214AC); Vf ~0.85 V @ 0.3 A; leakage nA at 4 V reverse (USB -> VSYS OR-ing)",
         "https://www.vishay.com/docs/88711/s1a.pdf", 0.12, moq=5),
-    Cat("PTC", "0.75A PTC", "MF-MSMF075-2", "Bourns", "", "Fuse:Fuse_1812_4532Metric",
-        "Resettable fuse 0.75 A hold / 1.5 A trip, 13.2 V, 1812 (VBUS: trips on TVS conduction or a short in the neck)",
+    Cat("PTC", "1.1A PTC", "MF-MSMF110/16X-2", "Bourns", "", "Fuse:Fuse_1812_4532Metric",
+        "Resettable fuse 1.1 A hold / 2.2 A trip, 16 V, 0.06-0.20 Ohm, 1812 (VBUS: limits a short in the neck cable on USB; "
+        "0.75 A part had too little hold margin when warm, round2 R2-E3)",
         "https://www.bourns.com/docs/Product-Datasheets/mf-msmf.pdf", 0.40, moq=5),
     Cat("TVS", "SMF5.0A", "SMF5.0A", "Littelfuse", "2691565", "Diode_SMD:D_SOD-123F",
         "TVS unidirectional 5.0 V standoff, 200 W, SOD-123FL",
@@ -90,7 +91,7 @@ CAT = {c.key: c for c in [
         "JST SH 4-pin side-entry SMD header (Qwiic pinout, moon cable)", "", 0.45),
     # ---------------------------------------------------------- passives
     Cat("R_5K1", "5.1k", "MCWR06X5101FTL", "Multicomp Pro", "", R0603, "Resistor 5.1 kOhm 1% 0603", unit_gbp=0.01, moq=50),
-    Cat("R_2K4", "2.4k", "MCWR06X2401FTL", "Multicomp Pro", "", R0603, "Resistor 2.4 kOhm 1% 0603 (charge current)", unit_gbp=0.01, moq=50),
+    Cat("R_2K4", "2.4k", "MCWR06X2401FTL", "Multicomp Pro", "", R0603, "Resistor 2.4 kOhm 1% 0603 (LED board RESET_N pull-up)", unit_gbp=0.01, moq=50),
     Cat("R_1K", "1k", "MCWR06X1001FTL", "Multicomp Pro", "", R0603, "Resistor 1 kOhm 1% 0603", unit_gbp=0.01, moq=50),
     Cat("R_10K", "10k", "MCWR06X1002FTL", "Multicomp Pro", "2447230", R0603, "Resistor 10 kOhm 1% 0603", unit_gbp=0.01, moq=50),
     Cat("R_100K", "100k", "MCWR06X1003FTL", "Multicomp Pro", "", R0603, "Resistor 100 kOhm 1% 0603", unit_gbp=0.01, moq=50),

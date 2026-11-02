@@ -39,7 +39,7 @@ Statuses follow the 3dprint convention: **GIVEN** (Matt said it), **ASSUMED** (C
 ## 2. Architecture
 
 ```
- USB-C (power only, 5.1k CC) ─PTC 0.75 A─TVS─┬─> MCP73831 charger 256 mA ─> BAT ─[Q3 rev-batt P-FET]─ LiPo 1200 mAh (PCM)
+ USB-C (power only, 5.1k CC) ─PTC 1.1 A──TVS─┬─> MCP73831 charger 256 mA ─> BAT ─[Q3 rev-batt P-FET]─ LiPo 1200 mAh (PCM)
                                              └─> D3 S1J rectifier ─┐
  BAT ─[Q1 load-share P-FET, gate = VBUS, R5 10k]───────────────────┴─> VSYS_RAW ─[Q2 P-FET, slide switch]─> VSYS 3.3–4.2 V
  VSYS ─> ATtiny3216 (buttons, I2C master, VDD measurement, PB2 → Q4)
@@ -113,6 +113,17 @@ Night modes go to level 15 (still < 1 lux at 30 cm).
   - Pack: J2 relocated with a lead slot (B-3); 1.6 mm screw-head gap over the pouch (B-2).
   - LED board 1.0 mm in the board file (N9).
   - Router fixed to keep the whole track body out of rule areas.
+- 2026-11-02 — Verification round 2 (2 reviewers; docs/verification/round2.md). Changes adopted:
+  - Battery-lead slot 6.4 × 5.0 mm, so the pre-fitted plug passes.
+  - Q4 soft turn-on (R13 10 k, C8 100 nF gate–drain).
+  - F1 is now MF-MSMF110/16X; TP7 VLED test pad added.
+  - LED-board RESET pull-up 2.4 k.
+  - W/C silk letters at the white LEDs; values and DNP cross-outs on the assembly drawings.
+  - Firmware: `cg_select()` moved into the host-tested core; faded cap changes; frozen timer from load start;
+    SWRST and VLED bleed on power-cycle; LM75B read-back.
+  - CAD: back-plate locators inside the cavity; 4.5 mm under the LED board; 0.88 mm board pocket; J2 headroom
+    pocket; switch finger recess; larger USB-C window; button flange Ø9.0.
+  - New `jig_led_board`; cross-part claims added.
 - 2026-11-02 — `fab/*/v0.1/` committed before ordering (deviation from the pcb repo's "commit fab on order"
   rule): Matt asked for files he can take straight to the fab. The order reference and tag follow at order time
   (handoff 01).
@@ -129,7 +140,7 @@ See `docs/verification/VERIFY.md` (measurements that only the prototype can sett
 |---|---|---|
 | Requirements & research | this file, docs/research | done |
 | Electronics | hardware/*, ERC 0 / DRC 0 errors / 0 unconnected / 0 parity; fab/*/v0.1 | done (v0.1) |
-| Firmware | firmware/, 25 host tests + AVR builds | done (v0.1), untested on hardware |
-| Mechanics | cad/parts (10 parts PASS), print/ STL + 3MF | done (v0.1) |
-| Verification rounds | docs/verification/round1.md, VERIFY.md | round 1 done, fixes applied and rebuilt |
+| Firmware | firmware/, 29 host tests + AVR builds | done (v0.1), untested on hardware |
+| Mechanics | cad/parts (11 parts PASS incl. the LED-board jig), print/ STL + 3MF | done (v0.1) |
+| Verification rounds | docs/verification/round1.md, round2.md, VERIFY.md | rounds 1 and 2 done, all fixes applied and rebuilt |
 | BOM/order, handoffs | bom/, docs/handoffs 01–06 | done |

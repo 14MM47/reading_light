@@ -5,13 +5,13 @@
       "Application": "Pcbnew",
       "Version": "9.0.9-9.0.9~ubuntu24.04.1"
     },
-    "CreationDate": "2026-11-02T18:14:31+00:00"
+    "CreationDate": "2026-11-02T18:57:16+00:00"
   },
   "GeneralSpecs": {
     "ProjectId": {
       "Name": "led-board",
       "GUID": "6c65642d-626f-4617-9264-2e6b69636164",
-      "Revision": "rev?"
+      "Revision": "0.1"
     },
     "Size": {
       "X": 26.1,
