@@ -1,0 +1,161 @@
+{
+    "$schema": "https://schemas.kicad.org/drc.v1.json",
+    "coordinate_units": "mm",
+    "date": "2026-11-02T16:59:47+0000",
+    "included_severities": [
+        "error",
+        "warning",
+        "exclusion"
+    ],
+    "kicad_version": "9.0.9",
+    "schematic_parity": [],
+    "source": "led-board.kicad_pcb",
+    "unconnected_items": [],
+    "violations": [
+        {
+            "description": "Silkscreen overlap",
+            "items": [
+                {
+                    "description": "Reference field of D10",
+                    "pos": {
+                        "x": 53.0,
+                        "y": 46.855
+                    },
+                    "uuid": "7f662ef7-7c1b-45fa-aaae-8f13f4de5d0a"
+                },
+                {
+                    "description": "Footprint text of D10 (1)",
+                    "pos": {
+                        "x": 52.3,
+                        "y": 47.0
+                    },
+                    "uuid": "c8cebd66-e8b3-4874-90cc-8e74a97459fa"
+                }
+            ],
+            "severity": "warning",
+            "type": "silk_overlap"
+        },
+        {
+            "description": "Silkscreen overlap",
+            "items": [
+                {
+                    "description": "Footprint text of D9 (1)",
+                    "pos": {
+                        "x": 46.3,
+                        "y": 47.0
+                    },
+                    "uuid": "cefcb8c4-9dee-4e3c-bcfa-9f4a22b59083"
+                },
+                {
+                    "description": "Reference field of D9",
+                    "pos": {
+                        "x": 47.0,
+                        "y": 46.855
+                    },
+                    "uuid": "fe944ff9-6581-4282-94fb-428f0719bfe8"
+                }
+            ],
+            "severity": "warning",
+            "type": "silk_overlap"
+        },
+        {
+            "description": "Silkscreen overlap",
+            "items": [
+                {
+                    "description": "Reference field of C1",
+                    "pos": {
+                        "x": 55.6,
+                        "y": 44.075
+                    },
+                    "uuid": "03a66636-27b4-4f9b-88fb-ba8b8d82be24"
+                },
+                {
+                    "description": "PCB text '1 GND 2 V 3 SDA 4 SCL' on B.Silkscreen",
+                    "pos": {
+                        "x": 50.0,
+                        "y": 44.2
+                    },
+                    "uuid": "b4b018e9-6d75-4657-b9d4-d1253f06b76f"
+                }
+            ],
+            "severity": "warning",
+            "type": "silk_overlap"
+        },
+        {
+            "description": "Silkscreen overlap",
+            "items": [
+                {
+                    "description": "Reference field of U1",
+                    "pos": {
+                        "x": 50.0,
+                        "y": 45.555
+                    },
+                    "uuid": "4c53a7eb-9029-4764-842d-61e6f9357643"
+                },
+                {
+                    "description": "PCB text 'MOON LED v0.1' on B.Silkscreen",
+                    "pos": {
+                        "x": 50.0,
+                        "y": 45.4
+                    },
+                    "uuid": "d1011ff6-9d29-487c-b151-e43d6ccf2349"
+                }
+            ],
+            "severity": "warning",
+            "type": "silk_overlap"
+        },
+        {
+            "description": "Silkscreen overlap",
+            "items": [
+                {
+                    "description": "Polygon of U1 on B.Silkscreen",
+                    "pos": {
+                        "x": 54.69,
+                        "y": 52.95
+                    },
+                    "uuid": "daaf726d-e8c9-415a-a7d0-3ca60a40db35"
+                },
+                {
+                    "description": "Reference field of R1",
+                    "pos": {
+                        "x": 55.4,
+                        "y": 53.475
+                    },
+                    "uuid": "e7a5a798-032d-4fc1-a194-f42a89b51738"
+                }
+            ],
+            "severity": "warning",
+            "type": "silk_overlap"
+        },
+        {
+            "description": "Silkscreen clipped by solder mask",
+            "items": [
+                {
+                    "description": "PCB text 'MOON LED v0.1' on B.Silkscreen",
+                    "pos": {
+                        "x": 50.0,
+                        "y": 45.4
+                    },
+                    "uuid": "d1011ff6-9d29-487c-b151-e43d6ccf2349"
+                }
+            ],
+            "severity": "warning",
+            "type": "silk_over_copper"
+        },
+        {
+            "description": "Text height out of range (board setup constraints silk text height min height 0.8000 mm; actual 0.6000 mm)",
+            "items": [
+                {
+                    "description": "PCB text '1 GND 2 V 3 SDA 4 SCL' on B.Silkscreen",
+                    "pos": {
+                        "x": 50.0,
+                        "y": 44.2
+                    },
+                    "uuid": "b4b018e9-6d75-4657-b9d4-d1253f06b76f"
+                }
+            ],
+            "severity": "warning",
+            "type": "text_height"
+        }
+    ]
+}

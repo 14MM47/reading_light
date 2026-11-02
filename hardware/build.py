@@ -1,0 +1,100 @@
+"""Build a board: schematic (+ERC), PCB (placement, routing, pours, +DRC with schematic parity), fab outputs.
+
+  python3 hardware/build.py main-board [--sch] [--pcb] [--fab]     (no flags = all)
+
+Uses KiCad 9 (pcbnew Python + kicad-cli). Outputs:
+  hardware/<board>/<board>.kicad_sch/.kicad_pcb/.kicad_pro, hardware/<board>/reports/{erc,drc}.json
+  fab/<board>/v<REV>/  gerbers+drill zip, bom.csv, cpl.csv (PCBWay + JLCPCB formats), schematic.pdf, step, renders
+"""
+from __future__ import annotations
+
+import argparse
+import csv
+import importlib.util
+import json
+import os
+import shutil
+import subprocess
+import sys
+import zipfile
+from datetime import date
+from pathlib import Path
+
+HW = Path(__file__).resolve().parent
+ROOT = HW.parent
+sys.path.insert(0, str(HW / "tools"))
+from kigen import symlib  # noqa: E402
+from kigen.schematic import Schematic  # noqa: E402
+
+symlib.EXTRA_LIBS["reading_light"] = str(HW / "lib" / "reading_light.kicad_sym")
+
+
+def load(board):
+    spec = importlib.util.spec_from_file_location(f"{board}_design", HW / board / "design.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def write_lib_tables(bdir: Path):
+    (bdir / "sym-lib-table").write_text(
+        '(sym_lib_table\n  (version 7)\n  (lib (name "reading_light")(type "KiCad")(uri "${KIPRJMOD}/../lib/reading_light.kicad_sym")'
+        '(options "")(descr "Moon reading light project symbols"))\n)\n')
+    (bdir / "fp-lib-table").write_text(
+        '(fp_lib_table\n  (version 7)\n  (lib (name "reading_light")(type "KiCad")(uri "${KIPRJMOD}/../lib/reading_light.pretty")'
+        '(options "")(descr "Moon reading light project footprints"))\n)\n')
+
+
+def run(cmd, **kw):
+    print("$", " ".join(str(c) for c in cmd), flush=True)
+    return subprocess.run(cmd, check=False, capture_output=True, text=True, **kw)
+
+
+def build_sch(board, d):
+    bdir = HW / board
+    s = Schematic(d.PROJECT, d.TITLE, d.REV, str(date.today()), paper=getattr(d, "PAPER", "A3"),
+                  company="14MM47 / reading_light")
+    s.comments = list(getattr(d, "COMMENTS", []))
+    for b in getattr(d, "BOXES", []):
+        s.box(*b)
+    for t, at in getattr(d, "NOTES", []):
+        s.text(t, at, size=2.0, bold=True)
+    parts = d.parts()
+    for p in parts:
+        s.add(p)
+    for net, at in d.PWR_FLAGS:
+        s.pwr_flag(net, at)
+    write_lib_tables(bdir)
+    sch = bdir / f"{d.PROJECT}.kicad_sch"
+    s.write(str(sch))
+    (bdir / "reports").mkdir(exist_ok=True)
+    r = run(["kicad-cli", "sch", "erc", "--format", "json", "--severity-all", "-o", str(bdir / "reports" / "erc.json"), str(sch)])
+    erc = json.loads((bdir / "reports" / "erc.json").read_text())
+    viol = [v for sh in erc["sheets"] for v in sh["violations"]]
+    for v in viol:
+        print(f"  ERC {v['severity']:<8} {v['type']}: {v['description']} {[i['description'] for i in v['items']]}")
+    print(f"ERC: {len(viol)} violations")
+    return s, parts, viol
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("board")
+    ap.add_argument("--sch", action="store_true")
+    ap.add_argument("--pcb", action="store_true")
+    ap.add_argument("--fab", action="store_true")
+    a = ap.parse_args()
+    allsteps = not (a.sch or a.pcb or a.fab)
+    d = load(a.board)
+    s, parts, erc = build_sch(a.board, d)
+    if a.pcb or a.fab or allsteps:
+        import layout  # noqa: E402  (hardware/layout.py, pcbnew-based)
+        layout.build_pcb(a.board, d, parts)
+    if a.fab or allsteps:
+        import fab  # noqa: E402
+        fab.export(a.board, d, parts)
+
+
+if __name__ == "__main__":
+    sys.path.insert(0, str(HW))
+    main()

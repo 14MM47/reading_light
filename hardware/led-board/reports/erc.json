@@ -1,0 +1,35 @@
+{
+    "$schema": "https://schemas.kicad.org/erc.v1.json",
+    "coordinate_units": "mm",
+    "date": "2026-11-02T16:59:18+0000",
+    "included_severities": [
+        "error",
+        "warning",
+        "exclusion"
+    ],
+    "kicad_version": "9.0.9",
+    "sheets": [
+        {
+            "path": "/",
+            "uuid_path": "/92c3cc34-9013-55c6-aad8-c6fc999e8c1c",
+            "violations": [
+                {
+                    "description": "Symbol 'LM75B' doesn't match copy in library 'Sensor_Temperature'",
+                    "items": [
+                        {
+                            "description": "Symbol U2 [LM75B]",
+                            "pos": {
+                                "x": 1.905,
+                                "y": 1.6002
+                            },
+                            "uuid": "6141008e-fcd2-5ddf-a98e-71dfaabc2232"
+                        }
+                    ],
+                    "severity": "warning",
+                    "type": "lib_symbol_mismatch"
+                }
+            ]
+        }
+    ],
+    "source": "led-board.kicad_sch"
+}

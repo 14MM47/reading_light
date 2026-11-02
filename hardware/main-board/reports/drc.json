@@ -1,0 +1,62 @@
+{
+    "$schema": "https://schemas.kicad.org/drc.v1.json",
+    "coordinate_units": "mm",
+    "date": "2026-11-02T16:48:07+0000",
+    "included_severities": [
+        "error",
+        "warning",
+        "exclusion"
+    ],
+    "kicad_version": "9.0.9",
+    "schematic_parity": [],
+    "source": "main-board.kicad_pcb",
+    "unconnected_items": [],
+    "violations": [
+        {
+            "description": "Silkscreen clipped by board edge",
+            "items": [
+                {
+                    "description": "Segment on Edge.Cuts",
+                    "pos": {
+                        "x": 35.0,
+                        "y": 2.0
+                    },
+                    "uuid": "9cc5f7f8-fd95-418d-81a8-226091af75a5"
+                },
+                {
+                    "description": "Segment of SW1 on F.Silkscreen",
+                    "pos": {
+                        "x": 34.58,
+                        "y": 29.4
+                    },
+                    "uuid": "77603b7d-e69a-48e6-aae7-d60f2cb9dfed"
+                }
+            ],
+            "severity": "warning",
+            "type": "silk_edge_clearance"
+        },
+        {
+            "description": "Silkscreen clipped by board edge",
+            "items": [
+                {
+                    "description": "Segment on Edge.Cuts",
+                    "pos": {
+                        "x": 35.0,
+                        "y": 2.0
+                    },
+                    "uuid": "9cc5f7f8-fd95-418d-81a8-226091af75a5"
+                },
+                {
+                    "description": "Segment of SW1 on F.Silkscreen",
+                    "pos": {
+                        "x": 35.87,
+                        "y": 28.1
+                    },
+                    "uuid": "2e4553bf-6e7c-4068-9211-2f530242e10b"
+                }
+            ],
+            "severity": "warning",
+            "type": "silk_edge_clearance"
+        }
+    ]
+}
