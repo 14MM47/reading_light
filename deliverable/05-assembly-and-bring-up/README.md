@@ -8,6 +8,7 @@ Instructions: **`handoff-05-assembly-bringup.pdf`** (about 3 h for the first lam
 | `drawings/*-zoomed.png` | The same, zoomed. Easiest to place parts from |
 | `schematics/` | Both schematics, for debugging during bring-up |
 | `images/lamp-assembly-render.png` | What it looks like assembled |
+| `images/fitment/` | How every part fits: exploded pack and head, sections through the pack (buttons, J2) and the head axis |
 | `BOM.csv` | What goes where |
 
 Things that are easy to get wrong (all covered in the handoff):

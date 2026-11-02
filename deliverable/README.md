@@ -1,7 +1,7 @@
 # Moon reading light v0.1: deliverable pack
 
 This folder holds everything needed to manufacture, print, flash, assemble and test the lamp, in build order. It is
-**generated** by `python3 tools/build_deliverable.py` from commit `67f9752`.
+**generated** by `python3 tools/build_deliverable.py` from commit `5374af2`.
 Don't edit it by hand: change the design, then re-run the generator. `MANIFEST.txt` lists every file with its
 SHA-256 and its source in the repo.
 
@@ -12,7 +12,7 @@ verification rounds; it has not been built or tested on hardware yet.
 
 | Step | Folder | What you do | Instructions |
 |---|---|---|---|
-| 0 | `00-overview/` | Read the plan, look at the renders, check the open decisions | `00-START-HERE.pdf`, `PLAN-…pdf` |
+| 0 | `00-overview/` | Read the plan, look at the renders and `fitment/` views, check the open decisions | `00-START-HERE.pdf`, `PLAN-…pdf` |
 | 1 | `01-pcb-manufacture/` | Upload each board's Gerber zip to PCBWay (or JLCPCB) with the specs in its `FAB_NOTES` | `handoff-01-pcb-order.pdf` |
 | 2 | `02-parts-order/` | Paste `farnell_quickpaste.txt` into Farnell's Quick Paste; buy the off-board items | `handoff-02-parts-order.pdf` |
 | 3 | `03-3d-printing/` | Print the coupons first, then the moon head, the pack and the jig | `handoff-03-printing.pdf` |
