@@ -9,8 +9,8 @@
 		(date "2026-11-02")
 		(rev "0.1")
 		(company "14MM47 / reading_light")
-		(comment 1 "Charge 417 mA (R3 2.4k). Slide switch is the only on/off (Matt). VSYS 3.3-4.2 V on battery, ~4.15 V on USB.")
-		(comment 2 "J3 carries VSYS (not 3.3 V) on the Qwiic pinout: never plug a 3.3 V-only Qwiic device into it.")
+		(comment 1 "Charge 256 mA (R3 3.9k; total USB draw <= ~0.55 A: use a >= 1 A USB-C charger). Slide switch is the only on/off (Matt).")
+		(comment 2 "J3 carries VLED (switched VSYS, not 3.3 V) on the Qwiic pinout: never plug a 3.3 V-only Qwiic device into it.")
 		(comment 3 "J2 polarity: + on pin 1 (silk). Q3 blocks a reversed battery; meter every pack before plugging in.")
 	)
 	(lib_symbols
@@ -463,6 +463,159 @@
 						)
 					)
 					(number "B5"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+			)
+			(embedded_fonts no)
+		)
+		(symbol "Device:Polyfuse"
+			(pin_numbers
+				(hide yes)
+			)
+			(pin_names
+				(offset 0)
+			)
+			(exclude_from_sim no)
+			(in_bom yes)
+			(on_board yes)
+			(property "Reference" "F"
+				(at -2.54 0 90)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Value" "Polyfuse"
+				(at 2.54 0 90)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Footprint" ""
+				(at 1.27 -5.08 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(justify left)
+					(hide yes)
+				)
+			)
+			(property "Datasheet" "~"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "Description" "Resettable fuse, polymeric positive temperature coefficient"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "ki_keywords" "resettable fuse PTC PPTC polyfuse polyswitch"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "ki_fp_filters" "*polyfuse* *PTC*"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(symbol "Polyfuse_0_1"
+				(polyline
+					(pts
+						(xy -1.524 2.54)
+						(xy -1.524 1.524)
+						(xy 1.524 -1.524)
+						(xy 1.524 -2.54)
+					)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(rectangle
+					(start -0.762 2.54)
+					(end 0.762 -2.54)
+					(stroke
+						(width 0.254)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 0 2.54)
+						(xy 0 -2.54)
+					)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+			)
+			(symbol "Polyfuse_1_1"
+				(pin passive line
+					(at 0 3.81 270)
+					(length 1.27)
+					(name "~"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "1"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin passive line
+					(at 0 -3.81 90)
+					(length 1.27)
+					(name "~"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "2"
 						(effects
 							(font
 								(size 1.27 1.27)
@@ -3334,7 +3487,7 @@
 		)
 		(uuid "2c60324d-60ca-5d43-b8d2-dc96383e4d72")
 	)
-	(label "VBUS"
+	(label "VBUS_IN"
 		(at 57.15 62.23 0)
 		(effects
 			(font
@@ -3385,6 +3538,144 @@
 			(justify left bottom)
 		)
 		(uuid "1cae91de-528f-5938-a2d4-daf192504a93")
+	)
+	(symbol
+		(lib_id "Device:Polyfuse")
+		(at 62.23 54.61 90)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "aaec4e3d-d9ba-5598-9e7b-757102f184dc")
+		(property "Reference" "F1"
+			(at 67.04 53.348 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "0.75A PTC"
+			(at 67.04 55.448 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "Fuse:Fuse_1812_4532Metric"
+			(at 62.23 54.61 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "https://www.bourns.com/docs/Product-Datasheets/mf-msmf.pdf"
+			(at 62.23 54.61 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Resettable fuse 0.75 A hold / 1.5 A trip, 13.2 V, 1812 (VBUS: trips on TVS conduction or a short in the neck)"
+			(at 62.23 54.61 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MPN" "MF-MSMF075-2"
+			(at 62.23 54.61 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Manufacturer" "Bourns"
+			(at 62.23 54.61 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Farnell" ""
+			(at 62.23 54.61 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "23a74ab7-cee8-5a67-8366-c25a17e2228d")
+		)
+		(pin "2"
+			(uuid "b3ed3200-5e8c-5907-90e7-c2023354b5fe")
+		)
+		(instances
+			(project "main-board"
+				(path "/c35f4bb0-442e-51c3-8fbc-1b2558b7604c"
+					(reference "F1")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(wire
+		(pts
+			(xy 58.42 54.61)
+			(xy 55.88 54.61)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "0c5b990e-45cc-53e9-8f84-ae1c23073673")
+	)
+	(label "VBUS_IN"
+		(at 55.88 54.61 180)
+		(effects
+			(font
+				(size 1 1)
+			)
+			(justify right bottom)
+		)
+		(uuid "e89870e7-1d4a-53eb-8e96-304df4f47541")
+	)
+	(wire
+		(pts
+			(xy 66.04 54.61)
+			(xy 68.58 54.61)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "65b0b351-13f7-5274-96b8-ba8886bea629")
+	)
+	(label "VBUS"
+		(at 68.58 54.61 0)
+		(effects
+			(font
+				(size 1 1)
+			)
+			(justify left bottom)
+		)
+		(uuid "7a7dcfc9-caf0-53f7-a93b-4668e8dde399")
 	)
 	(symbol
 		(lib_id "Device:R")
@@ -4166,7 +4457,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "2.4k"
+		(property "Value" "3.9k"
 			(at 130.286 98.12 0)
 			(effects
 				(font
@@ -4193,7 +4484,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Resistor 2.4 kOhm 1% 0603 (charge current)"
+		(property "Description" "Resistor 3.9 kOhm 1% 0603 (charge current 256 mA)"
 			(at 128.27 100.33 0)
 			(effects
 				(font
@@ -4202,7 +4493,7 @@
 				(hide yes)
 			)
 		)
-		(property "MPN" "MCWR06X2401FTL"
+		(property "MPN" "MCWR06X3901FTL"
 			(at 128.27 100.33 0)
 			(effects
 				(font
@@ -5318,7 +5609,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "100k"
+		(property "Value" "10k"
 			(at 283.956 82.88 0)
 			(effects
 				(font
@@ -5345,7 +5636,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Resistor 100 kOhm 1% 0603"
+		(property "Description" "Resistor 10 kOhm 1% 0603"
 			(at 281.94 85.09 0)
 			(effects
 				(font
@@ -5354,7 +5645,7 @@
 				(hide yes)
 			)
 		)
-		(property "MPN" "MCWR06X1003FTL"
+		(property "MPN" "MCWR06X1002FTL"
 			(at 281.94 85.09 0)
 			(effects
 				(font
@@ -5372,7 +5663,7 @@
 				(hide yes)
 			)
 		)
-		(property "Farnell" ""
+		(property "Farnell" "2447230"
 			(at 281.94 85.09 0)
 			(effects
 				(font
@@ -6957,9 +7248,26 @@
 		)
 		(uuid "7831e52e-0172-5735-8dac-d000a22afcfe")
 	)
-	(no_connect
-		(at 105.41 224.79)
-		(uuid "4a518f8c-f426-5f23-93e1-928235228788")
+	(wire
+		(pts
+			(xy 105.41 224.79)
+			(xy 107.95 224.79)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "a87e2304-ee72-55e4-b7c2-163613dac72b")
+	)
+	(label "LED_EN_N"
+		(at 107.95 224.79 0)
+		(effects
+			(font
+				(size 1 1)
+			)
+			(justify left bottom)
+		)
+		(uuid "1695584a-b64c-5670-ab1b-cee271cedfee")
 	)
 	(no_connect
 		(at 105.41 227.33)
@@ -7250,6 +7558,144 @@
 		(uuid "7f40adf0-fcab-5297-8ffc-12761bee2811")
 	)
 	(symbol
+		(lib_id "Device:R")
+		(at 139.7 185.42 90)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "17de46fa-2d5f-5cd2-8ba0-1dc1a5129f8f")
+		(property "Reference" "R11"
+			(at 144.51 183.904 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "1k"
+			(at 144.51 186.004 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "Resistor_SMD:R_0603_1608Metric"
+			(at 139.7 185.42 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 139.7 185.42 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Resistor 1 kOhm 1% 0603"
+			(at 139.7 185.42 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MPN" "MCWR06X1001FTL"
+			(at 139.7 185.42 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Manufacturer" "Multicomp Pro"
+			(at 139.7 185.42 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Farnell" ""
+			(at 139.7 185.42 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "f4c45408-673a-536b-8a56-06aa2c41aa64")
+		)
+		(pin "2"
+			(uuid "0c8bd379-4b8e-56bb-970e-d3bcc50e773d")
+		)
+		(instances
+			(project "main-board"
+				(path "/c35f4bb0-442e-51c3-8fbc-1b2558b7604c"
+					(reference "R11")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(wire
+		(pts
+			(xy 135.89 185.42)
+			(xy 133.35 185.42)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "512e2aef-09f6-56e8-97d6-8fd6f947ad34")
+	)
+	(label "VSYS"
+		(at 133.35 185.42 180)
+		(effects
+			(font
+				(size 1 1)
+			)
+			(justify right bottom)
+		)
+		(uuid "8a09ef88-b418-5200-b6bf-8862ff9b8225")
+	)
+	(wire
+		(pts
+			(xy 143.51 185.42)
+			(xy 146.05 185.42)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "4dd053d8-dc72-5429-bfe9-2d124142d0ae")
+	)
+	(label "VREF"
+		(at 146.05 185.42 0)
+		(effects
+			(font
+				(size 1 1)
+			)
+			(justify left bottom)
+		)
+		(uuid "33f9e9b9-33ee-5188-a53f-2a5d4a70aee8")
+	)
+	(symbol
 		(lib_id "Connector_Generic:Conn_01x04")
 		(at 149.86 199.39 0)
 		(unit 1)
@@ -7294,7 +7740,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Programming header (SerialUPDI / MPLAB Snap) + debug TX; pins fitted only for programming"
+		(property "Description" "Programming header: 1 VREF (sense only, 1k - never power the board here), 2 UPDI, 3 TX, 4 GND"
 			(at 149.86 199.39 0)
 			(effects
 				(font
@@ -7353,7 +7799,7 @@
 		)
 		(uuid "0eb14080-1d31-5442-8c82-938ad70bef95")
 	)
-	(label "VSYS"
+	(label "VREF"
 		(at 142.24 196.85 180)
 		(effects
 			(font
@@ -8471,6 +8917,306 @@
 		(uuid "67315cbb-7308-57a3-b408-688d28ae425f")
 	)
 	(symbol
+		(lib_id "Transistor_FET:Q_PMOS_GSD")
+		(at 279.4 240.03 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "36993a2b-62e5-5073-b934-27ec12575dbc")
+		(property "Reference" "Q4"
+			(at 282.94 234.45 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "DMG2305UX"
+			(at 282.94 236.55 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "Package_TO_SOT_SMD:SOT-23"
+			(at 279.4 240.03 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "https://www.diodes.com/assets/Datasheets/DMG2305UX.pdf"
+			(at 279.4 240.03 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "P-MOSFET -20 V -4.2 A, Rds(on) 52 mOhm @ -4.5 V (max), SOT-23 (G=1 S=2 D=3)"
+			(at 279.4 240.03 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MPN" "DMG2305UX-7"
+			(at 279.4 240.03 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Manufacturer" "Diodes Inc"
+			(at 279.4 240.03 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Farnell" "2543533"
+			(at 279.4 240.03 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "623d8bf7-90e4-58c9-b570-cb4cecf05161")
+		)
+		(pin "3"
+			(uuid "24e58197-2e9c-5bb4-9964-5884c2cc6a05")
+		)
+		(pin "2"
+			(uuid "5a0aa644-fde1-5f62-97b1-2d2c487f633f")
+		)
+		(instances
+			(project "main-board"
+				(path "/c35f4bb0-442e-51c3-8fbc-1b2558b7604c"
+					(reference "Q4")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(wire
+		(pts
+			(xy 274.32 240.03)
+			(xy 271.78 240.03)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "233f2d8c-bcdd-5919-b74c-88b9a52a1393")
+	)
+	(label "LED_EN_N"
+		(at 271.78 240.03 180)
+		(effects
+			(font
+				(size 1 1)
+			)
+			(justify right bottom)
+		)
+		(uuid "6229502d-f5e5-5b5f-a817-8ebe5978a803")
+	)
+	(wire
+		(pts
+			(xy 281.94 234.95)
+			(xy 281.94 232.41)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "909bddd9-8ce9-5d73-9a30-5fc0c732fbd0")
+	)
+	(label "VLED"
+		(at 281.94 232.41 90)
+		(effects
+			(font
+				(size 1 1)
+			)
+			(justify left bottom)
+		)
+		(uuid "92bc2f53-db33-5d40-8a63-763da012a567")
+	)
+	(wire
+		(pts
+			(xy 281.94 245.11)
+			(xy 281.94 247.65)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "58be178f-1c43-5a46-88f0-ea3b36731323")
+	)
+	(label "VSYS"
+		(at 281.94 247.65 270)
+		(effects
+			(font
+				(size 1 1)
+			)
+			(justify right bottom)
+		)
+		(uuid "6023b3e6-2782-572f-a2f7-4f4066ba1b46")
+	)
+	(symbol
+		(lib_id "Device:R")
+		(at 265.43 245.11 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "17ca8d6d-67a3-5abb-89a6-1726e8545e16")
+		(property "Reference" "R12"
+			(at 267.446 240.8 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "100k"
+			(at 267.446 242.9 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "Resistor_SMD:R_0603_1608Metric"
+			(at 265.43 245.11 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 265.43 245.11 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Resistor 100 kOhm 1% 0603"
+			(at 265.43 245.11 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MPN" "MCWR06X1003FTL"
+			(at 265.43 245.11 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Manufacturer" "Multicomp Pro"
+			(at 265.43 245.11 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Farnell" ""
+			(at 265.43 245.11 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "389bdd67-c72f-54a2-a364-deb442463753")
+		)
+		(pin "2"
+			(uuid "cd31f444-6777-573e-83cf-694d51719343")
+		)
+		(instances
+			(project "main-board"
+				(path "/c35f4bb0-442e-51c3-8fbc-1b2558b7604c"
+					(reference "R12")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(wire
+		(pts
+			(xy 265.43 241.3)
+			(xy 265.43 238.76)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "f7352f13-c000-5aa9-bce5-daaf2f6bf83c")
+	)
+	(label "VSYS"
+		(at 265.43 238.76 90)
+		(effects
+			(font
+				(size 1 1)
+			)
+			(justify left bottom)
+		)
+		(uuid "4d0d182f-1a70-5d00-842e-19bf621cef7a")
+	)
+	(wire
+		(pts
+			(xy 265.43 248.92)
+			(xy 265.43 251.46)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "07513f3c-85e7-5acd-ba57-88961209c27c")
+	)
+	(label "LED_EN_N"
+		(at 265.43 251.46 270)
+		(effects
+			(font
+				(size 1 1)
+			)
+			(justify right bottom)
+		)
+		(uuid "e5209547-f8ca-5774-8071-a090728f7466")
+	)
+	(symbol
 		(lib_id "Device:R")
 		(at 299.72 199.39 0)
 		(unit 1)
@@ -8577,7 +9323,7 @@
 		)
 		(uuid "77aedc68-2f9d-513f-b3bb-77fd11b4deda")
 	)
-	(label "VSYS"
+	(label "VLED"
 		(at 299.72 193.04 90)
 		(effects
 			(font
@@ -8715,7 +9461,7 @@
 		)
 		(uuid "0389bfbf-d5ee-5cf8-aaad-2b4f0d7387a1")
 	)
-	(label "VSYS"
+	(label "VLED"
 		(at 309.88 193.04 90)
 		(effects
 			(font
@@ -8764,7 +9510,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "MOON (Qwiic pinout, VCC=VSYS)"
+		(property "Value" "MOON (Qwiic pinout, VCC=VLED)"
 			(at 361.68 202.26 0)
 			(effects
 				(font
@@ -8880,7 +9626,7 @@
 		)
 		(uuid "dc4142f3-0115-531f-b04b-7aa5bd654010")
 	)
-	(label "VSYS"
+	(label "VLED"
 		(at 351.79 204.47 180)
 		(effects
 			(font
@@ -8934,7 +9680,7 @@
 	)
 	(symbol
 		(lib_id "power:PWR_FLAG")
-		(at 59.69 39.37 0)
+		(at 49.53 39.37 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom no)
@@ -8942,6 +9688,93 @@
 		(dnp no)
 		(uuid "bd3dc9a7-7bbc-5179-b5d6-fc819a414850")
 		(property "Reference" "#FLG01"
+			(at 50.53 38.87 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "PWR_FLAG"
+			(at 50.53 40.97 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" ""
+			(at 49.53 39.37 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 49.53 39.37 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" ""
+			(at 49.53 39.37 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "b5d207ec-e8bc-542f-ba42-c04e04d62631")
+		)
+		(instances
+			(project "main-board"
+				(path "/c35f4bb0-442e-51c3-8fbc-1b2558b7604c"
+					(reference "#FLG01")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(wire
+		(pts
+			(xy 49.53 39.37)
+			(xy 49.53 41.91)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "63c8063f-b42c-51ed-b242-f5f3b197128c")
+	)
+	(label "VBUS_IN"
+		(at 49.53 41.91 270)
+		(effects
+			(font
+				(size 1 1)
+			)
+			(justify right bottom)
+		)
+		(uuid "88bc9fc7-fdd8-56cf-9b3b-81a17f46183b")
+	)
+	(symbol
+		(lib_id "power:PWR_FLAG")
+		(at 59.69 39.37 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom no)
+		(on_board no)
+		(dnp no)
+		(uuid "50ff58f8-949c-5e0b-bb43-cbeb45b1b5a1")
+		(property "Reference" "#FLG02"
 			(at 60.69 38.87 0)
 			(effects
 				(font
@@ -8987,12 +9820,12 @@
 			)
 		)
 		(pin "1"
-			(uuid "b5d207ec-e8bc-542f-ba42-c04e04d62631")
+			(uuid "fbfbd8f7-1f1f-5d86-abcf-a3149313dfd6")
 		)
 		(instances
 			(project "main-board"
 				(path "/c35f4bb0-442e-51c3-8fbc-1b2558b7604c"
-					(reference "#FLG01")
+					(reference "#FLG02")
 					(unit 1)
 				)
 			)
@@ -9007,7 +9840,7 @@
 			(width 0)
 			(type default)
 		)
-		(uuid "63c8063f-b42c-51ed-b242-f5f3b197128c")
+		(uuid "7230dd41-e58d-578c-8649-1f0c9b5fe7cc")
 	)
 	(label "VBUS"
 		(at 59.69 41.91 270)
@@ -9017,7 +9850,7 @@
 			)
 			(justify right bottom)
 		)
-		(uuid "88bc9fc7-fdd8-56cf-9b3b-81a17f46183b")
+		(uuid "50d42edb-facf-576d-b7f4-9d18bfa20d0a")
 	)
 	(symbol
 		(lib_id "power:PWR_FLAG")
@@ -9027,8 +9860,8 @@
 		(in_bom no)
 		(on_board no)
 		(dnp no)
-		(uuid "50ff58f8-949c-5e0b-bb43-cbeb45b1b5a1")
-		(property "Reference" "#FLG02"
+		(uuid "37015389-e487-5010-8c29-876f681c7666")
+		(property "Reference" "#FLG03"
 			(at 70.85 38.87 0)
 			(effects
 				(font
@@ -9074,12 +9907,12 @@
 			)
 		)
 		(pin "1"
-			(uuid "fbfbd8f7-1f1f-5d86-abcf-a3149313dfd6")
+			(uuid "2d2c892e-486d-51ae-bb85-b135068f40bb")
 		)
 		(instances
 			(project "main-board"
 				(path "/c35f4bb0-442e-51c3-8fbc-1b2558b7604c"
-					(reference "#FLG02")
+					(reference "#FLG03")
 					(unit 1)
 				)
 			)
@@ -9094,7 +9927,7 @@
 			(width 0)
 			(type default)
 		)
-		(uuid "7230dd41-e58d-578c-8649-1f0c9b5fe7cc")
+		(uuid "9d9ddfcc-a32d-535f-9895-da6d91ff7d76")
 	)
 	(label "GND"
 		(at 69.85 41.91 270)
@@ -9104,7 +9937,7 @@
 			)
 			(justify right bottom)
 		)
-		(uuid "50d42edb-facf-576d-b7f4-9d18bfa20d0a")
+		(uuid "ecf7a16e-ef49-5a4d-91d5-a27fb737fb3f")
 	)
 	(symbol
 		(lib_id "power:PWR_FLAG")
@@ -9114,8 +9947,8 @@
 		(in_bom no)
 		(on_board no)
 		(dnp no)
-		(uuid "37015389-e487-5010-8c29-876f681c7666")
-		(property "Reference" "#FLG03"
+		(uuid "da7693a4-10e3-5e13-a156-7ec6aa37442e")
+		(property "Reference" "#FLG04"
 			(at 215.63 38.87 0)
 			(effects
 				(font
@@ -9161,12 +9994,12 @@
 			)
 		)
 		(pin "1"
-			(uuid "2d2c892e-486d-51ae-bb85-b135068f40bb")
+			(uuid "b686165f-153b-503b-a5cc-c75b6d00c8bd")
 		)
 		(instances
 			(project "main-board"
 				(path "/c35f4bb0-442e-51c3-8fbc-1b2558b7604c"
-					(reference "#FLG03")
+					(reference "#FLG04")
 					(unit 1)
 				)
 			)
@@ -9181,7 +10014,7 @@
 			(width 0)
 			(type default)
 		)
-		(uuid "9d9ddfcc-a32d-535f-9895-da6d91ff7d76")
+		(uuid "6d52b8af-988e-5357-bfb0-13b907b83df6")
 	)
 	(label "BAT_RAW"
 		(at 214.63 41.91 270)
@@ -9191,7 +10024,7 @@
 			)
 			(justify right bottom)
 		)
-		(uuid "ecf7a16e-ef49-5a4d-91d5-a27fb737fb3f")
+		(uuid "0389db30-fe74-562d-acf6-8a337753906e")
 	)
 	(symbol
 		(lib_id "power:PWR_FLAG")
@@ -9201,8 +10034,8 @@
 		(in_bom no)
 		(on_board no)
 		(dnp no)
-		(uuid "da7693a4-10e3-5e13-a156-7ec6aa37442e")
-		(property "Reference" "#FLG04"
+		(uuid "7a1f6280-089c-557b-b816-ebddda4d4842")
+		(property "Reference" "#FLG05"
 			(at 331.2 38.87 0)
 			(effects
 				(font
@@ -9248,12 +10081,12 @@
 			)
 		)
 		(pin "1"
-			(uuid "b686165f-153b-503b-a5cc-c75b6d00c8bd")
+			(uuid "28500dab-3816-5533-be67-88f938d8fd18")
 		)
 		(instances
 			(project "main-board"
 				(path "/c35f4bb0-442e-51c3-8fbc-1b2558b7604c"
-					(reference "#FLG04")
+					(reference "#FLG05")
 					(unit 1)
 				)
 			)
@@ -9268,7 +10101,7 @@
 			(width 0)
 			(type default)
 		)
-		(uuid "6d52b8af-988e-5357-bfb0-13b907b83df6")
+		(uuid "9edcc7b1-3219-5162-b0d0-83b586daddf6")
 	)
 	(label "VSYS_RAW"
 		(at 330.2 41.91 270)
@@ -9278,7 +10111,7 @@
 			)
 			(justify right bottom)
 		)
-		(uuid "0389db30-fe74-562d-acf6-8a337753906e")
+		(uuid "09b3d6ef-0bfb-5b96-bbac-87c3f5650018")
 	)
 	(symbol
 		(lib_id "power:PWR_FLAG")
@@ -9288,8 +10121,8 @@
 		(in_bom no)
 		(on_board no)
 		(dnp no)
-		(uuid "7a1f6280-089c-557b-b816-ebddda4d4842")
-		(property "Reference" "#FLG05"
+		(uuid "33e41521-c2ac-5b79-8bc3-08c2c5227443")
+		(property "Reference" "#FLG06"
 			(at 401.05 38.87 0)
 			(effects
 				(font
@@ -9335,12 +10168,12 @@
 			)
 		)
 		(pin "1"
-			(uuid "28500dab-3816-5533-be67-88f938d8fd18")
+			(uuid "02bbf0f4-f646-55ff-be7d-631e488e08a0")
 		)
 		(instances
 			(project "main-board"
 				(path "/c35f4bb0-442e-51c3-8fbc-1b2558b7604c"
-					(reference "#FLG05")
+					(reference "#FLG06")
 					(unit 1)
 				)
 			)
@@ -9355,7 +10188,7 @@
 			(width 0)
 			(type default)
 		)
-		(uuid "9edcc7b1-3219-5162-b0d0-83b586daddf6")
+		(uuid "a77c8719-48d4-5eda-aa6a-3f4b3d274933")
 	)
 	(label "VSYS"
 		(at 400.05 41.91 270)
@@ -9365,7 +10198,94 @@
 			)
 			(justify right bottom)
 		)
-		(uuid "09b3d6ef-0bfb-5b96-bbac-87c3f5650018")
+		(uuid "8c696946-ea64-5e0b-92bd-b96048cc60d4")
+	)
+	(symbol
+		(lib_id "power:PWR_FLAG")
+		(at 299.72 229.87 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom no)
+		(on_board no)
+		(dnp no)
+		(uuid "73bf3072-a48e-596b-a34d-31fb204fcb0f")
+		(property "Reference" "#FLG07"
+			(at 300.72 229.37 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "PWR_FLAG"
+			(at 300.72 231.47 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" ""
+			(at 299.72 229.87 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 299.72 229.87 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" ""
+			(at 299.72 229.87 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "72c5701a-82d3-554a-a877-9284920a9079")
+		)
+		(instances
+			(project "main-board"
+				(path "/c35f4bb0-442e-51c3-8fbc-1b2558b7604c"
+					(reference "#FLG07")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(wire
+		(pts
+			(xy 299.72 229.87)
+			(xy 299.72 232.41)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "eca6b493-d33e-5c57-ad31-d8e8f050b1a6")
+	)
+	(label "VLED"
+		(at 299.72 232.41 270)
+		(effects
+			(font
+				(size 1 1)
+			)
+			(justify right bottom)
+		)
+		(uuid "60b3f659-7c31-5a05-b72d-a2e32c77cc32")
 	)
 	(sheet_instances
 		(path "/"

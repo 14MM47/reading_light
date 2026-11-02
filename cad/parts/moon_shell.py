@@ -4,17 +4,18 @@ Requirements (newest last; never renumber):
   B1  GIVEN    (Matt) a hollow model of the moon, ~5 cm diameter, lit fully from inside by LEDs
   B2  GIVEN    (Matt, answer 2) generated from NASA public-domain LRO data, not a scaled Thingiverse model
   B3  GIVEN    (Matt, answer 1) the LEDs sit in the base of the moon at the top of the neck
-  B4  RULE     (optics model docs/design/optics) bottom opening half-angle 30-35 deg, LED plane 1-2 mm below the
+  B4  RULE     (optics model docs/design/optics) bottom opening half-angle 30-35 deg, LED plane 1-3 mm below the
                opening plane gives max/min wall illuminance <= 1.05 (integrating-sphere geometry)
   B5  RULE     (3dprint PLAN 11) lithophane wall >= 0.84 mm everywhere (2 perimeters), <= 2.6 mm
   B6  ASSUMED  dark maria and low ground thicker (darker), highlands and rims thinner: 75 % albedo, 25 % elevation
-  B7  ASSUMED  a 2.5 mm skirt below the opening (full width of the cut circle) carries 3 bayonet lugs into the LED
-               base and its bottom face clamps the LED board edge band
+  B7  ASSUMED  a 1.5 mm skirt below the opening (full width of the cut circle) carries 3 bayonet lugs into the LED
+               base; its bottom face presses the PETG clamp ring onto the LED board edge band (B12)
   B8  RULE     outer surface below 45 deg from the bottom pole is a 45 deg collar (designs that overhang out)
   B9  ASSUMED  printed upright on the skirt in white PLA; the inner dome closes without supports (moon-lamp practice)
   B10 ASSUMED  the near side (longitude 0) faces -Y, the lunar north pole is up
   B11 ASSUMED  the outer surface is a smooth 50.0 mm sphere; the lithophane relief is on the inside (crisp silhouette,
                exact diameter, clean outer perimeter)
+  B12 RULE     (thermal review) the PLA moon never touches the LED board: a 0.6 mm PETG ring sits between them
 """
 from __future__ import annotations
 
@@ -209,7 +210,7 @@ def organic(p):
 
 def context(p):
     """LED board (grey), sitting at the skirt's bottom edge, for clear_of checks."""
-    z_top = L.Z_CUT - L.SKIRT_H - 0.05
+    z_top = L.Z_CUT - L.SKIRT_H - L.RING_T - 0.05
     return {"led_board": mf.Manifold.cylinder(L.BOARD_T, L.BOARD_R, L.BOARD_R, 96).translate(
         (0, 0, z_top - L.BOARD_T + SHIFT))}
 
@@ -231,8 +232,8 @@ def spec(m, p):
     # B4: opening half-angle and LED plane depth
     ang = L.opening_half_angle_deg()
     out.append(claim("B4", "opening half-angle 28-35 deg", 28 <= ang <= 35, round(ang, 2)))
-    led_dz = -(L.SKIRT_H - 0.7)
-    out.append(claim("B4", "LED plane 1-2 mm below the opening plane", -2.0 <= led_dz <= -1.0, led_dz))
+    led_dz = -(L.SKIRT_H + L.RING_T - 0.7)
+    out.append(claim("B4", "LED plane 1-3 mm below the opening plane", -3.0 <= led_dz <= -1.0, round(led_dz, 2)))
     # B5: thickness along radial rays at sampled directions (above the collar band)
     rng = np.random.default_rng(3)
     ok, n, tmin, tmax = 0, 200, 9.0, 0.0

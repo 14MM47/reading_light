@@ -280,6 +280,10 @@
     "netclass_patterns": [
       {
         "netclass": "Power",
+        "pattern": "/VBUS_IN"
+      },
+      {
+        "netclass": "Power",
         "pattern": "/VBUS"
       },
       {
@@ -297,6 +301,10 @@
       {
         "netclass": "Power",
         "pattern": "/VSYS"
+      },
+      {
+        "netclass": "Power",
+        "pattern": "/VLED"
       }
     ]
   },

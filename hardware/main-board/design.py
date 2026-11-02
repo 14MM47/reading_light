@@ -5,11 +5,11 @@ Single source of truth for the schematic (kigen.schematic) and the board (kigen.
 the pcb repo conventions (upper-case, + for positive rails avoided because KiCad labels treat it literally).
 
 Power tree (see docs/design/electronics.md):
-  USB-C VBUS --TVS--+--> MCP73831 VDD --(CC/CV 4.20 V, ~417 mA)--> BAT --Q3 (reverse-battery P-FET)--> BAT_RAW = cell
+  USB-C VBUS_IN --PTC 0.75 A--> VBUS --TVS--+--> MCP73831 VDD --(CC/CV 4.20 V, ~256 mA)--> BAT --Q3 (rev-batt FET)--> cell
                     +--> D3 silicon rectifier (low leakage) -----+
                                                                  +--> VSYS_RAW --Q2 (slide-switch load switch)--> VSYS
   BAT --Q1 (load-share P-FET, off while VBUS present)-----------+
-  VSYS feeds the MCU and, through the JST-SH cable, the LED board (VLED).
+  VSYS feeds the MCU; Q4 (MCU-controlled) switches VSYS to VLED, which feeds the LED board through the JST-SH cable.
 """
 from __future__ import annotations
 
@@ -41,7 +41,7 @@ LIB = {
     "SLIDE": "Switch:SW_SPDT", "JST_PH2": "Connector_Generic:Conn_01x02", "JST_SH4": "Connector_Generic:Conn_01x04",
     "R_5K1": "Device:R", "R_2K4": "Device:R", "R_1K": "Device:R", "R_10K": "Device:R", "R_100K": "Device:R",
     "R_1M": "Device:R", "R_3K3": "Device:R", "C_100N": "Device:C", "C_1U": "Device:C", "C_4U7": "Device:C",
-    "C_10U": "Device:C",
+    "C_10U": "Device:C", "R_3K9": "Device:R", "PTC": "Device:Polyfuse",
 }
 
 
@@ -49,14 +49,17 @@ def parts():
     v = []
     # ---- A: USB-C input, ESD, charger (sheet top-left)
     v += [
-        P("J1", "USBC", {"A5": "CC1", "B5": "CC2", "A9": "VBUS", "B9": "VBUS", "A12": "GND", "B12": "GND", "S1": "GND"},
+        P("J1", "USBC", {"A5": "CC1", "B5": "CC2", "A9": "VBUS_IN", "B9": "VBUS_IN", "A12": "GND", "B12": "GND", "S1": "GND"},
           (40, 70, 0)),
+        # PTC ahead of the TVS: a sustained over-voltage makes the TVS conduct and trips the PTC; also limits a short
+        # in the neck cable while on USB (review M-5, M-6)
+        P("F1", "PTC", {"1": "VBUS_IN", "2": "VBUS"}, (62, 55, 90)),
         P("R1", "R_5K1", {"1": "CC1", "2": "GND"}, (75, 90, 0)),
         P("R2", "R_5K1", {"1": "CC2", "2": "GND"}, (85, 90, 0)),
         P("D1", "TVS", {"1": "VBUS", "2": "GND"}, (100, 85, 270), value="SMF5.0A"),
         P("C1", "C_10U", {"1": "VBUS", "2": "GND"}, (112, 85, 0)),
         P("U1", "CHG", {"1": "CHG_STAT", "2": "GND", "3": "BAT", "4": "VBUS", "5": "PROG"}, (150, 80, 0)),
-        P("R3", "R_2K4", {"1": "PROG", "2": "GND"}, (128, 100, 0)),
+        P("R3", "R_3K9", {"1": "PROG", "2": "GND"}, (128, 100, 0)),
         P("R4", "R_1K", {"1": "VBUS", "2": "CHG_LED"}, (178, 55, 90)),
         P("D2", "LED_RED_0603", {"1": "CHG_STAT", "2": "CHG_LED"}, (178, 72, 90), value="red"),
         P("C2", "C_10U", {"1": "BAT", "2": "GND"}, (190, 95, 0)),
@@ -68,7 +71,7 @@ def parts():
         P("Q3", "PFET", {"1": "Q3_G", "2": "BAT", "3": "BAT_RAW"}, (255, 60, 0), value="DMG2305UX"),
         P("R10", "R_10K", {"1": "Q3_G", "2": "GND"}, (247, 82, 0)),
         P("Q1", "PFET", {"1": "VBUS", "2": "VSYS_RAW", "3": "BAT"}, (295, 60, 0), value="DMG2305UX"),
-        P("R5", "R_100K", {"1": "VBUS", "2": "GND"}, (282, 85, 0)),
+        P("R5", "R_10K", {"1": "VBUS", "2": "GND"}, (282, 85, 0)),
         P("D3", "RECT", {"1": "VSYS_RAW", "2": "VBUS"}, (300, 100, 0), value="S1J"),
         P("C3", "C_10U", {"1": "VSYS_RAW", "2": "GND"}, (322, 90, 0)),
         P("Q2", "PFET", {"1": "SW_GATE", "2": "VSYS_RAW", "3": "VSYS"}, (360, 60, 0), value="DMG2305UX"),
@@ -83,15 +86,16 @@ def parts():
     # debug TX uses USART0's alternate pin PA1 (PORTMUX), next to UPDI and the header
     mcu = {"1": "VSYS", "20": "GND", "16": "UPDI", "17": "TX", "18": None, "19": None,
            "2": "BTN_DN", "3": "BTN_MAIN", "4": "BTN_UP", "5": None,
-           "11": "SCL", "10": "SDA", "9": None, "8": None, "7": None, "6": None,
+           "11": "SCL", "10": "SDA", "9": "LED_EN_N", "8": None, "7": None, "6": None,
            "12": None, "13": None, "14": None, "15": None}
     v += [
         P("U2", "MCU", mcu, (90, 215, 0), value="ATtiny3216-SN"),
         P("C6", "C_100N", {"1": "VSYS", "2": "GND"}, (45, 200, 0)),
         P("C7", "C_1U", {"1": "VSYS", "2": "GND"}, (55, 200, 0)),
+        P("R11", "R_1K", {"1": "VSYS", "2": "VREF"}, (140, 185, 90)),
         Part("J4", "Connector_Generic:Conn_01x04", "UPDI/TX", "Connector_PinHeader_2.54mm:PinHeader_1x04_P2.54mm_Vertical",
-             {"1": "VSYS", "2": "UPDI", "3": "TX", "4": "GND"}, sch=(150, 200, 0),
-             fields={"Description": "Programming header (SerialUPDI / MPLAB Snap) + debug TX; pins fitted only for programming",
+             {"1": "VREF", "2": "UPDI", "3": "TX", "4": "GND"}, sch=(150, 200, 0),
+             fields={"Description": "Programming header: 1 VREF (sense only, 1k - never power the board here), 2 UPDI, 3 TX, 4 GND",
                      "MPN": "DNP", "Farnell": ""}, in_bom=False, dnp=True),
     ]
     for i, (net, x) in enumerate([("VBUS", 130), ("BAT_RAW", 142), ("VSYS", 154), ("GND", 166), ("SDA", 178),
@@ -103,10 +107,15 @@ def parts():
         P("SW2", "TACT", {"1": "BTN_UP", "2": "GND"}, (240, 180, 0), value="UP"),
         P("SW3", "TACT", {"1": "BTN_MAIN", "2": "GND"}, (240, 200, 0), value="MAIN"),
         P("SW4", "TACT", {"1": "BTN_DN", "2": "GND"}, (240, 220, 0), value="DOWN"),
-        P("R8", "R_3K3", {"1": "VSYS", "2": "SDA"}, (300, 200, 0)),
-        P("R9", "R_3K3", {"1": "VSYS", "2": "SCL"}, (310, 200, 0)),
-        P("J3", "JST_SH4", {"1": "GND", "2": "VSYS", "3": "SDA", "4": "SCL"}, (360, 205, 0),
-          value="MOON (Qwiic pinout, VCC=VSYS)"),
+        # LED-board supply switch: the MCU (PB2 low) powers the LED board; off at reset (R12) and when the battery
+        # is empty, so a flat cell is not drained by the TLC59116's ~25 mA (review M2). Pull-ups sit on the switched
+        # rail so the unpowered LED board is never back-fed through SDA/SCL.
+        P("Q4", "PFET", {"1": "LED_EN_N", "2": "VSYS", "3": "VLED"}, (280, 240, 0), value="DMG2305UX"),
+        P("R12", "R_100K", {"1": "VSYS", "2": "LED_EN_N"}, (265, 245, 0)),
+        P("R8", "R_3K3", {"1": "VLED", "2": "SDA"}, (300, 200, 0)),
+        P("R9", "R_3K3", {"1": "VLED", "2": "SCL"}, (310, 200, 0)),
+        P("J3", "JST_SH4", {"1": "GND", "2": "VLED", "3": "SDA", "4": "SCL"}, (360, 205, 0),
+          value="MOON (Qwiic pinout, VCC=VLED)"),
     ]
     return v
 
@@ -117,8 +126,8 @@ PAD_MAP = {
     "J3": {"MP": None},
 }
 
-PWR_FLAGS = [("VBUS", (60, 40)), ("GND", (70, 40)), ("BAT_RAW", (215, 40)), ("VSYS_RAW", (330, 40)),
-             ("VSYS", (400, 40))]
+PWR_FLAGS = [("VBUS_IN", (50, 40)), ("VBUS", (60, 40)), ("GND", (70, 40)), ("BAT_RAW", (215, 40)), ("VSYS_RAW", (330, 40)),
+             ("VSYS", (400, 40)), ("VLED", (300, 230))]
 
 NOTES = [
     ("A  USB-C input, ESD and charger", (12, 25)),
@@ -128,8 +137,8 @@ NOTES = [
 ]
 BOXES = [(10, 20, 205, 150), (210, 20, 410, 150), (10, 155, 205, 285), (210, 155, 410, 285)]
 COMMENTS = [
-    "Charge 417 mA (R3 2.4k). Slide switch is the only on/off (Matt). VSYS 3.3-4.2 V on battery, ~4.15 V on USB.",
-    "J3 carries VSYS (not 3.3 V) on the Qwiic pinout: never plug a 3.3 V-only Qwiic device into it.",
+    "Charge 256 mA (R3 3.9k; total USB draw <= ~0.55 A: use a >= 1 A USB-C charger). Slide switch is the only on/off (Matt).",
+    "J3 carries VLED (switched VSYS, not 3.3 V) on the Qwiic pinout: never plug a 3.3 V-only Qwiic device into it.",
     "J2 polarity: + on pin 1 (silk). Q3 blocks a reversed battery; meter every pack before plugging in.",
 ]
 
@@ -153,42 +162,45 @@ def _rounded_rect(w, h, r, n=6):
 OUTLINE = ("poly", _rounded_rect(W, H, RC))
 RULES = {"clearance": 0.2, "track": 0.25, "track_min": 0.2, "via": 0.6, "drill": 0.3, "edge_clear": 0.3,
          "annular_min": 0.15, "hole_to_hole": 0.5}
-POWER_NETS = ["VBUS", "BAT", "BAT_RAW", "VSYS_RAW", "VSYS"]
+POWER_NETS = ["VBUS_IN", "VBUS", "BAT", "BAT_RAW", "VSYS_RAW", "VSYS", "VLED"]
 NETCLASSES = [dict(name="Power", track=0.5, clearance=0.2, nets=POWER_NETS)]
 
 PLACE = {
     # ref: (x, y, rot, side)
     "J3": (17.5, 3.6, 180, "F"),            # JST-SH to the moon, opening faces the top edge
     "R9": (12.5, 4.5, 90, "F"), "R8": (14.2, 8.6, 0, "F"),   # SCL / SDA pull-ups on the MCU side of J3
+    "Q4": (25.5, 4.6, 0, "F"), "R12": (29.0, 3.4, 0, "F"),   # LED-board supply switch next to J3
+    "R11": (6.2, 7.5, 90, "F"),                               # J4 VREF series resistor
     "TP6": (8.5, 4.0, 0, "F"), "TP5": (9.0, 8.5, 0, "F"),
-    "TP4": (3.5, 12.0, 0, "F"),
+    "TP4": (9.6, 16.0, 0, "F"),
     "Q2": (29.5, 11.0, 0, "F"), "C4": (25.5, 11.0, 90, "F"), "TP3": (32.5, 6.0, 0, "F"),
     "R6": (30.5, 15.5, 0, "F"), "C5": (30.5, 17.5, 0, "F"), "R7": (27.0, 20.5, 90, "F"),
     "SW2": (17.5, 17.0, 0, "F"), "SW3": (17.5, 28.0, 0, "F"), "SW4": (17.5, 39.0, 0, "F"),
     "SW1": (32.85, 28.0, 90, "F"),          # slide switch, knob out of the right edge
     "U2": (6.0, 26.0, 180, "F"),            # pin 1 bottom-right: PA4-6 (buttons) face the buttons, PB0/1 (I2C) at the top
     "C6": (8.0, 34.6, 0, "F"), "C7": (4.0, 34.6, 0, "F"),
-    "J4": (3.0, 38.6, 0, "F"),
+    "J4": (3.0, 8.0, 0, "F"),               # UPDI header, top-left (pins run down the left edge)
     "Q3": (28.5, 33.5, 90, "F"), "R10": (25.0, 33.5, 90, "F"),
     "Q1": (28.5, 38.5, 0, "F"), "C3": (32.8, 38.5, 90, "F"),
-    "R5": (24.0, 41.5, 90, "F"), "D3": (29.0, 43.8, 0, "F"),
-    "TP1": (32.5, 47.0, 0, "F"), "TP2": (9.0, 47.0, 0, "F"),
+    "R5": (24.0, 41.0, 90, "F"), "D3": (29.4, 43.1, 0, "F"),
+    "TP1": (32.5, 47.0, 0, "F"), "TP2": (3.5, 44.0, 0, "F"),
     "U1": (29.0, 51.0, 90, "F"), "R3": (32.8, 51.0, 90, "F"), "C2": (25.0, 51.0, 90, "F"),
-    "C1": (21.5, 50.5, 0, "F"), "D1": (14.0, 50.5, 0, "F"),
-    "R1": (11.0, 56.0, 90, "F"), "R2": (24.0, 56.5, 90, "F"),
+    "C1": (21.5, 50.5, 0, "F"), "D1": (12.6, 47.6, 0, "F"), "F1": (24.0, 47.0, 0, "F"),
+    "R1": (10.0, 59.5, 90, "F"), "R2": (24.0, 56.5, 90, "F"),
     "J1": (17.5, 58.6, 0, "F"),
     "D2": (27.5, 59.2, 0, "F"), "R4": (31.0, 59.2, 0, "F"),
-    "J2": (4.9, 54.5, 270, "F"),            # battery connector, opening faces the left edge
+    "J2": (5.0, 53.0, 90, "F"),             # battery connector, opening faces +x: the plug lies flat on the board
+                                            # over x 9.4-16 (keep-out below) and its wires drop through SLOTS[0]
 }
 
 ROUTE = [
     # (net, width) in order; GND is poured on both layers and stitched
-    ("VBUS", 0.5), ("BAT", 0.5), ("BAT_RAW", 0.5), ("VSYS_RAW", 0.5), ("VSYS", 0.5),
+    ("VBUS_IN", 0.5), ("VBUS", 0.5), ("BAT", 0.5), ("BAT_RAW", 0.5), ("VSYS_RAW", 0.5), ("VSYS", 0.5), ("VLED", 0.5),
     ("SCL", 0.25), ("SDA", 0.25),
     ("CC1", 0.25), ("CC2", 0.25), ("PROG", 0.25), ("CHG_STAT", 0.25), ("CHG_LED", 0.25),
     ("Q3_G", 0.25), ("SW_GATE", 0.25), ("SW_COM", 0.25),
     ("BTN_UP", 0.25), ("BTN_MAIN", 0.25), ("BTN_DN", 0.25),
-    ("UPDI", 0.25), ("TX", 0.25),
+    ("UPDI", 0.25), ("TX", 0.25), ("LED_EN_N", 0.25), ("VREF", 0.25),
 ]
 STITCH = [("GND", 0)]
 STITCH_GRID = [("GND", 3.0)]
@@ -197,9 +209,29 @@ ZONES = [dict(net="GND", layer="B", pts=_board_poly, clearance=0.25),
          dict(net="GND", layer="F", pts=_board_poly, clearance=0.3, priority=0)]
 SILK = [
     dict(s="MOON LIGHT main v0.1 2026-11", x=17.5, y=31.0, size=0.8, thick=0.12, layer="B.SilkS"),
-    dict(s="+", x=1.2, y=52.5, size=1.0, thick=0.15),
-    dict(s="UPDI: 1=VSYS 2=UPDI 3=TX 4=GND", x=17.5, y=33.5, size=0.8, thick=0.13, layer="B.SilkS"),
+    dict(s="+", x=0.9, y=55.4, size=0.9, thick=0.15),
+    dict(s="-", x=0.9, y=50.6, size=0.9, thick=0.15),
+    dict(s="BATT", x=12.7, y=49.2, size=0.8, thick=0.13),
+    dict(s="UPDI: 1=VREF(sense only) 2=UPDI 3=TX 4=GND", x=17.5, y=33.5, size=0.8, thick=0.13, layer="B.SilkS"),
 ]
 
-# M2 mounting holes (PCB hangs from two bosses on the inside of the pack's front face; keep Ø5.5 clear on top)
+# M2 mounting holes (PCB hangs from two bosses on the inside of the pack's front face; keep Ø5.2 clear)
 MOUNT_HOLES = [(21.5, 10.0), (17.5, 46.5)]
+# battery wires: plug lies on the board, its wires pass down through this slot to the cell behind the PCB
+SLOTS = [(17.3, 52.2, 3.0, 2.8, 0.6)]      # (cx, cy, w, h, r)
+# keep-outs: battery plug footprint on the board surface (no parts taller than 0.6 mm under it is fine; keep it clear)
+KEEPOUTS = [dict(layer="F", pts=[(9.6, 50.0), (15.8, 50.0), (15.8, 56.0), (9.6, 56.0)], tracks=False, vias=False, pour=False)]
+
+FAB_NOTES = """# main-board v0.1 - fabrication notes (paste into the fab's order form)
+
+- 2 layers, FR4 TG130-150, **1.6 mm**, 1 oz outer copper, 35.0 x 62.0 mm, rounded corners (r 2 mm)
+- Surface finish: HASL lead-free (ENIG optional), solder mask green, silkscreen white
+- DRC: 0 errors. Two silk warnings are intended: the SW1 slide-switch outline crosses the right board edge because
+  its knob overhangs the edge by design (the fab clips silk at the edge).
+- Min track / space 0.20 / 0.20 mm; min via 0.6 / 0.3 mm (drill); min hole 0.3 mm; no blind/buried vias, no castellations
+- Plated slots: none. NPTH: 2 x 0.9 mm (slide-switch pegs), 2 x 2.2 mm (M2 mounting holes). PTH: USB-C shell pegs,
+  J4 header (DNP). Internal routed cut-out 3.0 x 2.8 mm, r 0.6 (battery-lead slot, on Edge.Cuts)
+- Quantity 5. Stencil: top side only, frameless
+- Assembly (optional): all parts on TOP; BOM/CPL files: bom_pcbway.csv + cpl_pcbway.csv or bom_jlcpcb.csv + cpl_jlcpcb.csv.
+  J4 (programming header) and TP1-TP6 (test pads) are not populated.
+"""

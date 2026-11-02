@@ -1,7 +1,7 @@
 # PLAN — Moon reading light
 
-Status: **v0.1 design complete, nothing ordered** (2026-11-02). Next: Matt orders boards + parts, prints, builds
-(docs/handoffs/). Single source of truth for requirements and decisions; reasoning is kept so later revisions don't
+Status: **v0.1 design complete and through verification round 1, nothing ordered** (2026-11-02). Next: Matt orders
+boards + parts, prints the coupons, builds and bench-tests (docs/handoffs/, docs/verification/VERIFY.md). Single source of truth for requirements and decisions; reasoning is kept so later revisions don't
 re-derive it.
 
 ---
@@ -39,26 +39,32 @@ Statuses follow the 3dprint convention: **GIVEN** (Matt said it), **ASSUMED** (C
 ## 2. Architecture
 
 ```
- USB-C (power only, 5.1k CC) ─TVS─┬─> MCP73831 charger 417 mA ─> BAT ─[Q3 rev-batt P-FET]─ LiPo 1200 mAh (own PCM)
-                                  └─> D3 S1J rectifier ─┐
- BAT ─[Q1 load-share P-FET, gate = VBUS]────────────────┴─> VSYS_RAW ─[Q2 P-FET, slide switch]─> VSYS 3.3–4.2 V (4.15 on USB)
- VSYS ─> ATtiny3216 (buttons, I2C master, VDD measurement) ─ JST-SH 4-wire cable up the gooseneck ─┐
-                                                                                                    v
-   LED board in the moon base (26 mm): TLC59116 16-ch constant-current sink, 25 mA/channel, 97 kHz PWM
+ USB-C (power only, 5.1k CC) ─PTC 0.75 A─TVS─┬─> MCP73831 charger 256 mA ─> BAT ─[Q3 rev-batt P-FET]─ LiPo 1200 mAh (PCM)
+                                             └─> D3 S1J rectifier ─┐
+ BAT ─[Q1 load-share P-FET, gate = VBUS, R5 10k]───────────────────┴─> VSYS_RAW ─[Q2 P-FET, slide switch]─> VSYS 3.3–4.2 V
+ VSYS ─> ATtiny3216 (buttons, I2C master, VDD measurement, PB2 → Q4)
+ VSYS ─[Q4 P-FET, MCU-switched]─> VLED (+ I2C pull-ups) ─ JST-SH 4-wire cable up the gooseneck ─┐
+                                                                                                 v
+   LED board in the moon base (Ø26 mm, 1.0 mm): TLC59116 16-ch constant-current sink, 25 mA/channel, 97 kHz PWM
    ├─ 4 × 2700 K + 4 × 5000 K Bridgelux Thrive 2835 (CRI 97)      ├─ 2 × Würth RGB (common anode)
-   └─ LM75B temperature sensor (firmware derating)                  all anodes on VLED = VSYS
+   └─ LM75B: firmware derating + OS thermostat → TLC RESET (60/52 °C)   all anodes on VLED
 ```
 
 * **Main board** (pack, 35 × 62 mm, 2-layer 1.6 mm, all parts top): see `hardware/main-board/design.py` docstring.
 * **LED board** (moon base, Ø26 mm, 2-layer 1.0 mm, white mask; LEDs top, driver/sensor bottom): `hardware/led-board/design.py`.
 * **Optics**: a Lambertian source on the wall of a sphere lights its inside uniformly (integrating-sphere geometry).
-  Model `docs/design/optics/sphere_illum.py`: with the LED plane 1–2 mm below a 30–36° opening, wall illuminance
-  max/min ≈ 1.00–1.05 and ~97 % of the LED flux reaches the wall. Raising the board above the opening gives ≥ 2:1.
+  Model `docs/design/optics/sphere_illum.py`: with the LED plane 1–2.5 mm below a 30–36° opening, wall illuminance
+  max/min ≈ 1.00–1.04 for the whites (≤ 1.15 for single RGB colours, round1 F8) and ~97 % of the LED flux reaches the
+  wall. Raising the board above the opening gives ≥ 2:1.
+* **Light output**: 4000 K full ≈ 40 lm out of the moon, **20–30 lux on a page at 25–30 cm**. That is a moon lamp /
+  night-reading level, not a full reading light (round1 F6; v0.2 option in docs/verification/round1.md §5).
 * **Firmware**: `firmware/` — portable core (`lib/core`) + hardware glue (`src/main.cpp`); modes from
   `tools/gen_modes.py` (CIE 1931 mixing to the Planckian locus).
 * **Mechanics**: lithophane moon (PLA, NASA LROC albedo + LOLA relief → 0.9–2.6 mm wall, relief inside),
-  bayonet-locked to a PETG base cup that clamps the LED board and screws onto the gooseneck's M10×1 end;
-  pack = front shell + back plate + slip-on cantilever clip (PETG).
+  bayonet-locked to a PETG base cup. A 0.6 mm PETG ring clamps the LED board, so the PLA never touches it. The cup
+  screws onto the gooseneck's M10×1 end. Pack = front shell + back plate + slip-on cantilever clip (PETG).
+* **Thermal**: three layers. Firmware derating 45/52/58 °C; a 200 mA cap only with a trusted sensor (else 110 mA);
+  the LM75B hardware thermostat. Detail: docs/design/electronics.md §2.
 
 ## 3. Light modes (R9, R20)
 
@@ -66,7 +72,8 @@ Ten modes in button order (`firmware/include/modes_table.h`, generated): Warm 27
 Neutral reading 4000 K · Daylight 5000 K · Blue-white 6500 K · Candle 1900 K · Soft orange night · Red night ·
 Green · Blue. Evidence and targets: `docs/research/light-modes.md` (melanopic EDI limits from Brown et al. 2022,
 red for dark adaptation, Planckian chromaticities). 16 brightness steps, geometric 0.4 %–100 %. Power-on default:
-Soft white 3000 K at level 10 until the user saves another.
+Soft white 3000 K at level 10 until the user saves another. Green and Blue run at half current for supply headroom.
+Night modes go to level 15 (still < 1 lux at 30 cm).
 
 ## 4. Decision log
 
@@ -89,6 +96,28 @@ Soft white 3000 K at level 10 until the user saves another.
 - 2026-11-02 — Moon relief on the inside, smooth 50.0 mm outside (crisp silhouette; outer overhangs ≤ 45° by claim).
 - 2026-11-02 — Gooseneck: 120 mm, 10 mm OD, M10×1 ends, 6.8 mm bore (no coated gooseneck of this length is sold in
   the UK); sleeve it in silicone/heat-shrink for the plastic-coated look and feel (R12).
+- 2026-11-02 — Verification round 1 (4 reviewers; docs/verification/round1.md). Changes adopted:
+  - `board_map.h` is generated by `hardware/build.py`, with a consistency test (B1).
+  - Q4 MCU-switched LED-board supply; pull-ups on VLED (M2, M-3).
+  - J4 pin 1 = VREF via 1 k (M3).
+  - Charge 256 mA, R3 3.9 k (M4).
+  - F1 PTC ahead of the TVS (M-5, M-6).
+  - R5 10 k (m1).
+  - LM75B OS hardware thermostat on TLC RESET (M-1, m6).
+  - Derating 45/52/58 °C, with the trusted-sensor 200/110 mA caps (F1, F4).
+  - PETG clamp ring (F5).
+  - Recipes regenerated for the Würth RGB at 25 mA (F7).
+  - CG steps limited to the datasheet ranges (F9).
+  - Green/Blue at half current (M1).
+  - Firmware: WDT, bus recovery, read-back, timer-wrap fixes.
+  - Pack: J2 relocated with a lead slot (B-3); 1.6 mm screw-head gap over the pouch (B-2).
+  - LED board 1.0 mm in the board file (N9).
+  - Router fixed to keep the whole track body out of rule areas.
+- 2026-11-02 — `fab/*/v0.1/` committed before ordering (deviation from the pcb repo's "commit fab on order"
+  rule): Matt asked for files he can take straight to the fab. The order reference and tag follow at order time
+  (handoff 01).
+- 2026-11-02 — Accepted for v0.1, revisit in v0.2: no cell NTC; reversed cell not blocked while USB is present;
+  G/B tint drift at low battery; reading illuminance 20–30 lux. Decisions for Matt are listed in round1.md §5.
 
 ## 5. Open questions / VERIFY
 
@@ -99,8 +128,8 @@ See `docs/verification/VERIFY.md` (measurements that only the prototype can sett
 | Phase | Deliverable | Status |
 |---|---|---|
 | Requirements & research | this file, docs/research | done |
-| Electronics | hardware/*, ERC/DRC clean | done (v0.1) |
-| Firmware | firmware/, host tests + AVR build | done (v0.1), untested on hardware |
-| Mechanics | cad/parts, print/ | in progress |
-| Verification rounds | docs/verification | round 1 running |
-| BOM/order, handoffs | bom/, docs/handoffs | pending |
+| Electronics | hardware/*, ERC 0 / DRC 0 errors / 0 unconnected / 0 parity; fab/*/v0.1 | done (v0.1) |
+| Firmware | firmware/, 25 host tests + AVR builds | done (v0.1), untested on hardware |
+| Mechanics | cad/parts (10 parts PASS), print/ STL + 3MF | done (v0.1) |
+| Verification rounds | docs/verification/round1.md, VERIFY.md | round 1 done, fixes applied and rebuilt |
+| BOM/order, handoffs | bom/, docs/handoffs 01–06 | done |

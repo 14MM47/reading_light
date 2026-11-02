@@ -1,0 +1,10 @@
+Item #,Designator,Qty,Manufacturer,Mfg Part #,Description / Value,Package/Footprint,Type,Your Instructions / Notes,Farnell
+1,"D1,D3,D5,D7",4,Bridgelux,BXEN-27S-11M-3C-00-0-3,"2700K CRI97 - Mid-power white LED 2835, 2700 K, CRI 97 (Thrive), 3 V class",LED_PLCC_2835,SMD,polarity: pad 1 = cathode (large pad on 2835); check pin-1 / orientation in preview,3498849
+2,"D2,D4,D6,D8",4,Bridgelux,BXEN-50S-11M-3C-00-0-3,"5000K CRI97 - Mid-power white LED 2835, 5000 K, CRI 97 (Thrive), 3 V class",LED_PLCC_2835,SMD,polarity: pad 1 = cathode (large pad on 2835); check pin-1 / orientation in preview,3498853
+3,"D9,D10",2,Wurth Elektronik,150141M173100,"RGB 3528 CA - RGB LED PLCC-4 3528, common anode (1 A, 2 B-K, 3 R-K, 4 G-K), 30 mA max/die, R 625 / G 520 / B 470 nm",LED_RGB_Wuerth-PLCC4_3.2x2.8mm_150141M173100,SMD,polarity: pad 1 = cathode (large pad on 2835); check pin-1 / orientation in preview,2322115
+4,U1,1,Texas Instruments,TLC59116IPWR,"TLC59116IPWR - 16-ch I2C constant-current LED sink driver, 97 kHz PWM, TSSOP-28",TSSOP-28_4.4x9.7mm_P0.65mm,SMD,check pin-1 / orientation in preview,3119169
+5,R1,1,Multicomp Pro,MCWR06X7500FTL,750 (25 mA) - Resistor 750 Ohm 1% 0603 (TLC59116 REXT: 25.0 mA/channel),R_0603_1608Metric,SMD,,
+6,"C1,C3",2,Multicomp Pro,MC0603B104K500CT,100n - MLCC 100 nF 50 V X7R 0603,C_0603_1608Metric,SMD,,1759122
+7,C2,1,Samsung,CL21A106KOQNNNE,10u 16V 0805 - MLCC 10 uF 16 V X5R 0805 (0603 10 V part keeps only 2.9 uF at 5 V),C_0805_2012Metric,SMD,,
+8,U2,1,NXP,"LM75BDP,118","LM75BDP - I2C digital temperature sensor, +/-2 C, 2.8-5.5 V, TSSOP-8 (same die/pinout as LM75BD SOIC-8)",TSSOP-8_3x3mm_P0.65mm,SMD,check pin-1 / orientation in preview,
+9,R2,1,Multicomp Pro,MCWR06X1002FTL,10k - Resistor 10 kOhm 1% 0603,R_0603_1608Metric,SMD,,2447230

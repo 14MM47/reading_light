@@ -32,7 +32,7 @@ BOSS_D = 5.0
 
 Z_BACK = BACK_T
 Z_BAT_TOP = Z_BACK + BAT[2] + BAT_SWELL
-Z_PCB_BOT = Z_BAT_TOP + 0.4
+Z_PCB_BOT = Z_BAT_TOP + 1.6                # room for M2 pan heads (1.3 mm) + tape over the pouch (adversarial B-2)
 Z_PCB_TOP = Z_PCB_BOT + PCB_T
 Z_FACE_IN = Z_PCB_TOP + TOP_CLEAR
 Z_TOP = Z_FACE_IN + FRONT_T                      # overall thickness without the clip

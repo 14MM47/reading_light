@@ -31,6 +31,8 @@ class Board:
         ds.m_HoleToHoleMin = MM(rules.get("hole_to_hole", 0.5))
         ds.m_MinClearance = MM(rules.get("clearance", 0.2))
         ds.m_SolderMaskMinWidth = MM(0.0)
+        ds.m_TentViasFront = True           # vias covered by mask (nothing shorts under switches/ICs)
+        ds.m_TentViasBack = True
         ns = ds.m_NetSettings
         dflt = ns.GetDefaultNetclass()
         dflt.SetClearance(MM(rules.get("clearance", 0.2)))
@@ -134,7 +136,15 @@ class Board:
         s.SetWidth(MM(width))
         self.b.Add(s)
 
-    def edge_arc_poly(self, pts, width=0.1):
+    def slot(self, cx, cy, w, h, r=0.5, width=0.1):
+        """Internal cut-out (rounded rectangle) on Edge.Cuts, e.g. a wire pass-through."""
+        import math as _m
+        pts = []
+        for (ox, oy, a0) in ((cx + w / 2 - r, cy - h / 2 + r, -90), (cx + w / 2 - r, cy + h / 2 - r, 0),
+                             (cx - w / 2 + r, cy + h / 2 - r, 90), (cx - w / 2 + r, cy - h / 2 + r, 180)):
+            for k in range(5):
+                a = _m.radians(a0 + 90 * k / 4)
+                pts.append((ox + r * _m.cos(a), oy + r * _m.sin(a)))
         self.outline_poly(pts, width)
 
     def hole(self, x, y, d, pad_d=None, net=None):
@@ -211,7 +221,7 @@ class Board:
         z.SetIsRuleArea(True)
         z.SetDoNotAllowTracks(tracks)
         z.SetDoNotAllowVias(vias)
-        z.SetDoNotAllowZoneFills(pour)
+        z.SetDoNotAllowCopperPour(pour)
         z.SetDoNotAllowPads(False)
         z.SetDoNotAllowFootprints(False)
         ls = pcbnew.LSET()
@@ -249,6 +259,26 @@ class Board:
                 bb = p.GetBoundingBox()
                 pads.append((fp.IsFlipped(), bb))
         placed = []
+        # other silk already on the board (footprint graphics and texts, board texts) is an obstacle too
+        silk = {pcbnew.F_SilkS: False, pcbnew.B_SilkS: True}
+        for fp in self.b.GetFootprints():
+            for it in fp.GraphicalItems():
+                if it.GetLayer() in silk:
+                    bb = it.GetBoundingBox()
+                    placed.append(((pcbnew.ToMM(bb.GetX()), pcbnew.ToMM(bb.GetY()), pcbnew.ToMM(bb.GetRight()),
+                                    pcbnew.ToMM(bb.GetBottom())), silk[it.GetLayer()]))
+        for it in self.b.GetDrawings():
+            if it.GetLayer() in silk:
+                bb = it.GetBoundingBox()
+                placed.append(((pcbnew.ToMM(bb.GetX()), pcbnew.ToMM(bb.GetY()), pcbnew.ToMM(bb.GetRight()),
+                                pcbnew.ToMM(bb.GetBottom())), silk[it.GetLayer()]))
+            elif it.GetLayer() == pcbnew.Edge_Cuts and it.GetClass() == "PCB_SHAPE" and \
+                    it.GetShape() != pcbnew.SHAPE_T_CIRCLE:
+                bb = it.GetBoundingBox()                      # internal cut-outs (slots): keep silk 0.3 mm off
+                x0, y0, x1, y1 = (pcbnew.ToMM(v) for v in (bb.GetX(), bb.GetY(), bb.GetRight(), bb.GetBottom()))
+                if min(x1 - x0, y1 - y0) < 5.0:
+                    for side in (False, True):
+                        placed.append(((x0 - 0.3, y0 - 0.3, x1 + 0.3, y1 + 0.3), side))
         moved_to_fab = []
         for fp in sorted(self.b.GetFootprints(), key=lambda f: f.GetReference()):
             ref = fp.Reference()
@@ -262,8 +292,11 @@ class Board:
             bb = cy.BBox() if cy.OutlineCount() else fp.GetBoundingBox(False, False)
             x0, y0, x1, y1 = (pcbnew.ToMM(v) for v in (bb.GetX(), bb.GetY(), bb.GetRight(), bb.GetBottom()))
             cx, cy_ = (x0 + x1) / 2, (y0 + y1) / 2
-            n = len(fp.GetReference())
-            tw, th = 0.62 * size * n + 0.2, size + 0.2
+            # real text size from KiCad's font metrics (its box carries ~0.25 mm of line spacing: take 0.2 off
+            # each side so the box is the ink, then keep 0.05 mm of air)
+            ref.SetTextAngleDegrees(0)
+            rb = ref.GetBoundingBox()
+            tw, th = pcbnew.ToMM(rb.GetWidth()) - 0.3, pcbnew.ToMM(rb.GetHeight()) - 0.3
             cands = [(cx, y0 - th / 2 - 0.05, 0), (cx, y1 + th / 2 + 0.05, 0), (x0 - th / 2 - 0.05, cy_, 90),
                      (x1 + th / 2 + 0.05, cy_, 90), (x0 - tw / 2, y0 - th / 2, 0), (x1 + tw / 2, y0 - th / 2, 0),
                      (x0 - tw / 2, y1 + th / 2, 0), (x1 + tw / 2, y1 + th / 2, 0), (cx, cy_, 0)]

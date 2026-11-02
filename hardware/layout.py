@@ -60,6 +60,8 @@ def _build_once(board: str, d, parts, order):
     kb.pcbnew.FootprintLoad = load
     for nc in getattr(d, "NETCLASSES", []):
         B.netclass(**nc)
+    # board thickness goes into the STEP model and the fab notes (electrical review N9: the LED board is 1.0 mm)
+    B.b.GetDesignSettings().SetBoardThickness(pcbnew.FromMM(getattr(d, "BOARD_THICKNESS", 1.6)))
     # outline
     o = d.OUTLINE
     if o[0] == "circle":
@@ -78,6 +80,11 @@ def _build_once(board: str, d, parts, order):
         raise SystemExit(f"unplaced parts: {missing}")
     for h in getattr(d, "HOLES", []):
         B.hole(*h)
+    for (x, y) in getattr(d, "MOUNT_HOLES", []):
+        B.hole(x, y, 2.2)                                   # M2 clearance, NPTH
+        B.keepout("FB", [(x + 2.6 * math.cos(a * math.pi / 8), y + 2.6 * math.sin(a * math.pi / 8)) for a in range(16)])
+    for sl in getattr(d, "SLOTS", []):
+        B.slot(*sl)
     for k in getattr(d, "KEEPOUTS", []):
         B.keepout(**k)
     for t in getattr(d, "SILK", []):

@@ -49,14 +49,16 @@ float total_current_ma(const float d[G_COUNT]) {
     return s;
 }
 
-void mode_targets(uint8_t mode, uint8_t level, float cap, float out[G_COUNT]) {
+static float limits(const core_t *c);
+
+void mode_targets(uint8_t mode, uint8_t level, float cap, float i_cap_ma, float out[G_COUNT]) {
     if (mode >= MODE_COUNT) mode = 0;
     if (level > MODES[mode].max_level) level = MODES[mode].max_level;
     float f = level_fraction(level) * cap;
     for (int g = 0; g < G_COUNT; g++) out[g] = f * (float)MODES[mode].q12[g] / 4096.0f;
     float i = total_current_ma(out);
-    if (i > I_CAP_MA) {
-        float k = I_CAP_MA / i;
+    if (i > i_cap_ma) {
+        float k = i_cap_ma / i;
         for (int g = 0; g < G_COUNT; g++) out[g] *= k;
     }
 }
@@ -70,8 +72,9 @@ static float limits(const core_t *c) {
 
 static void retarget(core_t *c, uint32_t now) {
     for (int g = 0; g < G_COUNT; g++) c->fade_from[g] = c->drive[g];
-    mode_targets(c->mode, c->level[c->mode], limits(c), c->target);
+    mode_targets(c->mode, c->level[c->mode], limits(c), c->i_cap, c->target);
     c->fade_start = now;
+    c->fade_active = true;
 }
 
 void core_init(core_t *c, const saved_t *saved, uint32_t now) {
@@ -86,7 +89,11 @@ void core_init(core_t *c, const saved_t *saved, uint32_t now) {
     }
     c->t_cap = c->t_cap_target = 1.0f;
     c->t_last_ok = now;
+    c->t_changed_at = now;
+    c->t_trusted = false;            // until the sensor has answered
+    c->i_cap = I_CAP_UNTRUSTED_MA;
     c->vbat_mv = 4000;
+    c->last_slew = now;
     retarget(c, now);   // fades in from 0 on power-up
 }
 
@@ -127,7 +134,8 @@ void core_buttons(core_t *c, const bool pressed[BTN_COUNT], uint32_t now) {
                 if (!c->main_save_done && held >= HOLD_SAVE_MS) {
                     c->main_save_done = true;
                     c->save_request = true;
-                    c->blink_until = now + 400;          // confirmation: two dips (see core_tick)
+                    c->blink_start = now;                // confirmation: two dips (see core_tick)
+                    c->blink_len = 400;
                     c->blink_level = 0.15f;
                 }
             } else if (held >= REPEAT_DELAY_MS && (uint32_t)(now - c->last_repeat[b]) >= REPEAT_EVERY_MS) {
@@ -140,14 +148,30 @@ void core_buttons(core_t *c, const bool pressed[BTN_COUNT], uint32_t now) {
 
 void core_temperature(core_t *c, bool ok, float temp_c, uint32_t now) {
     float target;
+    if (ok && (temp_c < T_PLAUSIBLE_MIN_C || temp_c > T_PLAUSIBLE_MAX_C)) ok = false;
     if (ok) {
         c->t_valid = true;
         c->t_last_ok = now;
+        if (temp_c != c->t_last_value) {
+            c->t_last_value = temp_c;
+            c->t_changed_at = now;
+        }
         target = thermal_factor(temp_c);
     } else if ((uint32_t)(now - c->t_last_ok) > 3000) {
         target = T_FAILSAFE_CAP;
     } else {
         return;
+    }
+    // trusted = answering, in range, and not frozen while the LEDs are working hard (thermal review: a stuck or
+    // stale reading must not unlock the 200 mA cap)
+    bool fresh = (uint32_t)(now - c->t_last_ok) <= 3000;
+    bool frozen = total_current_ma(c->drive) > 50.0f && (uint32_t)(now - c->t_changed_at) > T_FROZEN_MS;
+    bool trusted = c->t_valid && fresh && !frozen;
+    float icap = trusted ? I_CAP_MA : I_CAP_UNTRUSTED_MA;
+    if (trusted != c->t_trusted || icap != c->i_cap) {
+        c->t_trusted = trusted;
+        c->i_cap = icap;
+        mode_targets(c->mode, c->level[c->mode], limits(c), c->i_cap, c->target);
     }
     if (target < c->t_cap_target - 0.01f || target > c->t_cap_target + 0.01f) {
         c->t_cap_target = target;
@@ -176,34 +200,46 @@ void core_battery(core_t *c, uint16_t vdd_mv, uint32_t now) {
 
 void core_tick(core_t *c, uint32_t now) {
     // thermal cap slews at ~10 %/s (0.0001 per 1 ms tick) so derating is gentle and invisible
-    static uint32_t last_slew;
     float d = c->t_cap_target - c->t_cap;
-    if ((d > 0.0005f || d < -0.0005f) && now != last_slew) {
-        float step = (float)(now - last_slew) * 0.0001f;
+    if ((d > 0.0005f || d < -0.0005f) && now != c->last_slew) {
+        float step = (float)(now - c->last_slew) * 0.0001f;
         if (step > 0.01f) step = 0.01f;
         if (d < 0) step = -step;
         if ((d > 0 && step > d) || (d < 0 && step < d)) step = d;
         c->t_cap += step;
-        bool fading = (uint32_t)(now - c->fade_start) < FADE_MS;
-        mode_targets(c->mode, c->level[c->mode], limits(c), c->target);
-        if (!fading)
+        mode_targets(c->mode, c->level[c->mode], limits(c), c->i_cap, c->target);
+        if (!c->fade_active)
             for (int g = 0; g < G_COUNT; g++) c->fade_from[g] = c->target[g];
     }
-    last_slew = now;
+    c->last_slew = now;
     // low-battery reminder blink
     if (c->batt == 1 && (uint32_t)(now - c->last_low_blink) >= LOW_BLINK_EVERY_MS) {
         c->last_low_blink = now;
-        c->blink_until = now + 200;
+        c->blink_start = now;
+        c->blink_len = 200;
         c->blink_level = 0.25f;
     }
-    float k = (float)(now - c->fade_start) / (float)FADE_MS;
-    if (k > 1.0f) k = 1.0f;
+    float k = 1.0f;
+    if (c->fade_active) {
+        uint32_t el = now - c->fade_start;
+        if (el >= FADE_MS) {
+            c->fade_active = false;
+            for (int g = 0; g < G_COUNT; g++) c->fade_from[g] = c->target[g];
+        } else {
+            k = (float)el / (float)FADE_MS;
+        }
+    }
     for (int g = 0; g < G_COUNT; g++) c->drive[g] = c->fade_from[g] + (c->target[g] - c->fade_from[g]) * k;
-    if ((int32_t)(c->blink_until - now) > 0) {
-        // dips: for the save confirmation two 100 ms dips inside 400 ms; for low battery one 200 ms dip
-        uint32_t left = c->blink_until - now;
-        bool dip = (c->blink_level < 0.2f) ? ((left / 100u) % 2u == 1u) : true;
-        if (dip)
-            for (int g = 0; g < G_COUNT; g++) c->drive[g] *= c->blink_level;
+    if (c->blink_len) {
+        uint32_t el = now - c->blink_start;          // elapsed time only: wrap-safe for any uptime
+        if (el >= c->blink_len) {
+            c->blink_len = 0;
+        } else {
+            // dips: for the save confirmation two 100 ms dips inside 400 ms; for low battery one 200 ms dip
+            uint32_t left = c->blink_len - el;
+            bool dip = (c->blink_level < 0.2f) ? ((left / 100u) % 2u == 1u) : true;
+            if (dip)
+                for (int g = 0; g < G_COUNT; g++) c->drive[g] *= c->blink_level;
+        }
     }
 }

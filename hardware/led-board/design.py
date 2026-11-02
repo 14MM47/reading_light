@@ -25,7 +25,7 @@ PAPER = "A3"
 CX, CY, R_BOARD = 50.0, 50.0, 13.0
 RING_R = 8.0
 
-LIB = {"LEDDRV": "reading_light:TLC59116IPW", "TEMP": "Sensor_Temperature:LM75B", "LED_WW": "Device:LED",
+LIB = {"LEDDRV": "reading_light:TLC59116IPW", "TEMP": "reading_light:LM75BDP", "LED_WW": "Device:LED",
        "LED_CW": "Device:LED", "LED_RGB": "Device:LED_ABRG", "R_750": "Device:R", "R_10K": "Device:R",
        "C_100N": "Device:C", "C_10U": "Device:C", "C_1U": "Device:C"}
 
@@ -116,7 +116,7 @@ def parts():
         v.append(P(ref, "LED_RGB", {"1": "VLED", "2": f"K_{ref}_B", "3": f"K_{ref}_R", "4": f"K_{ref}_G"},
                    (230 + 40 * j, 50, 0)))
     pin_of_out = PIN_OF_OUT
-    tlc = {"28": "VLED", "27": "SDA", "26": "SCL", "25": "VLED", "1": "REXT", "2": "GND", "3": "GND", "4": "GND",
+    tlc = {"28": "VLED", "27": "SDA", "26": "SCL", "25": "RESET_N", "1": "REXT", "2": "GND", "3": "GND", "4": "GND",
            "5": "GND", "10": "GND", "19": "GND", "24": "GND"}
     for o, pin in pin_of_out.items():
         tlc[pin] = outs[o]
@@ -125,8 +125,11 @@ def parts():
         P("R1", "R_750", {"1": "REXT", "2": "GND"}, (55, 175, 0), value="750 (25 mA)"),
         P("C1", "C_100N", {"1": "VLED", "2": "GND"}, (35, 145, 0)),
         P("C2", "C_10U", {"1": "VLED", "2": "GND"}, (25, 145, 0)),
-        P("U2", "TEMP", {"8": "VLED", "4": "GND", "1": "SDA", "2": "SCL", "3": None, "5": "GND", "6": "GND",
+        # hardware thermostat: LM75B OS (open-drain, active low; firmware sets Tos 60 C / Thyst 52 C) holds the
+        # TLC59116 in reset, so the LEDs go dark even if the MCU or the I2C bus has failed (review M-1)
+        P("U2", "TEMP", {"8": "VLED", "4": "GND", "1": "SDA", "2": "SCL", "3": "RESET_N", "5": "GND", "6": "GND",
                          "7": "GND"}, (190, 160, 0), value="LM75BDP"),
+        P("R2", "R_10K", {"1": "VLED", "2": "RESET_N"}, (45, 145, 0)),
         P("C3", "C_100N", {"1": "VLED", "2": "GND"}, (210, 145, 0)),
         Part("J1", "Connector_Generic:Conn_01x04", "MOON CABLE", "reading_light:LED_WirePads_1x04_P2.00mm",
              {"1": "GND", "2": "VLED", "3": "SDA", "4": "SCL"}, sch=(270, 160, 180),
@@ -140,7 +143,7 @@ PWR_FLAGS = [("VLED", (300, 130)), ("GND", (310, 130))]
 NOTES = [("LEDs - top face (into the moon)", (22, 30)), ("Driver, sensor, cable - bottom face", (22, 120))]
 BOXES = [(20, 25, 400, 95), (20, 115, 400, 210)]
 COMMENTS = [
-    "TLC59116 REXT 750R -> 25.0 mA per output (Wurth RGB abs max 30 mA). All LED anodes on VLED (= main board VSYS). RESET tied high.",
+    "TLC59116 REXT 750R -> 25.0 mA per output (Wurth RGB abs max 30 mA). All LED anodes on VLED. RESET <- LM75B OS (thermostat).",
     "I2C: TLC59116 0x60 (A3..A0 = GND), LM75B 0x48. Pull-ups are on the main board.",
     "Top face white mask (reflector). Edge band r 12-13 mm is clamped by the moon skirt: no copper there.",
 ]
@@ -154,6 +157,7 @@ def _circle(r, n=72):
 
 
 OUTLINE = ("circle", CX, CY, R_BOARD)
+BOARD_THICKNESS = 1.0   # mm: keeps the LED plane low in the moon base (optics stack, FAB_NOTES)
 RULES = {"clearance": 0.15, "track": 0.2, "track_min": 0.15, "via": 0.5, "drill": 0.25, "edge_clear": 1.0,
          "annular_min": 0.125, "hole_to_hole": 0.5}
 NETCLASSES = [dict(name="Power", track=0.4, clearance=0.15, via=0.5, drill=0.25, nets=["VLED"])]
@@ -177,6 +181,7 @@ def _place():
         "C1": (CX + 5.6, CY - 4.6, 0, "B"),      # VCC decoupling next to pin 28 (north-east)
         "C2": (CX - 7.6, CY + 0.0, 90, "B"),     # bulk 10 uF on VLED (west)
         "C3": (CX + 9.6, CY - 4.2, 90, "B"),     # LM75 decoupling
+        "R2": (CX + 6.6, CY + 7.0, 0, "B"),      # RESET_N pull-up (LM75B OS wired-OR)
         "J1": (CX + 2.0, CY - 9.2, 180, "B"),    # cable pads, north
     })
     return p
@@ -184,7 +189,7 @@ def _place():
 
 PLACE = _place()
 # GND first (it needs the channel under the TLC body to reach pins 10 and 19), then I2C, then the LED fan-in
-ROUTE = [("GND", 0.3), ("SDA", 0.2), ("SCL", 0.2), ("REXT", 0.2)] + \
+ROUTE = [("GND", 0.3), ("SDA", 0.2), ("SCL", 0.2), ("RESET_N", 0.2), ("REXT", 0.2)] + \
         [(f"K_{w[0]}", 0.25) for w in WHITE] + [(f"K_{r[0]}_{c}", 0.2) for r in RGB for c in "RGB"] + \
         [("VLED", 0.3, {"layers": (0,)})]   # top-only tree joining every anode and the pre-stitched vias
 PRE_STITCH = [("VLED", 1)]   # every bottom-side VLED pad gets a via to the top VLED pour before routing
@@ -192,6 +197,20 @@ STITCH = []                  # top face is the VLED pour: GND is routed + poured
 STITCH_GRID = []
 ZONES = [dict(net="GND", layer="B", pts=_circle(R_BOARD - 0.2), clearance=0.2, min_width=0.2),
          dict(net="VLED", layer="F", pts=_circle(R_BOARD - 0.2), clearance=0.2, min_width=0.2)]
-SILK = [dict(s="MOON LED v0.1", x=CX, y=CY - 4.6, size=0.8, thick=0.13, layer="B.SilkS"),
-        dict(s="1 GND 2 V 3 SDA 4 SCL", x=CX, y=CY - 5.8, size=0.6, thick=0.1, layer="B.SilkS")]
+# J1 is rotated 180: pad 1 (GND) at CX+5 ... pad 4 (SCL) at CX-1; one letter under each pad, key in the south
+SILK = [dict(s=t, x=CX + 2.0 + 3.0 - 2.0 * i, y=CY - 6.9, size=0.8, thick=0.13, layer="B.SilkS")
+        for i, t in enumerate("GVDC")] + \
+       [dict(s="MOON LED v0.1", x=CX - 2.5, y=CY + 6.4, size=0.8, thick=0.13, layer="B.SilkS"),
+        dict(s="D=SDA C=SCL", x=CX - 2.5, y=CY + 7.8, size=0.8, thick=0.13, layer="B.SilkS")]
 PAD_MAP = {}
+
+FAB_NOTES = """# led-board v0.1 - fabrication notes (paste into the fab's order form)
+
+- 2 layers, FR4, **1.0 mm**, 1 oz outer copper, round **26.0 mm** diameter
+- Surface finish: **ENIG** (flat pads for the 2835 LEDs and TSSOP-28)
+- Solder mask **WHITE** both sides (the top face is the reflector inside the moon), silkscreen black
+- Min track / space 0.20 / 0.15 mm; min via 0.5 / 0.25 mm (drill); no blind/buried vias
+- Quantity 5. Stencils: top AND bottom (frameless)
+- Assembly (optional): LEDs (D1-D10) on TOP; U1 TLC59116, U2 LM75BDP, R1, C1-C3 on BOTTOM. J1 = 4 solder pads for the cable
+  (not a component). Two-sided assembly costs extra; or assemble the bottom only and hand-fit the ten LEDs.
+"""

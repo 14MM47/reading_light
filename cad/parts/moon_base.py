@@ -4,13 +4,16 @@ onto the gooseneck's M10x1 end with a captured nut.
 Requirements (newest last; never renumber):
   B1  GIVEN    (Matt) LEDs in the base of the moon at the top of the neck
   B2  GIVEN    (Matt) pre-made metal bendable arm (gooseneck); chosen: 120 mm, 10 mm OD, M10x1 ends, 6.8 mm bore
-  B3  RULE     (optics model) LED board top 2.5 mm below the moon's opening plane (LED emitters ~1.8 mm below)
+  B3  RULE     (optics model) LED emitters 2.9 mm below the moon's opening plane (board top 3.6 mm below)
+  B9  RULE     (thermal review) a 0.6 mm PETG clamp ring (moon_ring.py) sits between the board edge and the PLA skirt:
+               the PLA never touches the board, which runs up to ~45-55 C
   B4  RULE     (LED board design) the board edge band r 12-13 mm is clamped between a ledge and the moon skirt;
                parts on the board's underside stay inside r 11.8 mm and need 1.5 mm of height
   B5  ASSUMED  bayonet: 3 vertical entry slots + 30 deg grooves for the moon's lugs; groove ceilings chamfered
                45 deg so the cup prints without supports
   B6  ASSUMED  the gooseneck's threaded end passes up through the floor and is held by an M10x1 hex nut sitting
-               in a hex socket on the floor (anti-rotation); a drop of thread-locker or epoxy is recommended
+               in a hex socket on the floor (anti-rotation); a drop of CA gel on the thread (no anaerobic
+               thread-locker: round1 m-7)
   B7  ASSUMED  the 4-wire cable runs up the gooseneck bore, through the nut, to the board's underside pads
   B8  RULE     printed upright (floor on the bed) in PETG (warmer than PLA: sits against the LED board)
 """
@@ -45,9 +48,11 @@ def dims():
     floor_top = L.FLOOR_T
     nut_top = floor_top + L.NUT_T
     ledge_z = nut_top + L.UNDER_BOARD_DEPTH          # board bottom rests here
-    board_top = ledge_z + L.BOARD_T                    # = skirt bottom when locked
-    rim_z = board_top + L.SKIRT_H                      # cup rim = moon's cut plane
-    return dict(floor_top=floor_top, nut_top=nut_top, ledge_z=ledge_z, board_top=board_top, rim_z=rim_z)
+    board_top = ledge_z + L.BOARD_T
+    ring_top = board_top + L.RING_T                    # = skirt bottom when locked
+    rim_z = ring_top + L.SKIRT_H                       # cup rim = moon's cut plane
+    return dict(floor_top=floor_top, nut_top=nut_top, ledge_z=ledge_z, board_top=board_top, ring_top=ring_top,
+                rim_z=rim_z)
 
 
 def part(*, wall=L.CUP_WALL, lug_clear=0.4, groove_turn=L.BAYONET_TURN_DEG):
@@ -73,7 +78,7 @@ def part(*, wall=L.CUP_WALL, lug_clear=0.4, groove_turn=L.BAYONET_TURN_DEG):
         span = math.degrees((L.LUG_W + 2 * lug_clear) / L.BORE_UPPER_R)
         for k in range(L.LUG_N):
             a0 = 90.37 + k * 360 / L.LUG_N
-            with Locations(Rot(0, 0, a0) * Pos((L.LUG_SLOT_R + L.BORE_UPPER_R) / 2 - 0.1, 0, d["board_top"] - 0.05)):
+            with Locations(Rot(0, 0, a0) * Pos((L.LUG_SLOT_R + L.BORE_UPPER_R) / 2 - 0.1, 0, d["ring_top"] - 0.05)):
                 Box(L.LUG_SLOT_R - L.BORE_UPPER_R + 0.2, L.LUG_W + 2 * lug_clear, H,
                     align=(Align.CENTER, Align.CENTER, Align.MIN), mode=Mode.SUBTRACT)
     cup = p.part
@@ -86,7 +91,7 @@ def part(*, wall=L.CUP_WALL, lug_clear=0.4, groove_turn=L.BAYONET_TURN_DEG):
         for s_ in range(steps + 1):
             a = a0 + span / 2 - (groove_turn + span) * s_ / steps
             dz = -L.CAM_DROP * max(0.0, (s_ - 1)) / (steps - 1)
-            seg = _revolved(L.groove_profile(d["board_top"] + dz), a - (groove_turn + span) / steps - 0.3,
+            seg = _revolved(L.groove_profile(d["ring_top"] + dz), a - (groove_turn + span) / steps - 0.3,
                             (groove_turn + span) / steps + 0.6)
             cup = cup - seg
     # hex socket for the M10x1 nut on the floor (anti-rotation), 0.2 mm clearance across flats
@@ -140,8 +145,8 @@ def context(p):
 def spec(m, p):
     d = dims()
     lo, hi = m.bounds
-    out = [claim("B3", "rim (moon cut plane) 2.5 mm above the board top", abs(d["rim_z"] - d["board_top"] - L.SKIRT_H) < 1e-6,
-                 round(d["rim_z"] - d["board_top"], 3))]
+    out = [claim("B3", "rim (moon cut plane) 3.6 mm above the board top (LED emitters 2.9 mm below)",
+                 abs(d["rim_z"] - d["board_top"] - (L.SKIRT_H + L.RING_T)) < 1e-6, round(d["rim_z"] - d["board_top"], 3))]
     out.append(claim("B4", "pocket radius = board radius + 0.2", abs(L.POCKET_R - L.BOARD_R - L.FIT_PCB) < 1e-6, L.POCKET_R))
     out.append(claim("B4", "ledge inner radius clears bottom parts (>= 11.8)", L.BOARD_LEDGE_IN_R >= L.COMPONENT_R_MAX,
                      L.BOARD_LEDGE_IN_R))

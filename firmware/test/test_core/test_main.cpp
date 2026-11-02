@@ -4,6 +4,7 @@
 #include <unity.h>
 
 #include "lightcore.h"
+#include "board_map.h"
 
 static core_t c;
 static uint32_t now;
@@ -34,8 +35,10 @@ void test_levels_monotonic_and_endpoints(void) {
 
 void test_thermal_curve(void) {
     TEST_ASSERT_FLOAT_WITHIN(1e-4, 1.0f, thermal_factor(25));
-    TEST_ASSERT_FLOAT_WITHIN(1e-4, 0.65f, thermal_factor(57.5f));
-    TEST_ASSERT_FLOAT_WITHIN(1e-4, 0.30f, thermal_factor(65));
+    TEST_ASSERT_FLOAT_WITHIN(1e-4, 1.0f, thermal_factor(45));
+    TEST_ASSERT_FLOAT_WITHIN(1e-4, 0.65f, thermal_factor(48.5f));
+    TEST_ASSERT_FLOAT_WITHIN(1e-4, 0.30f, thermal_factor(52));
+    TEST_ASSERT_FLOAT_WITHIN(1e-4, 0.05f, thermal_factor(58));
     TEST_ASSERT_FLOAT_WITHIN(1e-4, 0.05f, thermal_factor(90));
 }
 
@@ -43,8 +46,10 @@ void test_current_cap_every_mode_and_level(void) {
     float d[G_COUNT];
     for (int m = 0; m < MODE_COUNT; m++)
         for (int l = 0; l < LEVELS; l++) {
-            mode_targets(m, l, 1.0f, d);
+            mode_targets(m, l, 1.0f, I_CAP_MA, d);
             TEST_ASSERT_TRUE(total_current_ma(d) <= I_CAP_MA + 0.01f);
+            mode_targets(m, l, 1.0f, I_CAP_UNTRUSTED_MA, d);
+            TEST_ASSERT_TRUE(total_current_ma(d) <= I_CAP_UNTRUSTED_MA + 0.01f);
             for (int g = 0; g < G_COUNT; g++) TEST_ASSERT_TRUE(d[g] >= 0 && d[g] <= 1.0f);
         }
 }
@@ -90,7 +95,7 @@ void test_power_on_fades_in(void) {
     TEST_ASSERT_FLOAT_WITHIN(1e-6, 0.0f, total0);
     idle(FADE_MS + 5);
     float d[G_COUNT];
-    mode_targets(c.mode, c.level[c.mode], 1.0f, d);
+    mode_targets(c.mode, c.level[c.mode], 1.0f, c.i_cap, d);
     for (int g = 0; g < G_COUNT; g++) TEST_ASSERT_FLOAT_WITHIN(1e-5, d[g], c.drive[g]);
 }
 
@@ -158,7 +163,7 @@ void test_battery_low_empty_resume(void) {
     TEST_ASSERT_EQUAL_UINT8(1, c.batt);
     idle(FADE_MS + 5);
     float d[G_COUNT];
-    mode_targets(c.mode, c.level[c.mode], LOW_CAP, d);
+    mode_targets(c.mode, c.level[c.mode], LOW_CAP, c.i_cap, d);
     TEST_ASSERT_FLOAT_WITHIN(1e-4, d[G_WW], c.target[G_WW]);
     for (int i = 0; i < 80; i++) { core_battery(&c, 3200, now); idle(100); }
     TEST_ASSERT_EQUAL_UINT8(2, c.batt);
@@ -198,6 +203,97 @@ void test_save_confirmation_dips(void) {
     (void)during;
 }
 
+// ---- sensor trust: the 200 mA cap only unlocks with a fresh, plausible, changing reading (thermal review)
+void test_untrusted_until_sensor_answers_then_200mA(void) {
+    TEST_ASSERT_FALSE(c.t_trusted);
+    TEST_ASSERT_FLOAT_WITHIN(1e-3, I_CAP_UNTRUSTED_MA, c.i_cap);
+    core_temperature(&c, true, 30.0f, now);
+    TEST_ASSERT_TRUE(c.t_trusted);
+    TEST_ASSERT_FLOAT_WITHIN(1e-3, I_CAP_MA, c.i_cap);
+}
+
+void test_implausible_reading_is_a_failure(void) {
+    core_temperature(&c, true, 30.0f, now);
+    idle(3500);
+    core_temperature(&c, true, 150.0f, now);        // out of range: ignored -> silent sensor
+    TEST_ASSERT_FALSE(c.t_trusted);
+    TEST_ASSERT_FLOAT_WITHIN(1e-3, I_CAP_UNTRUSTED_MA, c.i_cap);
+}
+
+void test_frozen_reading_under_load_is_not_trusted(void) {
+    // full 4000 K so > 50 mA flows, then the same value every second for 6 minutes
+    while (c.mode != 2) tap(BTN_MAIN, 100);
+    run(5000, true, false, false);
+    for (int s = 0; s < 360; s++) { core_temperature(&c, true, 40.0f, now); idle(1000); }
+    TEST_ASSERT_FALSE(c.t_trusted);
+    TEST_ASSERT_TRUE(total_current_ma(c.drive) <= I_CAP_UNTRUSTED_MA + 0.01f);
+}
+
+void test_night_modes_light_only_red_and_warm_on_the_real_board(void) {
+    for (int m = 0; m < MODE_COUNT; m++) {
+        if (!(strstr(MODES[m].name, "night") || strstr(MODES[m].name, "Red"))) continue;
+        float d[G_COUNT];
+        mode_targets(m, MODES[m].max_level, 1.0f, I_CAP_MA, d);
+        for (int o = 0; o < 16; o++) {
+            int g = OUT_GROUP[o];
+            if (g == G_G || g == G_B || g == G_CW) TEST_ASSERT_FLOAT_WITHIN(1e-6, 0.0f, d[g]);
+        }
+    }
+}
+
+// ---- millis() wrap (firmware review FW-02): steady output 24.86 and 49.7 days after power-on
+void test_no_strobe_after_24_8_days_on(void) {
+    float ref = c.drive[G_WW] + c.drive[G_CW] + c.drive[G_G];
+    now = 1000u + 0x80000000u + 10u;
+    float mn = 1e9f;
+    for (int i = 0; i < 2000; i++) {
+        now++;
+        bool p[BTN_COUNT] = {false, false, false};
+        core_buttons(&c, p, now);
+        core_tick(&c, now);
+        float s = c.drive[G_WW] + c.drive[G_CW] + c.drive[G_G];
+        if (s < mn) mn = s;
+    }
+    TEST_ASSERT_FLOAT_WITHIN(1e-4, ref, mn);
+}
+
+void test_no_refade_after_49_7_days_on(void) {
+    float ref = c.drive[G_WW] + c.drive[G_CW] + c.drive[G_G];
+    now = (uint32_t)(1000u + 0xFFFFFFFFu + 1u);
+    float mn = 1e9f;
+    for (int i = 0; i < 100; i++) {
+        now++;
+        bool p[BTN_COUNT] = {false, false, false};
+        core_buttons(&c, p, now);
+        core_tick(&c, now);
+        float s = c.drive[G_WW] + c.drive[G_CW] + c.drive[G_G];
+        if (s < mn) mn = s;
+    }
+    TEST_ASSERT_FLOAT_WITHIN(1e-4, ref, mn);
+}
+
+void test_thermal_slew_independent_per_instance(void) {
+    static core_t a, b;
+    uint32_t t = 5000;
+    core_init(&a, NULL, t);
+    core_init(&b, NULL, t);
+    core_temperature(&a, true, 80.0f, t);
+    core_temperature(&b, true, 80.0f, t);
+    bool p[BTN_COUNT] = {false, false, false};
+    for (int i = 0; i < 12000; i++) {
+        t++;
+        core_buttons(&a, p, t); core_tick(&a, t);
+        core_buttons(&b, p, t); core_tick(&b, t);
+    }
+    TEST_ASSERT_FLOAT_WITHIN(0.01f, 0.05f, a.t_cap);
+    TEST_ASSERT_FLOAT_WITHIN(0.01f, 0.05f, b.t_cap);
+}
+
+void test_channel_current_matches_rext_750(void) {
+    const float i_fs = 1.26f / 750.0f * 15.0f * (127.0f / 128.0f) * 1000.0f;
+    TEST_ASSERT_FLOAT_WITHIN(0.1f, i_fs, I_CHANNEL_MA);
+}
+
 int main(int, char **) {
     UNITY_BEGIN();
     RUN_TEST(test_levels_monotonic_and_endpoints);
@@ -217,5 +313,13 @@ int main(int, char **) {
     RUN_TEST(test_brief_sag_does_not_shut_down);
     RUN_TEST(test_thermal_derating_and_sensor_failsafe);
     RUN_TEST(test_save_confirmation_dips);
+    RUN_TEST(test_untrusted_until_sensor_answers_then_200mA);
+    RUN_TEST(test_implausible_reading_is_a_failure);
+    RUN_TEST(test_frozen_reading_under_load_is_not_trusted);
+    RUN_TEST(test_night_modes_light_only_red_and_warm_on_the_real_board);
+    RUN_TEST(test_no_strobe_after_24_8_days_on);
+    RUN_TEST(test_no_refade_after_49_7_days_on);
+    RUN_TEST(test_thermal_slew_independent_per_instance);
+    RUN_TEST(test_channel_current_matches_rext_750);
     return UNITY_END();
 }

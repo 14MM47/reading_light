@@ -1,16 +1,16 @@
 Key,Qty per lamp,References,Value,Manufacturer,MPN,Description,Footprint,Farnell,Datasheet
 USBC,1,main:J1,USB4125-GF-A,GCT,USB4125-GF-A,"USB-C receptacle, 6-pin power only, top mount, SMT + THT shell",USB_C_Receptacle_GCT_USB4125-xx-x_6P_TopMnt_Horizontal,3648642,https://gct.co/files/drawings/usb4125.pdf
+PTC,1,main:F1,0.75A PTC,Bourns,MF-MSMF075-2,"Resettable fuse 0.75 A hold / 1.5 A trip, 13.2 V, 1812 (VBUS: trips on TVS conduction or a short in the neck)",Fuse_1812_4532Metric,,https://www.bourns.com/docs/Product-Datasheets/mf-msmf.pdf
 R_5K1,2,main:R1 main:R2,5.1k,Multicomp Pro,MCWR06X5101FTL,Resistor 5.1 kOhm 1% 0603,R_0603_1608Metric,,
 TVS,1,main:D1,SMF5.0A,Littelfuse,SMF5.0A,"TVS unidirectional 5.0 V standoff, 200 W, SOD-123FL",D_SOD-123F,2691565,https://www.littelfuse.com/products/tvs-diodes/surface-mount/smf.aspx
 C_10U,5,main:C1 main:C2 main:C3 main:C4 led:C2,10u 16V 0805,Samsung,CL21A106KOQNNNE,MLCC 10 uF 16 V X5R 0805 (0603 10 V part keeps only 2.9 uF at 5 V),C_0805_2012Metric,,
 CHG,1,main:U1,MCP73831-2ACI/OT,Microchip,MCP73831T-2ACI/OT,"Li-ion/LiPo linear charger 4.20 V, up to 500 mA, SOT-23-5",SOT-23-5,1332158,https://ww1.microchip.com/downloads/aemDocuments/documents/APID/ProductDocuments/DataSheets/MCP73831-Family-Data-Sheet-DS20001984H.pdf
-R_2K4,1,main:R3,2.4k,Multicomp Pro,MCWR06X2401FTL,Resistor 2.4 kOhm 1% 0603 (charge current),R_0603_1608Metric,,
-R_1K,1,main:R4,1k,Multicomp Pro,MCWR06X1001FTL,Resistor 1 kOhm 1% 0603,R_0603_1608Metric,,
+R_3K9,1,main:R3,3.9k,Multicomp Pro,MCWR06X3901FTL,Resistor 3.9 kOhm 1% 0603 (charge current 256 mA),R_0603_1608Metric,,
+R_1K,2,main:R4 main:R11,1k,Multicomp Pro,MCWR06X1001FTL,Resistor 1 kOhm 1% 0603,R_0603_1608Metric,,
 LED_RED_0603,1,main:D2,red,Kingbright,APT1608SURCK,"Hyper-red chip LED 0603, 230 mcd @ 20 mA, pin 1 = K (charge indicator, ~3 mA)",LED_0603_1608Metric,,https://www.kingbrightusa.com/images/catalog/SPEC/APT1608SURCK.pdf
 JST_PH2,1,main:J2,S2B-PH-SM4-TB,JST,S2B-PH-SM4-TB(LF)(SN),JST PH 2-pin side-entry SMD header (battery),JST_PH_S2B-PH-SM4-TB_1x02-1MP_P2.00mm_Horizontal,9492615,
-PFET,3,main:Q3 main:Q1 main:Q2,DMG2305UX,Diodes Inc,DMG2305UX-7,"P-MOSFET -20 V -4.2 A, Rds(on) 52 mOhm @ -4.5 V (max), SOT-23 (G=1 S=2 D=3)",SOT-23,2543533,https://www.diodes.com/assets/Datasheets/DMG2305UX.pdf
-R_10K,2,main:R10 main:R7,10k,Multicomp Pro,MCWR06X1002FTL,Resistor 10 kOhm 1% 0603,R_0603_1608Metric,2447230,
-R_100K,1,main:R5,100k,Multicomp Pro,MCWR06X1003FTL,Resistor 100 kOhm 1% 0603,R_0603_1608Metric,,
+PFET,4,main:Q3 main:Q1 main:Q2 main:Q4,DMG2305UX,Diodes Inc,DMG2305UX-7,"P-MOSFET -20 V -4.2 A, Rds(on) 52 mOhm @ -4.5 V (max), SOT-23 (G=1 S=2 D=3)",SOT-23,2543533,https://www.diodes.com/assets/Datasheets/DMG2305UX.pdf
+R_10K,4,main:R10 main:R5 main:R7 led:R2,10k,Multicomp Pro,MCWR06X1002FTL,Resistor 10 kOhm 1% 0603,R_0603_1608Metric,2447230,
 RECT,1,main:D3,S1J,Vishay,S1J-E3/61T,"Silicon rectifier 1 A 600 V, SMA (DO-214AC); Vf ~0.85 V @ 0.3 A; leakage nA at 4 V reverse (USB -> VSYS OR-ing)",D_SMA,,https://www.vishay.com/docs/88711/s1a.pdf
 R_1M,1,main:R6,1M,Multicomp Pro,MCWR06X1004FTL,Resistor 1 MOhm 1% 0603,R_0603_1608Metric,,
 C_100N,4,main:C5 main:C6 led:C1 led:C3,100n,Multicomp Pro,MC0603B104K500CT,MLCC 100 nF 50 V X7R 0603,C_0603_1608Metric,1759122,
@@ -18,6 +18,7 @@ SLIDE,1,main:SW1,PCM12SMTR,C&K,PCM12SMTR,"Mini slide switch SPDT, right-angle SM
 MCU,1,main:U2,ATtiny3216-SN,Microchip,ATTINY3216-SN,"8-bit AVR MCU, 32 KB flash, 256 B EEPROM, UPDI, 1.8-5.5 V, SOIC-20 (300 mil)",SOIC-20W_7.5x12.8mm_P1.27mm,3018703,https://ww1.microchip.com/downloads/aemDocuments/documents/MCU08/ProductDocuments/DataSheets/ATtiny3216-17-DataSheet-DS40002205A.pdf
 C_1U,1,main:C7,1u,Samsung,CL10A105KB8NNNC,MLCC 1 uF 50 V X5R 0603,C_0603_1608Metric,3013385,
 TACT,3,main:SW2 main:SW3 main:SW4,PTS645SM43SMTR92,C&K,PTS645SM43SMTR92 LFS,"Tactile switch 6x6x4.3 mm SMD, 160 gf",SW_SPST_PTS645Sx43SMTR92,3941596,
+R_100K,1,main:R12,100k,Multicomp Pro,MCWR06X1003FTL,Resistor 100 kOhm 1% 0603,R_0603_1608Metric,,
 R_3K3,2,main:R8 main:R9,3.3k,Multicomp Pro,MCWR06X3301FTL,Resistor 3.3 kOhm 1% 0603 (I2C pull-up),R_0603_1608Metric,,
 JST_SH4,1,main:J3,SM04B-SRSS-TB,JST,SM04B-SRSS-TB(LF)(SN),"JST SH 4-pin side-entry SMD header (Qwiic pinout, moon cable)",JST_SH_SM04B-SRSS-TB_1x04-1MP_P1.00mm_Horizontal,1830839,
 LED_WW,4,led:D1 led:D3 led:D5 led:D7,2700K CRI97,Bridgelux,BXEN-27S-11M-3C-00-0-3,"Mid-power white LED 2835, 2700 K, CRI 97 (Thrive), 3 V class",LED_PLCC_2835,3498849,
@@ -34,4 +35,8 @@ OTHER,1,,,RS Components,"288-4665 (SparkFun KIT-15081 Qwiic cable kit, 50-500 mm
 OTHER,2,,,Amazon/Accu.co.uk,M2x6 self tapping pan head A2,M2 x 6 mm self-tapping pan-head screws (PCB to front shell),,,
 OTHER,2,,,Amazon/Accu.co.uk,M2x12 self tapping pan head A2,M2 x 12 mm self-tapping pan-head screws (clip + back plate to front shell),,,
 OTHER,1,,,"Bambu Lab (PLA Basic Jade White, PETG Basic)",,"Filament: white PLA (moon) ~12 g, PETG (base, pack, clip, caps) ~40 g",,,
-OTHER,0,,,any,,Medium-strength thread-locker (gooseneck ends) or 5-min epoxy,,,
+OTHER,0,,,any,,"Cyanoacrylate (super glue, gel) for the gooseneck ends and the LED-pad strain relief",,,
+OTHER,0,,,any,,Neutral-cure silicone (or E6000): strain relief over the LED-board wire joints and the cable at J3,,,
+OTHER,1,,,Amazon UK / 3D-printer spares,PTFE tube 2x3mm,"PTFE tube 2 mm ID x 3 mm OD (or silicone sleeve), 200 mm: protects the cable inside the gooseneck",,,
+OTHER,0,,,any,,"Kapton (polyimide) tape 10-20 mm: over the pouch under the PCB, and under U1/D3/Q1-Q3",,,
+OTHER,0,,,any,,USB-C charger >= 1 A at 5 V (if you don't have one),,,

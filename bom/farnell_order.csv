@@ -1,16 +1,16 @@
 Farnell Order Code,Manufacturer Part Number,Manufacturer,Quantity,Needed for builds,Indicative unit GBP (ex VAT),Indicative line GBP,Description,Line note
 3648642,USB4125-GF-A,GCT,3,2,0.590,1.77,"USB-C receptacle, 6-pin power only, top mount, SMT + THT shell",reading-light USBC
+(search MPN),MF-MSMF075-2,Bourns,5,2,0.400,2.00,"Resettable fuse 0.75 A hold / 1.5 A trip, 13.2 V, 1812 (VBUS: trips on TVS conduction or a short in the neck)",reading-light PTC
 (search MPN),MCWR06X5101FTL,Multicomp Pro,50,4,0.010,0.50,Resistor 5.1 kOhm 1% 0603,reading-light R_5K1
 2691565,SMF5.0A,Littelfuse,5,2,0.150,0.75,"TVS unidirectional 5.0 V standoff, 200 W, SOD-123FL",reading-light TVS
 (search MPN),CL21A106KOQNNNE,Samsung,20,10,0.080,1.60,MLCC 10 uF 16 V X5R 0805 (0603 10 V part keeps only 2.9 uF at 5 V),reading-light C_10U
 1332158,MCP73831T-2ACI/OT,Microchip,3,2,0.590,1.77,"Li-ion/LiPo linear charger 4.20 V, up to 500 mA, SOT-23-5",reading-light CHG
-(search MPN),MCWR06X2401FTL,Multicomp Pro,50,2,0.010,0.50,Resistor 2.4 kOhm 1% 0603 (charge current),reading-light R_2K4
-(search MPN),MCWR06X1001FTL,Multicomp Pro,50,2,0.010,0.50,Resistor 1 kOhm 1% 0603,reading-light R_1K
+(search MPN),MCWR06X3901FTL,Multicomp Pro,50,2,0.010,0.50,Resistor 3.9 kOhm 1% 0603 (charge current 256 mA),reading-light R_3K9
+(search MPN),MCWR06X1001FTL,Multicomp Pro,50,4,0.010,0.50,Resistor 1 kOhm 1% 0603,reading-light R_1K
 (search MPN),APT1608SURCK,Kingbright,4,2,0.150,0.60,"Hyper-red chip LED 0603, 230 mcd @ 20 mA, pin 1 = K (charge indicator, ~3 mA)",reading-light LED_RED_0603
 9492615,S2B-PH-SM4-TB(LF)(SN),JST,10,2,0.480,4.80,JST PH 2-pin side-entry SMD header (battery),reading-light JST_PH2
-2543533,DMG2305UX-7,Diodes Inc,8,6,0.300,2.40,"P-MOSFET -20 V -4.2 A, Rds(on) 52 mOhm @ -4.5 V (max), SOT-23 (G=1 S=2 D=3)",reading-light PFET
-2447230,MCWR06X1002FTL,Multicomp Pro,50,4,0.010,0.50,Resistor 10 kOhm 1% 0603,reading-light R_10K
-(search MPN),MCWR06X1003FTL,Multicomp Pro,50,2,0.010,0.50,Resistor 100 kOhm 1% 0603,reading-light R_100K
+2543533,DMG2305UX-7,Diodes Inc,10,8,0.300,3.00,"P-MOSFET -20 V -4.2 A, Rds(on) 52 mOhm @ -4.5 V (max), SOT-23 (G=1 S=2 D=3)",reading-light PFET
+2447230,MCWR06X1002FTL,Multicomp Pro,50,8,0.010,0.50,Resistor 10 kOhm 1% 0603,reading-light R_10K
 (search MPN),S1J-E3/61T,Vishay,5,2,0.120,0.60,"Silicon rectifier 1 A 600 V, SMA (DO-214AC); Vf ~0.85 V @ 0.3 A; leakage nA at 4 V reverse (USB -> VSYS OR-ing)",reading-light RECT
 (search MPN),MCWR06X1004FTL,Multicomp Pro,50,2,0.010,0.50,Resistor 1 MOhm 1% 0603,reading-light R_1M
 1759122,MC0603B104K500CT,Multicomp Pro,50,8,0.010,0.50,MLCC 100 nF 50 V X7R 0603,reading-light C_100N
@@ -18,6 +18,7 @@ Farnell Order Code,Manufacturer Part Number,Manufacturer,Quantity,Needed for bui
 3018703,ATTINY3216-SN,Microchip,3,2,1.040,3.12,"8-bit AVR MCU, 32 KB flash, 256 B EEPROM, UPDI, 1.8-5.5 V, SOIC-20 (300 mil)",reading-light MCU
 3013385,CL10A105KB8NNNC,Samsung,10,2,0.030,0.30,MLCC 1 uF 50 V X5R 0603,reading-light C_1U
 3941596,PTS645SM43SMTR92 LFS,C&K,10,6,0.190,1.90,"Tactile switch 6x6x4.3 mm SMD, 160 gf",reading-light TACT
+(search MPN),MCWR06X1003FTL,Multicomp Pro,50,2,0.010,0.50,Resistor 100 kOhm 1% 0603,reading-light R_100K
 (search MPN),MCWR06X3301FTL,Multicomp Pro,50,4,0.010,0.50,Resistor 3.3 kOhm 1% 0603 (I2C pull-up),reading-light R_3K3
 1830839,SM04B-SRSS-TB(LF)(SN),JST,3,2,0.450,1.35,"JST SH 4-pin side-entry SMD header (Qwiic pinout, moon cable)",reading-light JST_SH4
 3498849,BXEN-27S-11M-3C-00-0-3,Bridgelux,10,8,0.100,1.00,"Mid-power white LED 2835, 2700 K, CRI 97 (Thrive), 3 V class",reading-light LED_WW

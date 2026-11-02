@@ -44,6 +44,7 @@ class Router:
         self.through = {}         # netname -> bool array [H, W]: cells where vias / plated holes join the layers
         self.smd_pads = {}        # netname -> bool array [2, H, W] (pads only, for via-in-pad avoidance)
         self.blocked_all = np.zeros((2, self.H, self.W), bool)
+        self.npth_mask = np.zeros((self.H, self.W), bool)
         self.hole_mask = np.zeros((self.H, self.W), bool)
         self._inside = self._board_inside()
         self.edge_dist = ndimage.distance_transform_edt(self._inside) * grid
@@ -117,6 +118,7 @@ class Router:
                     self.hole_mask |= np.array(img, bool)
                     if pad.GetAttribute() == pcbnew.PAD_ATTRIB_NPTH:
                         self.blocked_all[:] |= np.array(img, bool)
+                        self.npth_mask |= np.array(img, bool)
         for t in self.b.GetTracks():
             self._raster_track(t)
         for z in self.b.Zones():
@@ -206,13 +208,18 @@ class Router:
         freev = np.ones((self.H, self.W), bool)
         need_t = self.cl + w / 2 + self.margin
         need_v = self.cl + self.via_d / 2 + self.margin
+        def edt(mask):                            # distance (mm) to the nearest set cell; inf if none is set
+            return ndimage.distance_transform_edt(~mask) * self.g if mask.any() else np.full(mask.shape, np.inf)
+        npth_d = edt(self.npth_mask)
         for li in range(2):
             dist = ndimage.distance_transform_edt(~others[li]) * self.g
             ok_edge_t = self.edge_dist > (self.edge_cl + w / 2 + self.margin)
-            free[li] = (dist > need_t) & ok_edge_t & ~self.blocked_all[li]
+            # keep the whole track / via body (not only its centre line) out of rule areas, and clear NPTH holes
+            blk = edt(self.blocked_all[li])
+            free[li] = (dist > need_t) & ok_edge_t & (blk > w / 2 + self.margin) & (npth_d > need_t)
             if li not in layers:
                 free[li] = False
-            freev &= (dist > need_v) & ~self.blocked_all[li]
+            freev &= (dist > need_v) & (blk > self.via_d / 2 + self.margin) & (npth_d > need_v)
         holed = ndimage.distance_transform_edt(~self.hole_mask) * self.g
         freev &= holed > (0.5 + self.via_drill / 2 + self.via_drill / 2 + self.margin)
         freev &= self.edge_dist > (self.edge_cl + self.via_d / 2 + self.margin)

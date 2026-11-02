@@ -18,11 +18,15 @@ extern "C" {
 #define REPEAT_EVERY_MS   150
 #define DEBOUNCE_MS       15
 #define FADE_MS           160       // cross-fade on any change
-#define I_CHANNEL_MA      30.2f     // TLC59116 full-scale current (REXT 620 R, CG 0.992)
-#define I_CAP_MA          200.0f    // total LED current cap (moon-base thermal budget, ~0.6 W)
-#define T_DERATE_START_C  50.0f     // LED board temperature where derating starts
-#define T_DERATE_KNEE_C   65.0f     // 30 % at the knee
-#define T_DERATE_MAX_C    75.0f     // 5 % (faint glow) at/above this
+#define I_CHANNEL_MA      25.0f     // TLC59116 full-scale current: 1.26 V / 750 R x 15 x CG 0.992 (led-board R1)
+#define I_CAP_MA          200.0f    // total LED current cap while the temperature sensor is trusted (short bursts)
+#define I_CAP_UNTRUSTED_MA 110.0f   // hard cap without a trusted sensor: ~0.4 W in the head at 4.2 V (thermal review)
+#define T_DERATE_START_C  45.0f     // LED-board temperature where derating starts (keeps the PLA <= ~47 C)
+#define T_DERATE_KNEE_C   52.0f     // 30 % at the knee
+#define T_DERATE_MAX_C    58.0f     // 5 % (faint glow) at/above this; the LM75B OS thermostat cuts the TLC at 60 C
+#define T_PLAUSIBLE_MIN_C (-20.0f)
+#define T_PLAUSIBLE_MAX_C 100.0f
+#define T_FROZEN_MS       300000UL  // reading unchanged this long while > 50 mA flows = sensor not trusted
 #define T_FAILSAFE_CAP    0.30f     // cap if the temperature sensor stops answering
 #define VBAT_LOW_MV       3450      // under load: cap brightness, periodic blink
 #define VBAT_EMPTY_MV     3300      // under load for EMPTY_HOLD_MS: fade out and sleep
@@ -51,6 +55,10 @@ typedef struct {
     float t_cap, t_cap_target;        // thermal derate (filtered)
     bool t_valid;
     uint32_t t_last_ok;
+    float t_last_value;               // plausibility: last distinct reading and when it last changed
+    uint32_t t_changed_at;
+    bool t_trusted;                   // recent, in range and not frozen
+    float i_cap;                      // total current cap in force (I_CAP_MA or I_CAP_UNTRUSTED_MA)
     uint16_t vbat_mv;
     uint8_t batt;                     // 0 ok, 1 low, 2 empty
     uint32_t below_empty_since, last_low_blink;
@@ -59,9 +67,12 @@ typedef struct {
     float target[G_COUNT];
     float fade_from[G_COUNT];
     uint32_t fade_start;
-    uint32_t blink_until;             // confirmation/low-battery blink window
+    bool fade_active;                 // cleared when the fade completes, so a millis() wrap cannot restart it
+    uint32_t blink_start;             // confirmation/low-battery blink window: start ...
+    uint16_t blink_len;               // ... and length in ms (0 = no blink; no absolute deadline to wrap)
     float blink_level;
     bool save_request;                // main loop writes EEPROM when set
+    uint32_t last_slew;               // thermal slew timestamp (per instance, not a function static)
 } core_t;
 
 void core_init(core_t *c, const saved_t *saved, uint32_t now);
@@ -72,7 +83,7 @@ void core_tick(core_t *c, uint32_t now);         // updates c->drive[]
 
 float level_fraction(uint8_t level);
 float thermal_factor(float temp_c);
-void mode_targets(uint8_t mode, uint8_t level, float cap, float out[G_COUNT]);
+void mode_targets(uint8_t mode, uint8_t level, float cap, float i_cap_ma, float out[G_COUNT]);
 float total_current_ma(const float drive[G_COUNT]);
 uint8_t crc8(const uint8_t *p, uint8_t n);
 void saved_make(saved_t *s, uint8_t mode, uint8_t level);

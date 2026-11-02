@@ -9,7 +9,7 @@
 		(date "2026-11-02")
 		(rev "0.1")
 		(company "14MM47 / reading_light")
-		(comment 1 "TLC59116 REXT 750R -> 25.0 mA per output (Wurth RGB abs max 30 mA). All LED anodes on VLED (= main board VSYS). RESET tied high.")
+		(comment 1 "TLC59116 REXT 750R -> 25.0 mA per output (Wurth RGB abs max 30 mA). All LED anodes on VLED. RESET <- LM75B OS (thermostat).")
 		(comment 2 "I2C: TLC59116 0x60 (A3..A0 = GND), LM75B 0x48. Pull-ups are on the main board.")
 		(comment 3 "Top face white mask (reflector). Edge band r 12-13 mm is clamped by the moon skirt: no copper there.")
 	)
@@ -1604,7 +1604,7 @@
 			)
 			(embedded_fonts no)
 		)
-		(symbol "Sensor_Temperature:LM75B"
+		(symbol "reading_light:LM75BDP"
 			(exclude_from_sim no)
 			(in_bom yes)
 			(on_board yes)
@@ -1616,7 +1616,7 @@
 					)
 				)
 			)
-			(property "Value" "LM75B"
+			(property "Value" "LM75BDP"
 				(at 0 11.43 0)
 				(effects
 					(font
@@ -1625,7 +1625,7 @@
 					(justify left)
 				)
 			)
-			(property "Footprint" ""
+			(property "Footprint" "Package_SO:TSSOP-8_3x3mm_P0.65mm"
 				(at 0 0 0)
 				(effects
 					(font
@@ -1634,7 +1634,7 @@
 					(hide yes)
 				)
 			)
-			(property "Datasheet" "http://www.ti.com/lit/ds/symlink/lm75b.pdf"
+			(property "Datasheet" "https://www.nxp.com/docs/en/data-sheet/LM75B.pdf"
 				(at 0 0 0)
 				(effects
 					(font
@@ -1643,7 +1643,7 @@
 					(hide yes)
 				)
 			)
-			(property "Description" "Digital Temperature Sensor & Thermal Watchdog with LP on I2C and bus fault timeout, SOIC-8 and VSSOP-8"
+			(property "Description" "Digital temperature sensor and thermal watchdog, I2C, +/-2 C, 2.8-5.5 V, TSSOP-8 (NXP)"
 				(at 0 0 0)
 				(effects
 					(font
@@ -1661,7 +1661,7 @@
 					(hide yes)
 				)
 			)
-			(property "ki_fp_filters" "SOIC*3.9x4.9mm*P1.27mm* VSSOP*3x3mm*P0.65mm*"
+			(property "ki_fp_filters" "TSSOP*3x3mm*P0.65mm*"
 				(at 0 0 0)
 				(effects
 					(font
@@ -1670,7 +1670,7 @@
 					(hide yes)
 				)
 			)
-			(symbol "LM75B_0_1"
+			(symbol "LM75BDP_0_1"
 				(rectangle
 					(start -7.62 5.08)
 					(end 7.62 -5.08)
@@ -1808,7 +1808,7 @@
 					)
 				)
 			)
-			(symbol "LM75B_1_1"
+			(symbol "LM75BDP_1_1"
 				(pin input line
 					(at -10.16 2.54 0)
 					(length 2.54)
@@ -4035,7 +4035,7 @@
 		)
 		(uuid "ee1ca159-5319-5326-ab1a-bb4b538389fd")
 	)
-	(label "VLED"
+	(label "RESET_N"
 		(at 76.2 149.86 180)
 		(effects
 			(font
@@ -4930,7 +4930,7 @@
 		(uuid "3d205a33-d325-5fb5-a912-915193687f10")
 	)
 	(symbol
-		(lib_id "Sensor_Temperature:LM75B")
+		(lib_id "reading_light:LM75BDP")
 		(at 190.5 160.02 0)
 		(unit 1)
 		(exclude_from_sim no)
@@ -5190,9 +5190,164 @@
 		)
 		(uuid "9535698e-9756-552f-9111-6120c49d24d3")
 	)
-	(no_connect
-		(at 200.66 162.56)
-		(uuid "1e93054a-5158-54e7-9b39-9a3cff5e5093")
+	(wire
+		(pts
+			(xy 200.66 162.56)
+			(xy 203.2 162.56)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "7bd52be8-ef4b-5ae1-9cfd-f92d3080e490")
+	)
+	(label "RESET_N"
+		(at 203.2 162.56 0)
+		(effects
+			(font
+				(size 1 1)
+			)
+			(justify left bottom)
+		)
+		(uuid "7c27f3af-fbaf-5280-a2cd-60fd6d3ae698")
+	)
+	(symbol
+		(lib_id "Device:R")
+		(at 44.45 144.78 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "b1502825-2bc8-51c8-8666-e3187880f150")
+		(property "Reference" "R2"
+			(at 46.466 140.47 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "10k"
+			(at 46.466 142.57 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "Resistor_SMD:R_0603_1608Metric"
+			(at 44.45 144.78 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 44.45 144.78 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Resistor 10 kOhm 1% 0603"
+			(at 44.45 144.78 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MPN" "MCWR06X1002FTL"
+			(at 44.45 144.78 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Manufacturer" "Multicomp Pro"
+			(at 44.45 144.78 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Farnell" "2447230"
+			(at 44.45 144.78 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "ae4d849d-a5da-5ec3-abcb-f1bf68571dc4")
+		)
+		(pin "2"
+			(uuid "7543fe9b-af92-5fea-8358-eb41db63b11e")
+		)
+		(instances
+			(project "led-board"
+				(path "/92c3cc34-9013-55c6-aad8-c6fc999e8c1c"
+					(reference "R2")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(wire
+		(pts
+			(xy 44.45 140.97)
+			(xy 44.45 138.43)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "5bfecc1f-3620-588c-acbb-90568dcdca98")
+	)
+	(label "VLED"
+		(at 44.45 138.43 90)
+		(effects
+			(font
+				(size 1 1)
+			)
+			(justify left bottom)
+		)
+		(uuid "bf758d2a-fd80-5f8a-b150-568d1e06fc0c")
+	)
+	(wire
+		(pts
+			(xy 44.45 148.59)
+			(xy 44.45 151.13)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "1ca0be94-e94b-57c3-99ab-cb6bfd5cd68d")
+	)
+	(label "RESET_N"
+		(at 44.45 151.13 270)
+		(effects
+			(font
+				(size 1 1)
+			)
+			(justify right bottom)
+		)
+		(uuid "83e80734-54d3-5471-8108-2cc6aa742d4b")
 	)
 	(symbol
 		(lib_id "Device:C")

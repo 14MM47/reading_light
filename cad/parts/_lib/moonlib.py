@@ -9,16 +9,17 @@ OPEN_R = 12.3           # radius of the bottom opening on the inner sphere (33.3
 Z_CUT = -math.sqrt(R_IN ** 2 - OPEN_R ** 2)   # planar cut, sphere centre at z=0  (~ -19.34)
 SKIRT_R_IN = 12.0       # a little inside the opening (avoids coincident boolean faces; wider clamp band)
 SKIRT_R_OUT = 16.7      # full width of the moon's cut circle (45deg collar meets z_cut at r=16.64)
-SKIRT_H = 2.5           # skirt below the cut plane; its bottom edge clamps the LED board
+SKIRT_H = 3.0           # skirt below the cut plane; it presses on the PETG clamp ring, never on the board
 LUG_N = 3
 LUG_W = 3.0             # tangential width
-LUG_H = 1.2
+LUG_H = 1.4
 LUG_R_OUT = 17.5
 BAYONET_TURN_DEG = 30.0
 
 BOARD_R = 13.0          # LED board radius (26 mm round), 1.0 mm thick FR4 (VERIFY with PCBWay order)
 BOARD_T = 1.0
-BOARD_CLAMP_IN = SKIRT_R_IN  # board edge band [SKIRT_R_IN, BOARD_R] is clamped: no copper/parts there
+BOARD_CLAMP_IN = SKIRT_R_IN  # board edge band [SKIRT_R_IN, BOARD_R] is clamped (by the PETG ring): no copper/parts there
+RING_T = 0.6            # PETG clamp ring between the board and the PLA skirt (thermal review: keeps PLA off the board)
 COMPONENT_R_MAX = 11.8   # all components inside this radius on both faces
 LED_RING_R = 6.5
 
@@ -44,7 +45,7 @@ NECK_HOLE_R = NECK_THREAD_D / 2 + 0.25
 FLOOR_T = 2.0
 
 # ---- bayonet (shared by moon_shell lugs and moon_base grooves) ---------------------------------------
-LUG_CHAMFER = 0.6          # 45 deg chamfer on the lug's top outer edge (prints upward-facing on the moon)
+LUG_CHAMFER = 0.5          # 45 deg chamfer on the lug's top outer edge (prints upward-facing on the moon)
 GROOVE_CLEAR = 0.25        # vertical / radial clearance of the lug in its groove
 CAM_DROP = 0.35            # groove descends this much over the twist: pulls the moon down onto the LED board
 

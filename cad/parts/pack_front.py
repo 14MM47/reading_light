@@ -7,7 +7,8 @@ Requirements (newest last; never renumber):
   B3  GIVEN    (Matt) slide on/off switch on the side
   B4  GIVEN    (Matt) USB-C charging; flexible neck from the top of the pack
   B5  RULE     openings and bosses come from hardware/main-board/design.py (PLACE, MOUNT_HOLES) - no copied numbers
-  B6  ASSUMED  gooseneck's M10x1 end self-taps into a 9.3 mm socket in a boss inside the top wall (+ thread-locker);
+  B6  ASSUMED  gooseneck's M10x1 end self-taps into a 9.3 mm socket in a boss inside the top wall (+ optional CA gel;
+               never anaerobic thread-locker, it crazes PETG: round1 m-7);
                the pack is too thin for the 14 mm nut used in the moon base
   B7  ASSUMED  USB-C window 12.8 x 7.0 mm with the wall thinned to 1.2 mm around it so a moulded plug seats fully
   B8  ASSUMED  slide-switch knob reached through a 5.0 x 2.6 mm window with a 45 deg outer chamfer

@@ -13,6 +13,11 @@
 #define PIN_BTN_UP    PIN_PA6
 #define PIN_BTN_MAIN  PIN_PA5
 #define PIN_BTN_DN    PIN_PA4
+// LED-board supply switch Q4 (P-FET): LOW = LED board powered, HIGH/Hi-Z (R12 pull-up) = off
+#define PIN_LED_EN_N  PIN_PB2
+// LM75B thermostat: OS (open drain, active low) holds the TLC59116 in reset above TOS, releases below THYST
+#define LM75_TOS_C    60
+#define LM75_THYST_C  52
 // Debug serial: USART0 alternate pins (TX = PA1, RX = PA2) -> header J4 pin 3
 #define SERIAL_SWAP   1
 

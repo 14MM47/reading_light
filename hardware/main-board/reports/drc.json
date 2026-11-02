@@ -1,7 +1,7 @@
 {
     "$schema": "https://schemas.kicad.org/drc.v1.json",
     "coordinate_units": "mm",
-    "date": "2026-11-02T16:48:07+0000",
+    "date": "2026-11-02T18:11:11+0000",
     "included_severities": [
         "error",
         "warning",
@@ -21,7 +21,7 @@
                         "x": 35.0,
                         "y": 2.0
                     },
-                    "uuid": "9cc5f7f8-fd95-418d-81a8-226091af75a5"
+                    "uuid": "eb417fd6-33e5-4dc5-ad36-028f3ad8d7d1"
                 },
                 {
                     "description": "Segment of SW1 on F.Silkscreen",
@@ -29,7 +29,7 @@
                         "x": 34.58,
                         "y": 29.4
                     },
-                    "uuid": "77603b7d-e69a-48e6-aae7-d60f2cb9dfed"
+                    "uuid": "5c71b8a7-dc5c-4dff-af84-609638cfa607"
                 }
             ],
             "severity": "warning",
@@ -44,7 +44,7 @@
                         "x": 35.0,
                         "y": 2.0
                     },
-                    "uuid": "9cc5f7f8-fd95-418d-81a8-226091af75a5"
+                    "uuid": "eb417fd6-33e5-4dc5-ad36-028f3ad8d7d1"
                 },
                 {
                     "description": "Segment of SW1 on F.Silkscreen",
@@ -52,7 +52,7 @@
                         "x": 35.87,
                         "y": 28.1
                     },
-                    "uuid": "2e4553bf-6e7c-4068-9211-2f530242e10b"
+                    "uuid": "e895ebed-b583-4b45-bf58-da2c6ac235e8"
                 }
             ],
             "severity": "warning",
