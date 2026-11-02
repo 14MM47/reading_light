@@ -200,3 +200,6 @@ SILK = [
     dict(s="+", x=1.2, y=52.5, size=1.0, thick=0.15),
     dict(s="UPDI: 1=VSYS 2=UPDI 3=TX 4=GND", x=17.5, y=33.5, size=0.8, thick=0.13, layer="B.SilkS"),
 ]
+
+# M2 mounting holes (PCB hangs from two bosses on the inside of the pack's front face; keep Ø5.5 clear on top)
+MOUNT_HOLES = [(21.5, 10.0), (17.5, 46.5)]

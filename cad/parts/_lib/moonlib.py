@@ -28,3 +28,37 @@ FIT_PCB = 0.2            # radial clearance PCB edge to printed bore
 
 def opening_half_angle_deg():
     return math.degrees(math.asin(OPEN_R / R_IN))
+
+# ---- LED base cup (PETG) ------------------------------------------------------------------------
+CUP_WALL = 1.6
+BORE_UPPER_R = SKIRT_R_OUT + FIT_SLIP          # skirt bore
+LUG_SLOT_R = LUG_R_OUT + 0.25                   # bayonet slot / groove radius
+CUP_R_OUT = LUG_SLOT_R + CUP_WALL               # outer radius of the cup
+POCKET_R = BOARD_R + FIT_PCB                    # LED board pocket
+BOARD_LEDGE_IN_R = COMPONENT_R_MAX + 0.2        # ledge under the board edge band (clear of bottom parts)
+UNDER_BOARD_DEPTH = 2.2                         # room for bottom-side parts (TSSOP/0805 <= 1.3 mm) + wires
+NUT_AF = 14.0                                   # M10x1 lamp-thread hex nut across flats (VERIFY with the gooseneck kit)
+NUT_T = 3.0                                     # nut thickness (VERIFY)
+NECK_THREAD_D = 10.0                            # gooseneck end thread (M10x1, VERIFY)
+NECK_HOLE_R = NECK_THREAD_D / 2 + 0.25
+FLOOR_T = 2.0
+
+# ---- bayonet (shared by moon_shell lugs and moon_base grooves) ---------------------------------------
+LUG_CHAMFER = 0.6          # 45 deg chamfer on the lug's top outer edge (prints upward-facing on the moon)
+GROOVE_CLEAR = 0.25        # vertical / radial clearance of the lug in its groove
+CAM_DROP = 0.35            # groove descends this much over the twist: pulls the moon down onto the LED board
+
+
+def lug_profile(z0):
+    """(r, z) polygon of a lug cross-section, z0 = lug bottom (skirt bottom)."""
+    r0, r1, h, c = SKIRT_R_OUT - 0.3, LUG_R_OUT, LUG_H, LUG_CHAMFER
+    return [(r0, z0), (r1, z0), (r1, z0 + h - c), (r1 - c, z0 + h), (r0, z0 + h)]
+
+
+def groove_profile(z0):
+    """(r, z) polygon of the groove cavity in the cup wall: the lug profile grown by GROOVE_CLEAR, with a 45 deg roof
+    rising inward to the bore so the cavity prints without supports."""
+    rin, rout = BORE_UPPER_R - 0.05, LUG_SLOT_R
+    zb = z0 - 0.05
+    zr = z0 + LUG_H - LUG_CHAMFER + GROOVE_CLEAR
+    return [(rin, zb), (rout, zb), (rout, zr), (rin, zr + (rout - rin))]

@@ -75,14 +75,24 @@ def part(*, n_lon=600, n_lat=300, albedo_w=0.75, smooth_px=3.5, gamma=1.0, seam_
             - mf.Manifold.cylinder(L.SKIRT_H + 1.0, L.SKIRT_R_IN, L.SKIRT_R_IN, 211).translate((0, 0, -0.2))
             ).translate((0, 0, z0))
     lugs = []
+    span = math.degrees(L.LUG_W / L.SKIRT_R_OUT)
     for k in range(L.LUG_N):
-        lug = mf.Manifold.cube((L.LUG_R_OUT - L.SKIRT_R_OUT + 0.3, L.LUG_W, L.LUG_H)).translate(
-            (L.SKIRT_R_OUT - 0.3, -L.LUG_W / 2, z0))
-        lugs.append(lug.rotate((0, 0, 90.37 + k * 360 / L.LUG_N)))
+        lugs.append(_revolved(L.lug_profile(z0), 90.37 + k * 360 / L.LUG_N - span / 2, span))
     m = ring
     for g in lugs:
         m = m + g
     return m.translate((0, 0, SHIFT))
+
+
+def _revolved(profile, a0_deg, span_deg):
+    """Manifold of an (r, z) profile revolved from a0 over span (degrees)."""
+    from build123d import Axis, BuildPart, BuildSketch, Plane, Polygon, revolve
+    with BuildPart() as bp:
+        with BuildSketch(Plane.XZ):
+            Polygon(*profile, align=None)
+        revolve(axis=Axis.Z, revolution_arc=span_deg)
+    solid = bp.part.rotate(Axis.Z, a0_deg)
+    return as_manifold(solid)
 
 
 def _maps(smooth_px, albedo_w, gamma):

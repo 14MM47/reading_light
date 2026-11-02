@@ -127,6 +127,28 @@ def check_mesh(m: trimesh.Trimesh, P: dict, contexts: dict, sample_walls=6000, s
     zc = m.triangles_center[:, 2]
     ang = np.degrees(np.arcsin(np.clip(-nz, -1, 1)))     # 0 = vertical wall, 90 = flat ceiling
     over = (ang > th["overhang_max"] + 0.5) & (zc > 0.25) & (areas > 1e-4)
+    # bridges: connected flat ceilings (> 80 deg) whose narrowest span is <= bridge_max are bridges, not overhangs
+    flat = over & (ang > 80.0)
+    bridge_spans = []
+    if flat.any():
+        import networkx as nx
+        from shapely.geometry import MultiPoint
+        idx_flat = set(np.nonzero(flat)[0].tolist())
+        g = nx.Graph()
+        g.add_nodes_from(idx_flat)
+        for a, b in m.face_adjacency:
+            if a in idx_flat and b in idx_flat:
+                g.add_edge(a, b)
+        for comp in nx.connected_components(g):
+            comp = np.fromiter(comp, int)
+            pts = m.vertices[m.faces[comp]].reshape(-1, 3)[:, :2]
+            rect = MultiPoint([tuple(q) for q in pts]).minimum_rotated_rectangle
+            xs, ys = rect.exterior.coords.xy
+            sides = [math.dist((xs[k], ys[k]), (xs[k + 1], ys[k + 1])) for k in range(2)]
+            span = min(sides) if min(sides) > 0 else max(sides)
+            if span <= th["bridge_max"]:
+                over[comp] = False
+                bridge_spans.append(round(span, 2))
     zones = P.get("supported", [])
     in_zone = np.zeros(len(m.faces), bool)
     for zn in zones:
@@ -144,6 +166,8 @@ def check_mesh(m: trimesh.Trimesh, P: dict, contexts: dict, sample_walls=6000, s
     res[-1]["at"] = at
     if in_area > 0:
         add("supported_zones", "warn", round(in_area, 1), None, "; ".join(z["why"] for z in zones))
+    add(f"bridge_max:{th['bridge_max']}", "ok", max(bridge_spans) if bridge_spans else None, th["bridge_max"],
+        f"{len(bridge_spans)} flat ceilings treated as bridges")
 
     # first-layer contact
     bed = (nz < -0.999) & (zc < 0.05)
@@ -167,7 +191,7 @@ def check_mesh(m: trimesh.Trimesh, P: dict, contexts: dict, sample_walls=6000, s
 
 # -------------------------------------------------------------------- views
 def render(m: trimesh.Trimesh, path: Path, eye=(1.0, -1.4, 0.8), size=900, ctx=None, title=""):
-    """Flat-shaded painter's-algorithm render (no GPU)."""
+    """Ray-cast render (orthographic, first hit, Lambert + ambient); context bodies in grey."""
     from PIL import Image, ImageDraw
     eye = np.asarray(eye, float)
     eye = eye / np.linalg.norm(eye)
@@ -178,34 +202,45 @@ def render(m: trimesh.Trimesh, path: Path, eye=(1.0, -1.4, 0.8), size=900, ctx=N
         right = np.array([1.0, 0, 0])
     right /= np.linalg.norm(right)
     up2 = np.cross(right, fwd)
-    meshes = [(m, (235, 232, 222))] + [(c, (150, 150, 160)) for c in (ctx or [])]
-    allv = np.vstack([mm.vertices for mm, _ in meshes])
-    ctr = (allv.max(0) + allv.min(0)) / 2
-    scale = 0.85 * size / max(np.ptp(allv @ right), np.ptp(allv @ up2))
-    img = Image.new("RGB", (size, size), (252, 252, 250))
-    dr = ImageDraw.Draw(img)
-    light = np.array([0.4, -0.5, 0.9]) / np.linalg.norm([0.4, -0.5, 0.9])
-    polys = []
-    for mm, col in meshes:
-        tri = mm.vertices[mm.faces] - ctr
-        n = mm.face_normals
-        vis = n @ eye > 0
-        tri = tri[vis]
-        n = n[vis]
-        depth = (tri.mean(1) @ fwd)
-        sh = 0.35 + 0.65 * np.clip(n @ light, 0, 1)
-        x = tri @ right * scale + size / 2
-        y = size / 2 - tri @ up2 * scale
-        for k in range(len(tri)):
-            polys.append((depth[k], [(x[k, 0], y[k, 0]), (x[k, 1], y[k, 1]), (x[k, 2], y[k, 2])],
-                          tuple(int(c * sh[k]) for c in col)))
-    polys.sort(key=lambda p: -p[0])
-    for _, pts, c in polys:
-        dr.polygon(pts, fill=c)
+    meshes = [m] + list(ctx or [])
+    scene = trimesh.util.concatenate(meshes)
+    owner = np.concatenate([np.full(len(mm.faces), i) for i, mm in enumerate(meshes)])
+    ctr = (scene.bounds[0] + scene.bounds[1]) / 2
+    ext = max(np.ptp(scene.vertices @ right), np.ptp(scene.vertices @ up2)) * 1.08
+    px = ext / size
+    u = (np.arange(size) - size / 2 + 0.5) * px
+    U, Vv = np.meshgrid(u, -u)
+    origins = ctr + U[..., None] * right + Vv[..., None] * up2 - fwd * (np.linalg.norm(np.ptp(scene.vertices, 0)) * 2)
+    o = origins.reshape(-1, 3)
+    d = np.tile(fwd, (len(o), 1))
+    tri, ray, loc = scene.ray.intersects_id(o, d, multiple_hits=False, return_locations=True)
+    img = np.full((size * size, 3), 252.0)
+    light = np.array([0.35, -0.45, 0.85])
+    light /= np.linalg.norm(light)
+    n = scene.face_normals[tri]
+    n = np.where((n @ fwd)[:, None] > 0, -n, n)
+    sh = 0.30 + 0.70 * np.clip(n @ light, 0, 1) * 0.8 + 0.2 * np.clip(n @ eye, 0, 1)
+    depth = (loc - o[ray]) @ fwd
+    if len(depth):
+        dn = (depth - depth.min()) / max(1e-6, np.ptp(depth))
+        sh = sh * (1.0 - 0.45 * dn)          # depth cueing: deeper surfaces darker
+    base = np.where((owner[tri] == 0)[:, None], np.array([236, 232, 220.0]), np.array([150, 152, 165.0]))
+    img[ray] = base * sh[:, None]
+    # silhouette / step edges: depth discontinuities
+    dimg = np.full(size * size, np.nan)
+    dimg[ray] = depth
+    dimg = dimg.reshape(size, size)
+    gy = np.abs(np.diff(dimg, axis=0, prepend=dimg[:1]))
+    gx = np.abs(np.diff(dimg, axis=1, prepend=dimg[:, :1]))
+    edge = (np.nan_to_num(gx, nan=9) > 0.4) | (np.nan_to_num(gy, nan=9) > 0.4)
+    img = img.reshape(size, size, 3)
+    img[edge & ~np.isnan(dimg)] *= 0.35
+    img = img.reshape(-1, 3)
+    im = Image.fromarray(np.clip(img, 0, 255).astype(np.uint8).reshape(size, size, 3))
     if title:
-        dr.text((10, 10), title, fill=(40, 40, 40))
+        ImageDraw.Draw(im).text((10, 10), title, fill=(40, 40, 40))
     path.parent.mkdir(parents=True, exist_ok=True)
-    img.save(path)
+    im.save(path)
 
 
 # --------------------------------------------------------------------- main
