@@ -12,6 +12,7 @@ This repo was produced end to end by Claude Code as a test of the full product-d
 | What | Where |
 |---|---|
 | **Everything to build it, in build order** (PCB files, order lists, print files, firmware hex, drawings, PDFs of every instruction and checklist) | [`deliverable/`](deliverable/): start with `00-START-HERE.pdf` |
+| How every part fits (exploded and section views) | [`docs/design/fitment/`](docs/design/fitment/) |
 | Requirements, architecture, decisions, status | [`PLAN.md`](PLAN.md) |
 | PCB fabrication files (Gerbers zip, BOM, pick-and-place, PDFs, STEP) | [`fab/`](fab/) |
 | Printed parts, ready to slice (STL + 3MF) and print settings | [`print/`](print/) |

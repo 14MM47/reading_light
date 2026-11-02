@@ -177,6 +177,9 @@ def main():
     # ---------------------------------------------------------------- 00 overview
     B.copy(Path("docs/design/assembly.png"), Path("00-overview/lamp-assembly-render.png"))
     B.copy(Path("docs/design/moon_preview.png"), Path("00-overview/moon-lithophane-preview.png"))
+    for f in sorted((ROOT / "docs/design/fitment").glob("*.png")):      # cad/tools/fitment.py
+        B.copy(f.relative_to(ROOT), Path("00-overview/fitment") / f.name)
+        B.copy(f.relative_to(ROOT), Path("05-assembly-and-bring-up/images/fitment") / f.name)
     B.pdf(Path("PLAN.md"), Path("00-overview/PLAN-requirements-architecture-decisions.pdf"), "PLAN")
     B.pdf(Path("docs/verification/round1.md"), Path("00-overview/open-decisions-and-round1-summary.pdf"),
           "Verification round 1")
@@ -329,7 +332,7 @@ verification rounds; it has not been built or tested on hardware yet.
 
 | Step | Folder | What you do | Instructions |
 |---|---|---|---|
-| 0 | `00-overview/` | Read the plan, look at the renders, check the open decisions | `00-START-HERE.pdf`, `PLAN-…pdf` |
+| 0 | `00-overview/` | Read the plan, look at the renders and `fitment/` views, check the open decisions | `00-START-HERE.pdf`, `PLAN-…pdf` |
 | 1 | `01-pcb-manufacture/` | Upload each board's Gerber zip to PCBWay (or JLCPCB) with the specs in its `FAB_NOTES` | `handoff-01-pcb-order.pdf` |
 | 2 | `02-parts-order/` | Paste `farnell_quickpaste.txt` into Farnell's Quick Paste; buy the off-board items | `handoff-02-parts-order.pdf` |
 | 3 | `03-3d-printing/` | Print the coupons first, then the moon head, the pack and the jig | `handoff-03-printing.pdf` |
@@ -471,6 +474,7 @@ Instructions: **`handoff-05-assembly-bringup.pdf`** (about 3 h for the first lam
 | `drawings/*-zoomed.png` | The same, zoomed. Easiest to place parts from |
 | `schematics/` | Both schematics, for debugging during bring-up |
 | `images/lamp-assembly-render.png` | What it looks like assembled |
+| `images/fitment/` | How every part fits: exploded pack and head, sections through the pack (buttons, J2) and the head axis |
 | `BOM.csv` | What goes where |
 
 Things that are easy to get wrong (all covered in the handoff):

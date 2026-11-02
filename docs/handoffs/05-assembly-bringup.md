@@ -7,6 +7,8 @@ against `docs/verification/VERIFY.md` and records them there. Allow about 3 h fo
 - **Tools:** fine-tip iron, hot plate and/or hot air, flux, IPA, tweezers, a 10× loupe, a multimeter with diode test,
   and a bench supply with a current limit (or a spare charged cell plus the meter).
 - **Stencils and jig:** 0.12 mm stencils, plus the printed `jig_led_board` (PETG, from `print/`).
+- **Fitment views:** `docs/design/fitment/`, rendered by `cad/tools/fitment.py`. They show where every part sits:
+  the exploded pack and moon head, and sections through the pack and the head.
 - **Drawings:** `fab/<board>/v0.1/assembly_top.pdf` / `assembly_bottom.pdf`. These have values on the Fab layer
   and J4 crossed out as DNP. The zoomed views are easier to read: `fab/<board>/v0.1/renders/*_assembly_*.png`.
 - **Off-board items** (`bom/other_purchases.csv`): Kapton tape, PTFE sleeve, heat-shrink, CA gel, and neutral-cure
