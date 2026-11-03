@@ -60,7 +60,8 @@ def footprints(board):
         out.append({"ref": fp.GetReference(), "fp": fp.GetFPIDAsString(), "value": fp.GetValue(),
                     "side": "bottom" if back else "top", "pos": (MM(pos.x), MM(pos.y)),
                     "rot": fp.GetOrientationDegrees(), "body": pts,
-                    "pads": [(MM(p.GetPosition().x), MM(p.GetPosition().y)) for p in fp.Pads()]})
+                    "pads": [(MM(p.GetPosition().x), MM(p.GetPosition().y)) for p in fp.Pads()],
+                    "pad_nets": [p.GetNetname().lstrip("/") for p in fp.Pads()]})
     return out
 
 

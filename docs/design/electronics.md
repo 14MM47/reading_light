@@ -19,11 +19,11 @@ Datasheet extracts with page references: `docs/datasheets/KEYSPECS.md`. Review f
   → VBUS. F1 limits a short in the neck cable while on USB. The worst-case normal draw is about 0.5 A, against a
   hold current of about 0.8 A at 60 °C (round2 R2-E3; the 0.75 A part had too little margin when warm).
   **This is not over-voltage protection** (round2 R2-E4). A 6.4–7.5 V source sits below the TVS's conduction and
-  trips nothing, which puts VSYS at 5.6–6.6 V, above the ATtiny's and the LM75B's 6 V absolute maximum. A hard
+  trips nothing, which puts VSYS at 5.6–6.6 V, above the ATtiny's and the LED board's 6 V absolute maximum. A hard
   over-voltage fault destroys the TVS before or as the PTC trips. Accepted for a USB-C 5 V-only sink, with real OVP
   (e.g. a TPS2595-class eFuse) on the v0.2 list.
 * **Q4 LED-board switch** (DMG2305UX, gate Q4_G driven from PB2 through R13 10 k, with C8 100 nF gate–drain and R12
-  100 k pull-up to VSYS): off in reset and in the empty-battery sleep, so a flat cell is not drained by the TLC59116.
+  100 k pull-up to VSYS): off in reset and in the empty-battery sleep, so a flat cell is not drained by the LED board.
   VLED = VSYS − I·R_DS(on) (≈ 10–20 mV at 180 mA). **Soft turn-on** (round2 R2-E1): R13 into C8 holds the Miller
   plateau, so VLED ramps at about 2.5 V/ms. Charging the LED board's ~9 µF then takes about 25 mA, where the
   unslowed gate gave multi-amp peaks that sagged VSYS, the MCU's supply, below its BOD level. Bench check: VERIFY E13.
@@ -50,52 +50,66 @@ Datasheet extracts with page references: `docs/datasheets/KEYSPECS.md`. Review f
   MCP73831 output reverse leakage ≤ 2 µA (I_DISCHARGE), R5 sees 0 V, R6 sees 0 V. **Total ≤ ~3 µA** plus the cell's own
   PCM (~3–6 µA typical): about 0.1 % of capacity per month.
 
-## 2. LED drive (LED board)
+## 2. LED drive (LED board v0.2, 18 mm)
 
-* TLC59116: I_OUT = (1.26 V / R_EXT) × 15 × CG; CG = 0.992 after power-up → R_EXT 750 Ω gives **25.0 mA**/channel
-  (TI DS Eq. 3–5). Output knee ≈ 0.6 V at 26 mA (DS: I_O specified at V_O = 0.6 V).
-* Headroom: V_LED − V_f ≥ knee (≈ 0.35–0.6 V) for full current. White (Bridgelux, ~2.75 V at 25 mA): regulated down
-  to V_LED ≈ 3.35 V (the whole usable battery range). Red (Würth, ~2.1 V): always. **Green/blue (Würth, 3.2–3.6 V at
-  20–25 mA)**: at 25 mA they regulate only above V_LED ≈ 3.7–3.9 V. Therefore the **Green and Blue modes run at half
-  current** (12.5 mA, IREF step 0xBF, at every level including 15; drive 0.496 and a host test since round2 R2-F1):
-  lower VF and knee, regulated down to about 3.6 V of battery (round1 M1). The
-  mixed whites (3000/4000/6500 K, candle) use only a little G/B at up to 25 mA; their tint drifts slightly warm/
-  magenta in the last ~30 % of the battery. Accepted for v0.1 (a boost converter would add heat in the moon; v0.2
-  option: 5 V boost for the RGB anodes only). Bench check: VERIFY E9.
-* Low-end dimming: 8-bit PWM at 97 kHz per channel × IREF current-gain steps 0.33 / 0.50 / 0.99 (8.3 / 12.5 / 25.0 mA,
-  all inside the datasheet's 5–120 mA output ranges) → ~750:1 range. Step choice: `cg_select()` in the core
-  (host-tested: never clips, lowest step that fits, hysteresis). Below ~2 % the minor channels of mixed modes
-  quantise (soft orange becomes red-orange at its lowest levels: accepted, round1 F9).
-* Supply current of the TLC59116 is ≤ 29 mA (max, REXT 720–750 Ω row of DS §7.5) while on, and it dominates the
-  night-light budget (VERIFY E7).
+Design note for the redesign: `docs/design/led-board-v0.2.md`. Datasheet extract: `docs/datasheets/KEYSPECS.md`
+(LP5012, SLVSEH2B).
+
+* **TI LP5012** (WQFN-20, 3 × 3 mm), 12 constant-current sinks, all LED anodes on VLED. I_OUT = K_IREF × V_IREF /
+  R_IREF = 105 × 0.7 V / 2.94 kΩ = **25.0 mA** per channel (Max_Current_Option 0: I_MAX 25.5 mA, ±5 %). Würth RGB
+  abs max 30 mA. 11 channels used (8 white, R, G, B), one spare. ADDR1 = ADDR0 = GND → I²C **0x14**.
+* PWM: 29 kHz, 12 bit (9-bit + 3-bit dithering), duty = OUTx_COLOR/255 × LEDx_BRIGHTNESS/255 (linear scale, set in
+  DEVICE_CONFIG1 = 0x1C). Each LEDx_BRIGHTNESS covers three outputs, and on this board each bank mixes groups, so the
+  firmware writes one brightness to all four banks and a colour per group. `lp_brightness()` picks the smallest
+  brightness that still shows the strongest group (colours keep 7–8 bits for the mix ratios) with hysteresis, and
+  writes are ordered so the in-between state is never brighter than either end (host-tested in `lib/core`). Level 0
+  (0.4 % of full) is brightness 2 × colour 130: the minor channels of mixed modes quantise only near the bottom.
+* Headroom: V_LED − V_f ≥ V_SAT (0.25 V typ, 0.35 V max at 20 mA) for full current. White (~2.75 V at 25 mA) and red
+  (~2.1 V): regulated over the whole battery range. **Green/blue (Würth, 3.2–3.6 V at 20–25 mA)**: regulated above
+  V_LED ≈ 3.65 V typical. The LP5012 has no per-channel current step (the TLC59116 design ran G/B at a 12.5 mA step),
+  and PWM cannot lower the 25 mA peak, so the Green and Blue modes now run at full duty: below ~3.7 V of battery
+  they dim gracefully, and the small G/B share of the mixed whites drifts slightly warm/magenta in the last ~30 % of
+  the battery. Accepted (v0.2 option: RIREF 3.65 kΩ = 20 mA for every channel). Bench check: VERIFY E9.
+* Supply current: ~4–6 mA while any LED is on, ≤ 10 µA in power-save (all outputs 0 for 30 ms) and standby; the
+  TLC59116 drew up to 29 mA. That multiplies the night-light runtime (§3).
+* **One RGB LED** at the board centre (v0.1 had two): colour and night modes are about half as bright (red night
+  1.1 lm, candle 2.4 lm, 6500 K 30 lm instead of 40 lm, because blue now sets the limit there); the whites are
+  unchanged (34–61 lm of LED flux).
 * **Thermal protection, three layers** (round1 M-1, F1, F4):
-  1. Firmware derating on the LM75B reading: 100 % ≤ 45 °C → 30 % at 52 °C → 5 % at 58 °C. Slew ~10 %/s.
+  1. Firmware derating on the MCP9800 reading: 100 % ≤ 45 °C → 30 % at 52 °C → 5 % at 58 °C. Slew ~10 %/s.
   2. Current caps: 200 mA total while the sensor is *trusted* (answering, −20…100 °C, and changing within 5 min of
      the load exceeding 50 mA); otherwise 110 mA, and 30 % if it stops answering for 3 s. The largest mode draws
-     177.5 mA, so in practice the 200 mA cap never binds and the 110 mA one does. Cap changes fade over 160 ms.
-  3. Hardware thermostat: LM75B OS (comparator, active low, Tos 60 °C / Thyst 52 °C, set at every init) holds the
-     TLC59116 RESET low. Works with a hung MCU or a dead bus. LM75B POR defaults (80/75 °C) are a looser backstop
-     until the firmware programs it.
-* Recovery: 2 s watchdog; MODE1 read-back every 1 s (a POR'd TLC re-initialises). After 4 failed inits the firmware
-  sends the TLC software reset (SWRST 0x6B: A5h 5Ah), then power-cycles the LED board through Q4, unless the
+     177.5 mA, so in practice the 200 mA cap never binds and the 110 mA one does. Cap changes fade over 160 ms. The
+     MCP9800 runs at 12 bit (0.0625 °C), so the "changing" test sees normal noise.
+  3. Hardware thermostat: MCP9800A0 ALERT (open drain, comparator, active low, TSET 60 °C / THYST 52 °C, fault queue
+     2, set at every init) pulls the LP5012's EN low: shutdown, all outputs off. Works with a hung MCU or a dead bus.
+     When ALERT releases, the LP5012 restarts with its registers reset and stays dark until the firmware re-inits it
+     (it reads Chip_EN every second). EN has a 2.4 kΩ pull-up (round2 R2-E5), an 0402 on the board's TOP face in the
+     gap between D1 and D2 (no room left on the bottom). MCP9800 POR defaults (80/75 °C) are a looser backstop until
+     the firmware programs it.
+* Recovery: 2 s watchdog; DEVICE_CONFIG0 read-back every 1 s (Chip_EN = 0 → re-init). After 4 failed inits the
+  firmware writes the LP5012 RESET register (17h = FFh), then power-cycles the LED board through Q4, unless the
   thermostat is what holds it off. During the off time it drives SDA/SCL low, so VLED bleeds through the 3.3 k
-  pull-ups (τ ≈ 16 ms, 200 ms off) to below the TLC's 0.2 V POR threshold (round2 R2-E2). RESET_N has a 2.4 k pull-up
-  (stiffer node near the metal neck, round2 R2-E5).
+  pull-ups (200 ms off) to well below the LP5012's 2.0 V UVLO (round2 R2-E2).
 
 ## 3. Runtime estimates (1200 mAh, ~4.4 Wh usable to 3.3 V)
 
+LED current comes straight from the cell (linear sinks); the electronics (MCU idle-sleeping between 1 ms ticks,
+LP5012 4–6 mA, MCP9800 0.2 mA) add about 7 mA while the light is on.
+
 | Use | Battery current (approx.) | Runtime |
 |---|---|---|
-| 4000 K at full (177.5 mA LEDs at 25.0 mA/ch + ~30 mA electronics; derating may trim it once warm) | ~210 mA | ~5.5 h |
-| Soft white at level 10 (~25 % of full) | ~70 mA | ~16 h |
-| Red night light, level 4 | ~30 mA (driver-dominated) | ~40 h |
+| 4000 K at full (177.5 mA LEDs at 25.0 mA/ch; derating may trim it once warm) | ~185 mA | ~6.5 h |
+| Soft white at level 10 (16 % of full: ~19 mA LEDs) | ~26 mA | ~45 h |
+| Red night light, level 4 (~0.4 mA LED) | ~8 mA (electronics-dominated) | ~150 h |
 | Empty-battery sleep (LED board off via Q4, MCU power-down + PIT) | ≤ ~30 µA (VERIFY F4) | months before the PCM cut-off |
 | Switched off | ≤ ~10 µA incl. cell PCM | years (self-discharge dominates) |
 
 ## 4. I2C
 
-Main board pull-ups 3.3 kΩ to VLED (switched VSYS); bus = MCU + 200 mm cable + TLC59116 (0x60) + LM75B (0x48); 100 kHz.
-On boot the firmware clocks SCL until SDA is free: a reset mid-transfer can leave a slave holding SDA until its own
-time-out (TLC59116 ~25 ms), and the recovery costs nothing.
-Rise time with C ≈ 60–100 pF: 0.85·R·C ≈ 0.2–0.3 µs (Standard mode limit 1 µs). TLC59116 V_IH = 0.7 × VCC. The MCU
-runs on VSYS, and the LED board and pull-ups on VLED ≈ VSYS − 20 mV, so the levels match.
+Main board pull-ups 3.3 kΩ to VLED (switched VSYS); bus = MCU + 200 mm cable + LP5012 (0x14) + MCP9800A0 (0x48);
+100 kHz. On boot the firmware clocks SCL until SDA is free: a reset mid-transfer can leave a slave holding SDA (neither
+LED-board part has a bus time-out), and the recovery costs nothing.
+Rise time with C ≈ 60–100 pF: 0.85·R·C ≈ 0.2–0.3 µs (Standard mode limit 1 µs). LP5012 V_IH = 1.4 V (fixed);
+MCP9800 V_IH = 0.7 × VDD. The MCU runs on VSYS, and the LED board and pull-ups on VLED ≈ VSYS − 20 mV, so the levels
+match.

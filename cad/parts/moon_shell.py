@@ -4,18 +4,29 @@ Requirements (newest last; never renumber):
   B1  GIVEN    (Matt) a hollow model of the moon, ~5 cm diameter, lit fully from inside by LEDs
   B2  GIVEN    (Matt, answer 2) generated from NASA public-domain LRO data, not a scaled Thingiverse model
   B3  GIVEN    (Matt, answer 1) the LEDs sit in the base of the moon at the top of the neck
-  B4  RULE     (optics model docs/design/optics) bottom opening half-angle 30-35 deg, LED plane 1-3 mm below the
-               opening plane gives max/min wall illuminance <= 1.05 (integrating-sphere geometry)
+  B4  RULE     (optics model docs/design/optics, v0.1 head) bottom opening half-angle 30-35 deg, LED plane 1-2 mm below
+               the opening plane gives max/min wall illuminance <= 1.05 (superseded by B13 for the v0.2 head)
   B5  RULE     (3dprint PLAN 11) lithophane wall >= 0.84 mm everywhere (2 perimeters), <= 2.6 mm
   B6  ASSUMED  dark maria and low ground thicker (darker), highlands and rims thinner: 75 % albedo, 25 % elevation
-  B7  ASSUMED  a 1.5 mm skirt below the opening (full width of the cut circle) carries 3 bayonet lugs into the LED
-               base; its bottom face presses the PETG clamp ring onto the LED board edge band (B12)
+  B7  ASSUMED  (v0.1 head) a skirt below the opening carries 3 bayonet lugs into the LED base; its bottom face presses
+               the PETG clamp ring onto the LED board edge band (superseded by B15/B16)
   B8  RULE     outer surface below 45 deg from the bottom pole is a 45 deg collar (designs that overhang out)
   B9  ASSUMED  printed upright on the skirt in white PLA; the inner dome closes without supports (moon-lamp practice)
   B10 ASSUMED  the near side (longitude 0) faces -Y, the lunar north pole is up
   B11 ASSUMED  the outer surface is a smooth 50.0 mm sphere; the lithophane relief is on the inside (crisp silhouette,
                exact diameter, clean outer perimeter)
   B12 RULE     (thermal review) the PLA moon never touches the LED board: a 0.6 mm PETG ring sits between them
+  B13 RULE     (corrected optics model 2026-11-03, 18 mm LED board v0.2) opening r 9.0 on the inner sphere (half-angle
+               ~23.7 deg); white emitters 1-2 mm below the opening plane (1.2 chosen): model max/min 1.011 one white,
+               1.002 both whites, 1.037 RGB on the visible wall (docs/design/optics/head_v02.txt; the opening is the
+               aperture, so deeper LEDs shade the low wall: 2.0 mm gives 1.055)
+  B14 RULE     (no shadow) below the opening the bore is never narrower than the cone from the outermost emitter edge to
+               the opening rim, so no LED ray that can pass the opening is clipped
+  B15 ASSUMED  (v0.2 head) the base cup sits inside the moon's skirt (a slim stem instead of a wide cup): skirt 25.3 mm
+               OD; bayonet turned inside out, grooves inside the skirt (roof = the 45 deg clamp cone, floor 45 deg with
+               a cam), entry slots open at the skirt bottom; the 45 deg collar runs down onto the skirt (B8)
+  B16 RULE     (B12, v0.2) the moon presses the PETG ring through a 45 deg cone on the ring's chamfer, 0.25 mm clear of
+               the cup's matching 45 deg rim
 """
 from __future__ import annotations
 
@@ -33,7 +44,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 from _lib import moonlib as L  # noqa: E402
 from _lib.meshkit import as_manifold, claim  # noqa: E402
 
-SHIFT = L.SKIRT_H - L.Z_CUT    # bake print orientation: skirt bottom on the bed (z=0)
+SHIFT = -L.Z_SKIRT_BOT          # bake print orientation: skirt bottom on the bed (z=0)
 
 ASSETS = Path(__file__).resolve().parents[1] / "assets" / "moon"
 
@@ -60,8 +71,9 @@ PRINT = {
 
 VERIFY = {
     "lithophane_range": "0.9-2.6 mm in white PLA at 0.12 mm layers: confirm contrast on the first print",
-    "skirt_fit": "skirt OD 33.4 mm into a 33.7 mm base bore (0.15 radial): confirm with the fit coupon",
-    "lug_engagement": "bayonet lugs 0.8 mm radial; confirm they lock without cracking the skirt",
+    "skirt_fit": "skirt ID 21.1 mm over the 20.8 mm cup (0.15 radial): confirm with the bayonet coupon",
+    "lug_engagement": "cup lugs 0.8 mm radial in the skirt grooves; 0.25 mm cam: confirm the moon locks firmly "
+                      "without cracking the skirt and the board does not rattle",
 }
 
 
@@ -69,31 +81,92 @@ def defaults_note():
     return "see _lib/moonlib.py"
 
 
+def _skirt_profile():
+    """(r, z) outline of the exact lower part (moon frame): skirt, clamp cone up to where it meets the inner sphere
+    (the opening rim, a 67 deg ridge), the inner sphere (0.02 inside the lithophane's) up to Z_TRIM, where the
+    lithophane (trimmed there) sits on its top face, then a band 0.2 mm inside the lithophane wall up to
+    Z_CUT + 0.6 (overlap, no exposed seam: every face left at Z_TRIM faces up)."""
+    zt = L.Z_CUT + 0.6
+    if L.Z_BORE_BOT < L.Z_BORE_TOP - 0.1:                 # vertical bore from the clamp cone up to the sphere
+        start, z0 = [(L.BORE_R, L.Z_BORE_BOT)], L.Z_BORE_TOP
+    else:                                                 # the cone meets the sphere directly
+        start, z0 = [], L.Z_RIDGE
+    inner = start + [(math.sqrt(L.R_IN_EXACT ** 2 - z * z), z) for z in np.linspace(z0, L.Z_TRIM, 6)]
+    r_in_t = math.sqrt(L.R_IN ** 2 - zt * zt) + 0.2
+    band = [(math.sqrt(L.R_IN ** 2 - L.Z_TRIM ** 2) + 0.2, L.Z_TRIM), (r_in_t, zt), (L.COLLAR_K + zt - 0.2, zt),
+            (L.COLLAR_K + L.Z_TRIM - 0.2, L.Z_TRIM), (L.COLLAR_K + L.Z_TRIM + 0.01, L.Z_TRIM)]
+    return (inner + band +
+            [(L.COLLAR_K + L.Z_CUT + 0.01, L.Z_CUT), (L.SKIRT_R_OUT, L.Z_COLLAR_SKIRT - 0.01),
+             (L.SKIRT_R_OUT, L.Z_SKIRT_BOT), (L.SKIRT_R_IN, L.Z_SKIRT_BOT), (L.SKIRT_R_IN, L.CONE_C - L.SKIRT_R_IN)])
+
+
+def lock_angle(k):
+    """Moon-frame angle of lug k when locked (= its cup-frame angle: the moon is turned +BAYONET_TURN to lock)."""
+    return L.LUG_ANGLES[k]
+
+
 def part(*, n_lon=600, n_lat=300, albedo_w=0.75, smooth_px=3.5, gamma=1.0, seam_lon_deg=180.0):
-    """Exact features: skirt + bayonet lugs (manifold primitives), in moon coordinates (centre at 0)."""
-    z0 = L.Z_CUT - L.SKIRT_H
-    ring = (mf.Manifold.cylinder(L.SKIRT_H + 0.6, L.SKIRT_R_OUT, L.SKIRT_R_OUT, 233)
-            - mf.Manifold.cylinder(L.SKIRT_H + 1.0, L.SKIRT_R_IN, L.SKIRT_R_IN, 211).translate((0, 0, -0.2))
-            ).translate((0, 0, z0))
-    lugs = []
-    span = math.degrees(L.LUG_W / L.SKIRT_R_OUT)
+    """Exact features in moon coordinates: skirt + clamp cone + bore, minus the bayonet grooves and entry slots."""
+    m = _revolved(_skirt_profile(), 0.0, 360.0)
+    span = math.degrees(L.LUG_W / L.LUG_R_OUT)           # lug width as an angle
+    slot = math.degrees((L.LUG_W + 0.8) / L.SKIRT_R_IN)   # entry slot (0.4 clear each side)
     for k in range(L.LUG_N):
-        lugs.append(_revolved(L.lug_profile(z0), 90.37 + k * 360 / L.LUG_N - span / 2, span))
-    m = ring
-    for g in lugs:
-        m = m + g
-    return m.translate((0, 0, SHIFT))
+        a = lock_angle(k)
+        # groove: flat at FLOOR_K_LOCK under the locked lug, ramping down (the cam) toward the entry slot at
+        # a + turn; one lofted solid (no stacked steps, so no coincident faces)
+        a0, a1 = a - span / 2 - 1.0, a + L.BAYONET_TURN_DEG + slot / 2 - 0.4   # ends inside the slot (no coplanar end)
+        ramp0, ramp1 = a + span / 2, a + L.BAYONET_TURN_DEG - span / 2
+        angles = list(np.linspace(a0, a1, 41))
+        profiles = []
+        for b in angles:
+            t = min(1.0, max(0.0, (b - ramp0) / (ramp1 - ramp0)))
+            profiles.append(L.groove_profile(L.FLOOR_K_LOCK + (L.FLOOR_K_OPEN - L.FLOOR_K_LOCK) * t))
+        m = m - _loft_revolve(profiles, angles)
+        # entry slot: straight up from below the bed to the roof (the clamp cone extended, 45 deg)
+        r0 = L.SKIRT_R_IN - 0.05
+        c = L.CONE_C + 0.03
+        prof = [(r0, L.Z_SKIRT_BOT - 0.2), (L.GROOVE_R, L.Z_SKIRT_BOT - 0.2), (L.GROOVE_R, c - L.GROOVE_R), (r0, c - r0)]
+        m = m - _revolved(prof, a + L.BAYONET_TURN_DEG - slot / 2, slot)
+    return as_manifold(m).translate((0, 0, SHIFT))
 
 
-def _revolved(profile, a0_deg, span_deg):
-    """Manifold of an (r, z) profile revolved from a0 over span (degrees)."""
-    from build123d import Axis, BuildPart, BuildSketch, Plane, Polygon, revolve
-    with BuildPart() as bp:
-        with BuildSketch(Plane.XZ):
-            Polygon(*profile, align=None)
-        revolve(axis=Axis.Z, revolution_arc=span_deg)
-    solid = bp.part.rotate(Axis.Z, a0_deg)
-    return as_manifold(solid)
+def _loft_revolve(profiles, angles_deg):
+    """Watertight solid through (r, z) profiles (same point count, counter-clockwise or not) placed at the given
+    angles about Z: rings joined by quads, the two ends capped."""
+    n = len(profiles[0])
+    V, F = [], []
+    for prof, a in zip(profiles, angles_deg):
+        pts = list(prof)
+        area2 = sum(x0 * y1 - x1 * y0 for (x0, y0), (x1, y1) in zip(pts, pts[1:] + pts[:1]))
+        if area2 < 0:
+            pts = pts[::-1]
+        c, s_ = math.cos(math.radians(a)), math.sin(math.radians(a))
+        V += [(r * c, r * s_, z) for r, z in pts]
+    rings = len(angles_deg)
+    for i in range(rings - 1):
+        for j in range(n):
+            a0, a1 = i * n + j, i * n + (j + 1) % n
+            b0, b1 = a0 + n, a1 + n
+            F += [(a0, b1, a1), (a0, b0, b1)]
+    for j in range(1, n - 1):                             # end caps (convex profiles)
+        F.append((0, j + 1, j))
+        last = (rings - 1) * n
+        F.append((last, last + j, last + j + 1))
+    t = trimesh.Trimesh(np.array(V), np.array(F), process=True)
+    trimesh.repair.fix_winding(t)                         # one consistent winding (caps and sides)
+    if t.volume < 0:
+        t.invert()
+    return as_manifold(t)
+
+
+def _revolved(profile, a0_deg, span_deg, n=None):
+    """Manifold of an (r, z) profile revolved from a0 over span (degrees), built directly in manifold3d."""
+    segs = n or max(8, int(abs(span_deg) / 1.5))
+    pts = [(float(r), float(z)) for r, z in profile]
+    area2 = sum(x0 * y1 - x1 * y0 for (x0, y0), (x1, y1) in zip(pts, pts[1:] + pts[:1]))
+    cs = mf.CrossSection([pts if area2 > 0 else pts[::-1]])     # counter-clockwise for the positive fill rule
+    solid = mf.Manifold.revolve(cs, segs, float(span_deg))
+    return solid.rotate((0.0, 0.0, float(a0_deg)))
 
 
 def _maps(smooth_px, albedo_w, gamma):
@@ -204,15 +277,17 @@ def organic(p):
     # rotate so the near side (lon 0) faces -Y (B10)
     shell.apply_transform(trimesh.transformations.rotation_matrix(math.radians(p.seam_lon_deg), (0, 0, 1)))
     # trim at the opening plane
-    big = mf.Manifold.cube((200, 200, 200)).translate((-100, -100, L.Z_CUT))
+    big = mf.Manifold.cube((200, 200, 200)).translate((-100, -100, L.Z_ORG_TRIM))
     return {"add": [(as_manifold(shell) ^ big).translate((0, 0, SHIFT))], "cut": []}
 
 
 def context(p):
-    """LED board (grey), sitting at the skirt's bottom edge, for clear_of checks."""
-    z_top = L.Z_CUT - L.SKIRT_H - L.RING_T - 0.05
-    return {"led_board": mf.Manifold.cylinder(L.BOARD_T, L.BOARD_R, L.BOARD_R, 96).translate(
-        (0, 0, z_top - L.BOARD_T + SHIFT))}
+    """LED board (grey) and PETG ring in their clamped positions, for clear_of checks."""
+    board = mf.Manifold.cylinder(L.BOARD_T, L.BOARD_R, L.BOARD_R, 96).translate((0, 0, L.Z_BOARD_BOT + SHIFT))
+    ring = (mf.Manifold.cylinder(L.RING_T - 0.05, L.RING_R_OUT - L.RING_CHAMFER, L.RING_R_OUT - L.RING_CHAMFER, 96)
+            - mf.Manifold.cylinder(L.RING_T, L.RING_R_IN, L.RING_R_IN, 96).translate((0, 0, -0.1))
+            ).translate((0, 0, L.Z_BOARD_TOP + SHIFT))
+    return {"led_board": board, "ring_core": ring}
 
 
 def spec(m, p):
@@ -229,11 +304,22 @@ def spec(m, p):
     shell_outer = (rad > L.R_OUT - 0.3) & (cen[:, 2] > L.Z_CUT + 0.05)
     worst = float(ang[shell_outer].max())
     out.append(claim("B8", "outer surface overhang <= 45 deg", worst <= 45.5, round(worst, 2)))
-    # B4: opening half-angle and LED plane depth
+    # B13: opening and LED depth (v0.2); B14: nothing solid inside the emitter-to-opening cone
     ang = L.opening_half_angle_deg()
-    out.append(claim("B4", "opening half-angle 28-35 deg", 28 <= ang <= 35, round(ang, 2)))
-    led_dz = -(L.SKIRT_H + L.RING_T - 0.7)
-    out.append(claim("B4", "LED plane 1-3 mm below the opening plane", -3.0 <= led_dz <= -1.0, round(led_dz, 2)))
+    out.append(claim("B13", "opening r 9.0 on the inner sphere (half-angle 22-25 deg)", 22.0 <= ang <= 25.0, round(ang, 2)))
+    out.append(claim("B14", "bore under the opening >= 0.5 mm tall (blunt lip, no knife edge)",
+                     L.Z_BORE_TOP - L.Z_BORE_BOT >= 0.5, round(L.Z_BORE_TOP - L.Z_BORE_BOT, 3)))
+    out.append(claim("B13", "white emitters 1-2 mm below the opening plane", 1.0 <= L.LED_DEPTH <= 2.0, L.LED_DEPTH))
+    probes = [[(L.emitter_cone_r(z) - 0.02) * math.cos(a), (L.emitter_cone_r(z) - 0.02) * math.sin(a), z + SHIFT]
+              for z in np.linspace(L.Z_EMIT + 0.05, L.Z_CUT - 0.02, 9) for a in np.linspace(0, 2 * math.pi, 24, endpoint=False)]
+    hit = int(np.asarray(m.contains(probes)).sum())
+    out.append(claim("B14", "no material inside the emitter-to-opening cone (9 heights x 24 angles)", hit == 0, hit))
+    out.append(claim("B14", "bore radius >= the opening radius", L.BORE_R >= L.OPEN_R - 1e-9, L.BORE_R))
+    # B16: the cone bears on the ring's chamfer, and its clearance to the cup's 45 deg rim
+    out.append(claim("B16", "clamp cone passes through the ring chamfer",
+                     abs(L.CONE_C - (L.RING_R_OUT - L.RING_CHAMFER + L.Z_RING_TOP)) < 1e-9, round(L.CONE_C, 3)))
+    out.append(claim("B16", "cone 0.25 mm clear of the cup rim (perpendicular)",
+                     abs((L.CONE_C - L.TOP_C) / math.sqrt(2) - L.GAP_45) < 1e-9, round((L.CONE_C - L.TOP_C) / math.sqrt(2), 3)))
     # B5: thickness along radial rays at sampled directions (above the collar band)
     rng = np.random.default_rng(3)
     ok, n, tmin, tmax = 0, 200, 9.0, 0.0
@@ -246,5 +332,12 @@ def spec(m, p):
         tmin, tmax = min(tmin, tt), max(tmax, tt)
         ok += (0.84 <= tt <= L.T_MAX + 0.1)
     out.append(claim("B5", f"radial wall 0.84-2.7 mm at sampled points ({ok}/{n})", ok == n, [round(tmin, 3), round(tmax, 3)]))
-    out.append(claim("B7", "skirt + 3 lugs present (bottom ring at z=0)", abs(lo[2]) < 1e-3, round(float(lo[2]), 3)))
+    out.append(claim("B15", "skirt bottom on the bed (z=0)", abs(lo[2]) < 1e-3, round(float(lo[2]), 3)))
+    out.append(claim("B15", "skirt OD 25.3 mm (cup inside it)", abs(2 * L.SKIRT_R_OUT - 25.3) < 0.05, 2 * L.SKIRT_R_OUT))
+    r_g = (L.SKIRT_R_IN + L.GROOVE_R) / 2
+    a = math.radians(lock_angle(0))
+    zg = (L.FLOOR_K_LOCK + L.CONE_C) / 2 + 0.0 + SHIFT     # mid-height of the groove at r_g
+    zg = ((L.FLOOR_K_LOCK + r_g) + (L.CONE_C - r_g)) / 2 + SHIFT
+    open_at_lock = not bool(m.contains([[r_g * math.cos(a), r_g * math.sin(a), zg]])[0])
+    out.append(claim("B15", "groove open where the locked lug sits", open_at_lock))
     return out

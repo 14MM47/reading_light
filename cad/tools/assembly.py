@@ -60,7 +60,7 @@ def main():
     p = types.SimpleNamespace(n_lon=300, n_lat=150, albedo_w=0.75, smooth_px=3.5, gamma=1.0, seam_lon_deg=180.0)
     base = tm(moon_base.part())
     moon = tm(moon_shell.part(**vars(p)) + moon_shell.organic(p)["add"][0])
-    moon.apply_translation((0, 0, moon_base.dims()["ring_top"]))       # skirt bottom (z=0) seats on the clamp ring
+    moon.apply_translation((0, 0, moon_base.dims()["moon_z0"]))        # skirt over the cup, clamp cone on the ring
     head = trimesh.util.concatenate([base, moon])
     # align head +Z with the tube tangent
     Rm = trimesh.geometry.align_vectors([0, 0, 1], tan)

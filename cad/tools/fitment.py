@@ -179,21 +179,21 @@ def head_parts(g):
     P.append(("clamp ring (PETG)", ring, COL["ring"], "ring"))
     p = types.SimpleNamespace(n_lon=300, n_lat=150, albedo_w=0.75, smooth_px=3.5, gamma=1.0, seam_lon_deg=180.0)
     moon = tm(moon_shell.part(**vars(p)) + moon_shell.organic(p)["add"][0])
-    moon.apply_translation((0, 0, d["ring_top"]))
+    moon.apply_translation((0, 0, d["moon_z0"]))       # skirt bottom over the cup, clamp cone on the ring
     P.append(("lithophane moon (PLA)", moon, COL["moon"], "moon"))
     t_out = tube((0, 0, -22.0), (0, 0, d["nut_top"]), 5.0, 40)
     t_in = tube((0, 0, -22.1), (0, 0, d["nut_top"] + 0.1), 3.4, 40)
     P.append(("gooseneck (thread flush with nut)", t_out.difference(t_in), COL["neck"], "neck"))
     # the four cable wires: up the bore, out above the nut, to the G V D C pads on the board's underside
-    pads = next(f for f in g["led-board"]["footprints"] if f["ref"] == "J1")["pads"]
-    cols = {"1": (25, 25, 25), "2": (200, 40, 40), "3": (40, 90, 200), "4": (230, 200, 40)}
+    j1 = next(f for f in g["led-board"]["footprints"] if f["ref"] == "J1")
+    cols = {"GND": (25, 25, 25), "VLED": (200, 40, 40), "SDA": (40, 90, 200), "SCL": (230, 200, 40)}   # Qwiic
     zt = d["ledge_z"]
-    for k, (px, py) in enumerate(sorted(pads, key=lambda q: -q[0])):   # pad 1 (GND) at the largest x
+    for k, ((px, py), net) in enumerate(zip(j1["pads"], j1["pad_nets"])):
         X, Y = xf(px, py)
         ox, oy = (k - 1.5) * 0.9, 0.0
         w = wire([(ox, oy, -20.0), (ox, oy, d["nut_top"] + 0.8), (ox * 0.6 + X * 0.4, Y * 0.5, zt - 1.6),
                   (X, Y, zt - 0.35)])
-        P.append((f"wire {k + 1}", w, list(cols.values())[k], "wires"))
+        P.append((f"wire {net}", w, cols.get(net, (120, 120, 120)), "wires"))
     return P
 
 
@@ -430,11 +430,11 @@ def main():
     offh = {"neck": (0, 0, -18), "nut": (0, 0, -9), "wires": (0, 0, -9), "cup": (0, 0, 0), "board": (0, 0, 14),
             "ring": (0, 0, 24), "moon": (0, 0, 36)}
     v = View(eye=(0.7, -1.0, 0.45), up=(0, 0, 1), px_per_mm=9)
-    labels = [("lithophane moon 50 mm (PLA), 3 bayonet lugs", "moon", None),
-              ("PETG clamp ring 0.6 mm: the PLA never touches the board", "ring", None),
-              ("LED board 26 mm: 8 white + 2 RGB LEDs on top", "board", None),
-              ("(TLC59116 driver + LM75B sensor underneath)", "D9", None),
-              ("base cup (PETG): pocket, ledge, bayonet grooves", "cup", None),
+    labels = [("lithophane moon 50 mm (PLA): skirt with 3 bayonet grooves", "moon", None),
+              ("PETG clamp ring 0.8 mm: the PLA never touches the board", "ring", None),
+              ("LED board 18 mm: 8 white + 1 RGB LEDs on top", "board", None),
+              ("(LP5012 driver + MCP9800 sensor underneath)", "D9", None),
+              ("base cup (PETG) inside the skirt: pocket, ledge, 3 lugs", "cup", None),
               ("M10x1 nut in the hex socket", "nut", None),
               ("4 wires GND / VLED / SDA / SCL", "wires", None),
               ("gooseneck tube, thread filed flush with the nut", "neck", None)]
@@ -443,20 +443,21 @@ def main():
 
     # ---- 5. head, section through the axis (X = 0), seen from +X
     v = View(eye=(1.0, -0.15, 0.12), up=(0, 0, 1), px_per_mm=14)
-    labels = [("lithophane wall 0.9-2.6 mm (relief inside)", "moon", (0, -L.R_OUT, d["ring_top"] + 22)),
-              ("white LEDs light the sphere from its opening", "D4", (0, -8, d["board_top"] + 1)),
-              ("moon skirt pressed onto the PETG ring", "moon", (0, -14.5, d["ring_top"])),
-              ("PETG clamp ring", "ring", (0, -13.5, d["board_top"] + 0.3)),
-              ("LED board, 0.12 mm proud of the pocket step", "board", (0, -12.5, d["ledge_z"] + 0.5)),
-              ("TLC59116 under the board centre", "U1", None),
+    labels = [("lithophane wall 0.9-2.6 mm (relief inside)", "moon", (0, -L.R_OUT, d["cut_z"] + 20)),
+              ("white LEDs 1.2 mm below the opening", "D4", (0, -6, d["board_top"] + 0.6)),
+              ("45 deg clamp cone presses the PETG ring", "moon", (0, -9.3, d["ring_top"])),
+              ("PETG clamp ring", "ring", (0, -8.6, d["board_top"] + 0.4)),
+              ("LED board, 0.1 mm proud of the cup rim", "board", (0, -8.8, d["ledge_z"] + 0.5)),
+              ("LP5012 under the board centre", "U1", None),
               ("4.5 mm for the wires above the nut", "wires", (0, 0, d["nut_top"] + 2.5)),
               ("M10x1 nut", "nut", None),
               ("gooseneck tube end", "neck", (0, -4.6, -12)),
-              ("bayonet groove + lug", "moon", (0, L.LUG_R_OUT, d["ring_top"] + 0.7)),
-              ("base cup (PETG)", "cup", (0, L.CUP_R_OUT, d["floor_top"] + 3))]
+              ("cup lug in the skirt's bayonet groove", "cup", (0, L.LUG_R_OUT, L.cup_z(L.Z_LUG_FACE_TOP))),
+              ("base cup (PETG) inside the moon's skirt", "cup", (0, L.CUP_R, d["floor_top"] + 3))]
     render(hd, v, OUT / "head_section.png", "Moon head: section through the axis", labels,
            cut=((-1, 0, 0), (0, 0, 0)),
-           notes=["Section faces hatched. Nut and gooseneck from moonlib dimensions (nut 14 AF x 3: VERIFY M1)."])
+           notes=["Section faces hatched. Nut and gooseneck from moonlib dimensions (nut 14 AF x 3: VERIFY M1).",
+                  "Moon turned to its locked position: the lugs sit at the end of their grooves."])
 
     # ---- contact sheet
     files = ["pack_exploded.png", "pack_section_buttons.png", "pack_section_J2.png", "head_exploded.png",

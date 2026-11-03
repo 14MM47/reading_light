@@ -10,7 +10,7 @@ M2 x 12 mm self-tapping pan-head screws (clip + back plate to front shell),4,Ama
 "Cyanoacrylate (super glue, gel) for the gooseneck ends and the LED-pad strain relief",1,any,,,3.00,Gooseneck threads only. NOT anaerobic thread-locker: it does not cure against plastic and can craze PETG (round1 m-7).
 Neutral-cure silicone (or E6000): strain relief over the LED-board wire joints and the cable at J3,1,any,,,5.00,Not acetoxy (vinegar-smell) silicone: it corrodes copper.
 "PTFE tube 2 mm ID x 3 mm OD (or silicone sleeve), 200 mm: protects the cable inside the gooseneck",2,Amazon UK / 3D-printer spares,PTFE tube 2x3mm,,0.50,Plus 6 mm heat-shrink over each cut gooseneck end (round1 M-7).
-"Kapton (polyimide) tape 10-20 mm: over the pouch under the PCB, and under U1/D3/Q1-Q3",1,any,,,3.00,One roll covers many builds (round1 B-2).
+"Kapton (polyimide) tape 10-20 mm: over the pouch under the PCB, under U1/D3/Q1-Q3, and a disc over the LED board's LP5012 (faces the gooseneck's metal end)",1,any,,,3.00,One roll covers many builds (round1 B-2).
 USB-C charger >= 1 A at 5 V (if you don't have one),1,any,,,0.00,The lamp can draw ~0.5-0.6 A while charging with the light on (round1 M4).
 UPDI programmer: Microchip MPLAB SNAP (PG164100),1,Farnell,2915518,,15.00,"Or a 3.3 V USB-UART (FTDI TTL-232R-3V3, Farnell 1329311) + 470 R for SerialUPDI."
 "Stencils (PCBWay/JLCPCB, frameless) for both boards",1,with the PCB order,,,10.00,

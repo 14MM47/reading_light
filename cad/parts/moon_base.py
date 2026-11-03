@@ -1,16 +1,16 @@
-"""Moon base cup: holds the 26 mm LED board facing up into the moon, locks the moon by a bayonet, and screws
-onto the gooseneck's M10x1 end with a captured nut.
+"""Moon base cup: holds the 18 mm LED board facing up into the moon, carries the bayonet lugs the moon locks onto,
+and screws onto the gooseneck's M10x1 end with a captured nut. v0.2: the cup sits inside the moon's skirt (a slim
+stem, 20.8 mm body) instead of wrapping round the moon (38.7 mm in v0.1).
 
 Requirements (newest last; never renumber):
   B1  GIVEN    (Matt) LEDs in the base of the moon at the top of the neck
   B2  GIVEN    (Matt) pre-made metal bendable arm (gooseneck); chosen: 120 mm, 10 mm OD, M10x1 ends, 6.8 mm bore
-  B3  RULE     (optics model) LED emitters 2.9 mm below the moon's opening plane (board top 3.6 mm below)
-  B9  RULE     (thermal review) a 0.6 mm PETG clamp ring (moon_ring.py) sits between the board edge and the PLA skirt:
+  B3  RULE     (optics model, v0.1 head) LED emitters 2.9 mm below the moon's opening plane (superseded by B12)
+  B9  RULE     (thermal review) a 0.6 mm PETG clamp ring (moon_ring.py) sits between the board edge and the PLA moon:
                the PLA never touches the board, which runs up to ~45-55 C
-  B4  RULE     (LED board design) the board edge band r 12-13 mm is clamped between a ledge and the moon skirt;
-               parts on the board's underside stay inside r 11.8 mm and need 1.5 mm of height
-  B5  ASSUMED  bayonet: 3 vertical entry slots + 30 deg grooves for the moon's lugs; groove ceilings chamfered
-               45 deg so the cup prints without supports
+  B4  RULE     (LED board design) the board's edge band (v0.2: r 8-9 mm) is clamped between a ledge and the ring; parts
+               on the board's underside stay inside r 7.8 mm and need 1.5 mm of height
+  B5  ASSUMED  (v0.1) bayonet: 3 vertical entry slots + 30 deg grooves in the cup (superseded by B13)
   B6  ASSUMED  the gooseneck's threaded end passes up through the floor and is held by an M10x1 hex nut sitting
                in a hex socket on the floor (anti-rotation); a drop of CA gel on the thread (no anaerobic
                thread-locker: round1 m-7)
@@ -18,8 +18,14 @@ Requirements (newest last; never renumber):
   B8  RULE     printed upright (floor on the bed) in PETG (warmer than PLA: sits against the LED board)
   B10 RULE     (round2 R2-D3) >= 4.5 mm free height between the nut top and the board underside: the wires leave the
                gooseneck bore above the nut and turn to the pads; the thread must end at or below the nut top (VERIFY)
-  B11 RULE     (round2 R2-D15) board pocket 0.88 deep (board 1.0 +/- 0.1): the board top stands proud of the step, so
-               the clamp ring always bears on the board and the bayonet's cam drop preloads it
+  B11 RULE     (round2 R2-D15) the board is located by the pocket wall but its top stands proud of the cup, so only the
+               ring bears on it and the bayonet's cam preloads it
+  B12 RULE     (corrected optics model, v0.2) white emitters 1.2 mm below the moon's opening plane (board top 1.9 mm)
+  B13 ASSUMED  (v0.2) bayonet turned inside out: 3 lugs on the cup's outside (3 mm wide, 0.8 mm radial, 45 deg top and
+               bottom so they print without support) lock into grooves inside the moon's skirt (moon_shell B15)
+  B14 RULE     (v0.2) the cup's rim is a flat land (>= 0.84 mm, 0.1 under the board top) and a 45 deg bevel 0.25 mm
+               under the moon's clamp cone (moon_shell B16); the lug tops lie on the bevel's cone
+  B15 RULE     (v0.2) the cavity under the board (r 8.35) clears the nut socket's corners: no ceiling to print
 """
 from __future__ import annotations
 
@@ -27,12 +33,12 @@ import math
 import sys
 from pathlib import Path
 
-from build123d import (Align, Axis, Box, BuildPart, BuildSketch, Cylinder, Locations, Mode, Plane, PolarLocations,
-                       Pos, RegularPolygon, Rot, chamfer, extrude, Part)
+import manifold3d as mf
+from build123d import Align, BuildPart, BuildSketch, Cylinder, Locations, Mode, Plane, Pos, RegularPolygon, extrude
 
 sys.path.insert(0, str(Path(__file__).parent))
 from _lib import moonlib as L  # noqa: E402
-from _lib.meshkit import claim  # noqa: E402
+from _lib.meshkit import as_manifold, claim  # noqa: E402
 
 PRINT = {
     "material": "petg-basic",
@@ -50,90 +56,46 @@ VERIFY = {
 
 
 def dims():
+    """Heights in the cup frame (bed z = 0)."""
     floor_top = L.FLOOR_T
     nut_top = floor_top + L.NUT_T
     ledge_z = nut_top + L.UNDER_BOARD_DEPTH          # board bottom rests here
     board_top = ledge_z + L.BOARD_T
-    ring_top = board_top + L.RING_T                    # = skirt bottom when locked
-    rim_z = ring_top + L.SKIRT_H                       # cup rim = moon's cut plane
+    ring_top = board_top + L.RING_T
+    rim_in_z = L.cup_z(L.Z_LAND)                       # flat land on top of the pocket wall ...
+    rim_out_z = L.cup_z(L.TOP_C - L.CUP_R)            # ... then a 45 deg bevel down to the cup's outer wall
+    cut_z = L.cup_z(L.Z_CUT)                          # moon's opening plane
+    moon_z0 = L.cup_z(L.Z_SKIRT_BOT)                  # where the moon's print frame z = 0 (skirt bottom) sits
     return dict(floor_top=floor_top, nut_top=nut_top, ledge_z=ledge_z, board_top=board_top, ring_top=ring_top,
-                rim_z=rim_z)
-
-
-def part(*, wall=L.CUP_WALL, lug_clear=0.4, groove_turn=L.BAYONET_TURN_DEG):
-    d = dims()
-    H = d["rim_z"]
-    with BuildPart() as p:
-        # outer body: cylinder with a 45 deg chamfer at the bed edge
-        Cylinder(L.CUP_R_OUT, H, align=(Align.CENTER, Align.CENTER, Align.MIN))
-        chamfer(p.edges().filter_by(Axis.Z, reverse=True).sort_by(Axis.Z)[0], 1.2)
-        # skirt bore (from the pocket step up to the rim; the board top stands 0.12 above the step)
-        with Locations((0, 0, d["ledge_z"] + L.POCKET_DEPTH)):
-            Cylinder(L.BORE_UPPER_R, H, align=(Align.CENTER, Align.CENTER, Align.MIN), mode=Mode.SUBTRACT)
-        # LED board pocket
-        with Locations((0, 0, d["ledge_z"])):
-            Cylinder(L.POCKET_R, L.POCKET_DEPTH + 0.01, align=(Align.CENTER, Align.CENTER, Align.MIN), mode=Mode.SUBTRACT)
-        # cavity under the board (parts + wires), down to the floor
-        with Locations((0, 0, d["floor_top"])):
-            Cylinder(L.BOARD_LEDGE_IN_R, d["ledge_z"] - d["floor_top"] + 0.01,
-                     align=(Align.CENTER, Align.CENTER, Align.MIN), mode=Mode.SUBTRACT)
-        # gooseneck thread hole through the floor
-        Cylinder(L.NECK_HOLE_R, L.FLOOR_T + 0.02, align=(Align.CENTER, Align.CENTER, Align.MIN), mode=Mode.SUBTRACT)
-        # bayonet entry slots: lug profile (grown) extruded straight up from the groove to the rim
-        span = math.degrees((L.LUG_W + 2 * lug_clear) / L.BORE_UPPER_R)
-        for k in range(L.LUG_N):
-            a0 = 90.37 + k * 360 / L.LUG_N
-            with Locations(Rot(0, 0, a0) * Pos((L.LUG_SLOT_R + L.BORE_UPPER_R) / 2 - 0.1, 0, d["ring_top"] - 0.05)):
-                Box(L.LUG_SLOT_R - L.BORE_UPPER_R + 0.2, L.LUG_W + 2 * lug_clear, H,
-                    align=(Align.CENTER, Align.CENTER, Align.MIN), mode=Mode.SUBTRACT)
-    cup = p.part
-    # helical cam grooves: the groove profile revolved in steps, each step a little lower (CAM_DROP over the turn),
-    # turning clockwise (seen from above) from each entry slot
-    steps = 10
-    span = math.degrees((L.LUG_W + 2 * lug_clear) / L.BORE_UPPER_R)
-    for k in range(L.LUG_N):
-        a0 = 90.37 + k * 360 / L.LUG_N
-        for s_ in range(steps + 1):
-            a = a0 + span / 2 - (groove_turn + span) * s_ / steps
-            dz = -L.CAM_DROP * max(0.0, (s_ - 1)) / (steps - 1)
-            seg = _revolved(L.groove_profile(d["ring_top"] + dz), a - (groove_turn + span) / steps - 0.3,
-                            (groove_turn + span) / steps + 0.6)
-            cup = cup - seg
-    # hex socket for the M10x1 nut on the floor (anti-rotation), 0.2 mm clearance across flats
-    with BuildPart() as hx:
-        with Locations((0, 0, d["floor_top"])):
-            Cylinder(L.BOARD_LEDGE_IN_R - 0.01, L.NUT_T, align=(Align.CENTER, Align.CENTER, Align.MIN))
-        with BuildSketch(Plane.XY.offset(d["floor_top"])):
-            RegularPolygon((L.NUT_AF + 0.4) / math.sqrt(3), 6, major_radius=True)
-        extrude(amount=L.NUT_T + 0.01, mode=Mode.SUBTRACT)
-        # (no cable notch: the wires leave the bore above the nut, in the 4.5 mm space under the board, R2-D3)
-    return cup + hx.part
+                rim_in_z=rim_in_z, rim_out_z=rim_out_z, rim_z=rim_in_z, cut_z=cut_z, moon_z0=moon_z0)
 
 
 def _revolved(profile, a0_deg, span_deg):
-    from build123d import Polygon, revolve
-    with BuildPart() as bp:
-        with BuildSketch(Plane.XZ):
-            Polygon(*profile, align=None)
-        revolve(axis=Axis.Z, revolution_arc=span_deg)
-    return bp.part.rotate(Axis.Z, a0_deg)
+    segs = max(8, int(abs(span_deg) / 1.5))
+    pts = [(float(r), float(z)) for r, z in profile]
+    area2 = sum(x0 * y1 - x1 * y0 for (x0, y0), (x1, y1) in zip(pts, pts[1:] + pts[:1]))
+    cs = mf.CrossSection([pts if area2 > 0 else pts[::-1]])
+    return mf.Manifold.revolve(cs, segs, float(span_deg)).rotate((0.0, 0.0, float(a0_deg)))
 
 
-def _groove_roof_cutter(z_roof, turn):
-    """Triangular-section ring segments: 45 deg roof from the groove's outer edge rising inward to the bore."""
-    from build123d import Polyline, make_face, revolve
-    rin, rout = L.BORE_UPPER_R - 0.01, L.LUG_SLOT_R
-    h = rout - rin
-    with BuildPart() as rc:
-        for k in range(L.LUG_N):
-            a0 = 90 + k * 360 / L.LUG_N
-            with BuildSketch(Plane.XZ) as sk:
-                Polyline((rin, z_roof), (rout, z_roof), (rin, z_roof + h), close=True)
-                make_face()
-            revolve(axis=Axis.Z, revolution_arc=turn + 2 * math.degrees(math.atan((L.LUG_W + 0.4) / 2 / rin)))
-            rc.part = rc.part.rotate(Axis.Z, a0 - turn - math.degrees(math.atan((L.LUG_W + 0.4) / 2 / rin))) \
-                if False else rc.part
-    return rc.part
+def part():
+    d = dims()
+    ch = 0.8                                          # 45 deg chamfer at the bed edge
+    body = _revolved([(L.NECK_HOLE_R, 0.0), (L.CUP_R - ch, 0.0), (L.CUP_R, ch), (L.CUP_R, d["rim_out_z"]),
+                      (L.LAND_R_OUT, d["rim_in_z"]), (L.POCKET_R, d["rim_in_z"]), (L.POCKET_R, d["ledge_z"]),
+                      (L.BOARD_LEDGE_IN_R, d["ledge_z"]),
+                      (L.BOARD_LEDGE_IN_R, d["nut_top"]), (L.NECK_HOLE_R, d["nut_top"])], 0.0, 360.0)
+    span = math.degrees(L.LUG_W / L.LUG_R_OUT)
+    for a in L.LUG_ANGLES:
+        body = body + _revolved(L.lug_profile_cup(), a - span / 2, span)
+    # hex socket for the M10x1 nut on the floor (anti-rotation), 0.2 mm clearance across flats; its corners
+    # (r 8.31) stay inside the cavity radius above (r 8.35), so the socket's top is open: no ceiling (B15).
+    # The prism runs 0.3 mm up into the cavity so no face is coplanar with the cavity floor.
+    with BuildPart() as hx:
+        with BuildSketch(Plane.XY.offset(d["floor_top"])):
+            RegularPolygon((L.NUT_AF + 0.4) / math.sqrt(3), 6, major_radius=True)
+        extrude(amount=L.NUT_T + 0.3)
+    return body - as_manifold(hx.part)
 
 
 def context(p):
@@ -147,20 +109,29 @@ def context(p):
 def spec(m, p):
     d = dims()
     lo, hi = m.bounds
-    out = [claim("B3", "rim (moon cut plane) 3.6 mm above the board top (LED emitters 2.9 mm below)",
-                 abs(d["rim_z"] - d["board_top"] - (L.SKIRT_H + L.RING_T)) < 1e-6, round(d["rim_z"] - d["board_top"], 3))]
+    out = [claim("B12", "white emitters 1.2 mm below the opening plane (board top 1.9 mm below)",
+                 abs(d["cut_z"] - d["board_top"] - (L.LED_DEPTH + L.EMITTER_H)) < 1e-6,
+                 round(d["cut_z"] - d["board_top"], 3))]
     out.append(claim("B4", "pocket radius = board radius + 0.2", abs(L.POCKET_R - L.BOARD_R - L.FIT_PCB) < 1e-6, L.POCKET_R))
-    out.append(claim("B4", "ledge inner radius clears bottom parts (>= 11.8)", L.BOARD_LEDGE_IN_R >= L.COMPONENT_R_MAX,
+    out.append(claim("B4", "ledge inner radius clears bottom parts (>= 7.8)", L.BOARD_LEDGE_IN_R >= L.COMPONENT_R_MAX,
                      L.BOARD_LEDGE_IN_R))
     out.append(claim("B6", "floor hole passes the M10 thread", L.NECK_HOLE_R * 2 >= L.NECK_THREAD_D + 0.4, L.NECK_HOLE_R * 2))
-    out.append(claim("B8", "outer diameter", 30 < 2 * hi[0] < 45, round(float(2 * hi[0]), 2)))
-    # material ring under the board ledge must exist (probe a point in the ledge)
+    out.append(claim("B8", "outer diameter (body 20.8 mm, lugs 22.4 mm)", 20 < 2 * L.CUP_R < 22 and 2 * hi[0] < 23,
+                     round(float(2 * hi[0]), 2)))
     r_probe = (L.BOARD_LEDGE_IN_R + L.POCKET_R) / 2
     out.append(claim("B4", "ledge present under the board edge", bool(m.contains([[r_probe, 0, d["ledge_z"] - 0.3]])[0])))
     out.append(claim("B10", ">= 4.5 mm between the nut top and the board underside", d["ledge_z"] - d["nut_top"] >= 4.5 - 1e-6,
                      round(d["ledge_z"] - d["nut_top"], 2)))
-    out.append(claim("B11", "board top proud of the pocket step for a 0.9 mm board", L.POCKET_DEPTH < 0.9 - 0.01,
-                     L.POCKET_DEPTH))
-    out.append(claim("B11", "pocket step open above the pocket (bore starts at the step)",
-                     not bool(m.contains([[L.POCKET_R + 0.5, 0, d["ledge_z"] + L.POCKET_DEPTH + 0.05]])[0])))
+    out.append(claim("B11", "pocket wall locates the board, board top proud of the cup rim",
+                     d["ledge_z"] + 0.5 < d["rim_in_z"] < d["board_top"], round(d["rim_in_z"] - d["ledge_z"], 3)))
+    out.append(claim("B13", "3 lugs, 0.8 mm radial", abs(L.LUG_R_OUT - L.CUP_R - 0.8) < 1e-9 and L.LUG_N == 3,
+                     round(L.LUG_R_OUT - L.CUP_R, 3)))
+    a = math.radians(L.LUG_ANGLES[0])
+    zl = (L.cup_z(L.Z_LUG_FACE_TOP) + L.cup_z(L.Z_LUG_FACE_BOT)) / 2
+    out.append(claim("B13", "lug present", bool(m.contains([[(L.LUG_R_OUT - 0.2) * math.cos(a),
+                                                            (L.LUG_R_OUT - 0.2) * math.sin(a), zl]])[0])))
+    out.append(claim("B14", "rim bevel 0.25 mm under the moon's clamp cone", abs((L.CONE_C - L.TOP_C) / math.sqrt(2) - 0.25) < 1e-9))
+    out.append(claim("B14", "rim land >= 0.84 mm wide", L.LAND_R_OUT - L.POCKET_R >= 0.84, round(L.LAND_R_OUT - L.POCKET_R, 3)))
+    out.append(claim("B15", "nut socket corners inside the cavity radius", (L.NUT_AF + 0.4) / math.sqrt(3) < L.BOARD_LEDGE_IN_R,
+                     round((L.NUT_AF + 0.4) / math.sqrt(3), 3)))
     return out

@@ -105,8 +105,6 @@ CAT = {c.key: c for c in [
     Cat("R_1M", "1M", "MCWR06X1004FTL", "Multicomp Pro", "", R0603, "Resistor 1 MOhm 1% 0603", unit_gbp=0.01, moq=50),
     Cat("R_3K9", "3.9k", "MCWR06X3901FTL", "Multicomp Pro", "", R0603, "Resistor 3.9 kOhm 1% 0603 (charge current 256 mA)", unit_gbp=0.01, moq=50),
     Cat("R_3K3", "3.3k", "MCWR06X3301FTL", "Multicomp Pro", "", R0603, "Resistor 3.3 kOhm 1% 0603 (I2C pull-up)", unit_gbp=0.01, moq=50),
-    Cat("R_2K94", "2.94k", "MCWR06X2941FTL", "Multicomp Pro", "", R0603,
-        "Resistor 2.94 kOhm 1% 0603 (LP5012 RIREF: 105 x 0.7 V / 2.94 k = 25.0 mA/channel)", unit_gbp=0.01, moq=50),
     # LED board v0.2 (18 mm): 0402 passives so the driver's support parts fit inside r 7.8 mm
     Cat("R_2K94_0402", "2.94k", "RC0402FR-072K94L", "Yageo", "", R0402,
         "Resistor 2.94 kOhm 1% 0402 (LP5012 RIREF: 105 x 0.7 V / 2.94 k = 25.0 mA/channel)", unit_gbp=0.01, moq=50),

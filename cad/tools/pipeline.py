@@ -96,7 +96,9 @@ def check_mesh(m: trimesh.Trimesh, P: dict, contexts: dict, sample_walls=6000, s
     # wall thickness: rays inward from sampled facet centroids (area-weighted)
     rng = np.random.default_rng(seed)
     areas = m.area_faces
-    n = min(sample_walls, len(m.faces))
+    # sample only facets with area: a revolve or boolean can leave a few zero-area slivers, and sampling without
+    # replacement needs at least n non-zero weights (else numpy raises instead of checking the part)
+    n = min(sample_walls, int((areas > 0).sum()))
     idx = rng.choice(len(m.faces), n, replace=False, p=areas / areas.sum())
     c = m.triangles_center[idx]
     d = -m.face_normals[idx]
