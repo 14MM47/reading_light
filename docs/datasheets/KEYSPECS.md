@@ -385,3 +385,29 @@ Legend: **OK** means the footprint matches the datasheet. **MISMATCH** or **NOTE
   - A5 at −0.5, B5 at +0.5, B9 at −1.52, A9 at +1.52, B12 at −2.75, A12 at +2.75, all at y −3.08 with the sizes above.
   - Four S1 slots at (±4.32, −3.0) and (±4.32, +0.8).
   - Use this variant, not the `-0190` one (that is the 1.9 mm stake version).
+
+## TI LP5012 (LED board v0.2 driver): LP5009/LP5012 datasheet SLVSEH2B (May 2019, rev. Aug 2020), 52 pages
+- Source: https://www.ti.com/lit/ds/symlink/lp5012.pdf (downloaded 2026-11-03).
+- Package RUK = WQFN-20, 3.00 × 3.00 mm, 0.8 mm max height, 0.4 mm pitch, exposed pad 1.7 × 1.7 mm (= GND).
+  KiCad `Package_DFN_QFN:Texas_RUK0020B_WQFN-20-1EP_3x3mm_P0.4mm_EP1.7x1.7mm` (pads 0.7 × 0.2, EP = pad 21).
+- RUK pinout (Pin Functions table): 1 VCAP, 2–13 OUT0–OUT11, 14 ADDR0, 15 ADDR1, 16 VCC, 17 SDA, 18 SCL, 19 EN,
+  20 IREF, thermal pad = GND. ADDRx must not float. Unused OUTx may float.
+- Supply 2.7–5.5 V (abs max 6 V on EN, IREF, OUTx, SCL, SDA, VCC; VCAP 2 V). UVLO: shutdown < 2.0 V, restart ≤ 2.5 V.
+- Current: ISET = KIREF × VIREF / RIREF, KIREF 105, VIREF 0.7 V. **RIREF 2.94 kΩ → 25.0 mA.** IMAX 25.5 mA
+  (Max_Current_Option 0, full VCC range) or 35 mA (option 1, VCC ≥ 3.3 V). IREF shorted to GND → internal limit
+  ILIM 35–85 mA. Device-to-device and channel-to-channel error ±5 % at 10 mA.
+- Output saturation VSAT (current down 5 %, 20 mA, option 0): 0.25 V typ, 0.35 V max (TLC59116 knee was ~0.35–0.6 V).
+- PWM: 29 kHz typ (21 kHz min), 12-bit = 9-bit PWM + 3-bit dithering (9-bit without dithering).
+  Duty = OUTx_COLOR (8-bit) × LEDx_BRIGHTNESS (8-bit), linear or log (Log_Scale_EN).
+- Supply current: normal ~4 mA typ / 6 mA max at 10 mA per output (modes text: 10 mA typ); power-save
+  (all LEDs off > 30 ms) 6–10 µA; standby (Chip_EN = 0) 6–10 µA; shutdown (EN low) 0.2 / 1 µA.
+- EN: EN low → SHUTDOWN from any state; EN high → INITIALIZATION, **all registers reset**. First I2C access
+  ≤ 500 µs after the EN rising edge (tEN_H). The thermostat (LM75B OS, open drain) pulls EN low.
+- I2C: up to 400 kHz. Address 0010 1 A1 A0 → **0x14** with ADDR1 = ADDR0 = GND. Broadcast 0x0C.
+- Registers: 00h DEVICE_CONFIG0 (bit 6 Chip_EN, reset 0); 01h DEVICE_CONFIG1 (reset 3Ch: b5 Log_Scale_EN,
+  b4 Power_Save_EN, b3 Auto_Incr_EN, b2 PWM_Dithering_EN, b1 Max_Current_Option, b0 LED_Global_Off);
+  02h LED_CONFIG0 (bank enables); 03h–06h bank; **07h–0Ah LED0–LED3_BRIGHTNESS (reset FFh)**;
+  **0Bh–16h OUT0–OUT11_COLOR (reset 00h)**; 17h RESET (write FFh = reset all registers). Each LEDx_BRIGHTNESS
+  covers three consecutive outputs (LED0 = OUT0–2 … LED3 = OUT9–11).
+- Required parts: 1 µF VCAP → GND and 1 µF VCC → GND, both close to the device; RIREF close to the device.
+- Thermal: RθJA 53.7 °C/W (RUK, JEDEC board), RθJB 27.4 °C/W. Thermal shutdown 160 °C (hysteresis 15 °C).

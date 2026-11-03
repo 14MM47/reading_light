@@ -21,10 +21,14 @@ class Cat:
     moq: int = 1                   # Farnell minimum / multiple
     alt: str = ""
     lcsc: str = ""                 # for JLCPCB assembly route (fill/verify at quote time)
+    supplier: str = "Farnell"      # where the order list buys it (Farnell unless stated)
+    supplier_code: str = ""        # order code / search term at a non-Farnell supplier
 
 
 R0603 = "Resistor_SMD:R_0603_1608Metric"
 C0603 = "Capacitor_SMD:C_0603_1608Metric"
+R0402 = "Resistor_SMD:R_0402_1005Metric"
+C0402 = "Capacitor_SMD:C_0402_1005Metric"
 
 CAT = {c.key: c for c in [
     # ---------------------------------------------------------------- ICs
@@ -36,13 +40,16 @@ CAT = {c.key: c for c in [
         "Li-ion/LiPo linear charger 4.20 V, up to 500 mA, SOT-23-5",
         "https://ww1.microchip.com/downloads/aemDocuments/documents/APID/ProductDocuments/DataSheets/MCP73831-Family-Data-Sheet-DS20001984H.pdf",
         0.59),
-    Cat("LEDDRV", "TLC59116IPWR", "TLC59116IPWR", "Texas Instruments", "3119169", "Package_SO:TSSOP-28_4.4x9.7mm_P0.65mm",
-        "16-ch I2C constant-current LED sink driver, 97 kHz PWM, TSSOP-28",
-        "https://www.ti.com/lit/ds/symlink/tlc59116.pdf", 1.89),
-    Cat("TEMP", "LM75BDP", "LM75BDP,118", "NXP", "", "Package_SO:TSSOP-8_3x3mm_P0.65mm",
-        "I2C digital temperature sensor, +/-2 C, 2.8-5.5 V, TSSOP-8 (same die/pinout as LM75BD SOIC-8)",
-        "https://www.nxp.com/docs/en/data-sheet/LM75B.pdf", 0.55, moq=5,
-        alt="LM75BD,118 SOIC-8 (Farnell 2841138) does not fit the 24 mm LED board"),
+    # LED board v0.2 driver: 3 x 3 mm instead of the TLC59116's 9.7 x 6.4 mm TSSOP-28 (board 26 -> 18 mm). Not stocked
+    # by Farnell or RS (2026-11): DigiKey UK showed 4,632 in stock, ~GBP 0.90 (cut tape). Re-check at order time.
+    Cat("LEDDRV", "LP5012RUKR", "LP5012RUKR", "Texas Instruments", "", "Package_DFN_QFN:Texas_RUK0020B_WQFN-20-1EP_3x3mm_P0.4mm_EP1.7x1.7mm",
+        "12-ch I2C constant-current RGB LED sink driver, 25.5 mA max, 12-bit (9+3 dither) 29 kHz PWM, WQFN-20 3x3 0.4 mm pitch",
+        "https://www.ti.com/lit/ds/symlink/lp5012.pdf", 0.90, supplier="DigiKey UK",
+        supplier_code="LP5012RUKR (cut tape) - digikey.co.uk"),
+    Cat("TEMP", "MCP9800A0", "MCP9800A0T-M/OT", "Microchip", "1439485", "Package_TO_SOT_SMD:SOT-23-5",
+        "I2C temperature sensor, LM75 register compatible (8-bit CONFIG), address 0x48, 2.7-5.5 V, open-drain ALERT, "
+        "+/-1 C typ / +/-3 C max, SOT-23-5", "https://ww1.microchip.com/downloads/en/DeviceDoc/21909d.pdf", 0.55, moq=5,
+        alt="LM75BDP,118 (NXP, TSSOP-8) on LED board v0.1: too large for the 18 mm board v0.2"),
     # --------------------------------------------------------- discretes
     Cat("PFET", "DMG2305UX", "DMG2305UX-7", "Diodes Inc", "2543533", "Package_TO_SOT_SMD:SOT-23",
         "P-MOSFET -20 V -4.2 A, Rds(on) 52 mOhm @ -4.5 V (max), SOT-23 (G=1 S=2 D=3)",
@@ -65,9 +72,9 @@ CAT = {c.key: c for c in [
         "Hyper-red chip LED 0603, 230 mcd @ 20 mA, pin 1 = K (charge indicator, ~3 mA)",
         "https://www.kingbrightusa.com/images/catalog/SPEC/APT1608SURCK.pdf", 0.15),
     # ------------------------------------------------------------- LEDs
-    Cat("LED_WW", "2700K CRI97", "BXEN-27S-11M-3C-00-0-3", "Bridgelux", "3498849", "LED_SMD:LED_PLCC_2835",
+    Cat("LED_WW", "2700K CRI97", "BXEN-27S-11M-3C-00-0-3", "Bridgelux", "3498849", "reading_light:LED_PLCC_2835_Dense",
         "Mid-power white LED 2835, 2700 K, CRI 97 (Thrive), 3 V class", "", 0.10),
-    Cat("LED_CW", "5000K CRI97", "BXEN-50S-11M-3C-00-0-3", "Bridgelux", "3498853", "LED_SMD:LED_PLCC_2835",
+    Cat("LED_CW", "5000K CRI97", "BXEN-50S-11M-3C-00-0-3", "Bridgelux", "3498853", "reading_light:LED_PLCC_2835_Dense",
         "Mid-power white LED 2835, 5000 K, CRI 97 (Thrive), 3 V class", "", 0.18,
         alt="BXEN-65S-11M-3C-00-0-3 (6500 K) if a UK source appears"),
     Cat("LED_RGB", "RGB 3528 CA", "150141M173100", "Wurth Elektronik", "2322115",
@@ -98,7 +105,19 @@ CAT = {c.key: c for c in [
     Cat("R_1M", "1M", "MCWR06X1004FTL", "Multicomp Pro", "", R0603, "Resistor 1 MOhm 1% 0603", unit_gbp=0.01, moq=50),
     Cat("R_3K9", "3.9k", "MCWR06X3901FTL", "Multicomp Pro", "", R0603, "Resistor 3.9 kOhm 1% 0603 (charge current 256 mA)", unit_gbp=0.01, moq=50),
     Cat("R_3K3", "3.3k", "MCWR06X3301FTL", "Multicomp Pro", "", R0603, "Resistor 3.3 kOhm 1% 0603 (I2C pull-up)", unit_gbp=0.01, moq=50),
-    Cat("R_750", "750", "MCWR06X7500FTL", "Multicomp Pro", "", R0603, "Resistor 750 Ohm 1% 0603 (TLC59116 REXT: 25.0 mA/channel)", unit_gbp=0.01, moq=50),
+    Cat("R_2K94", "2.94k", "MCWR06X2941FTL", "Multicomp Pro", "", R0603,
+        "Resistor 2.94 kOhm 1% 0603 (LP5012 RIREF: 105 x 0.7 V / 2.94 k = 25.0 mA/channel)", unit_gbp=0.01, moq=50),
+    # LED board v0.2 (18 mm): 0402 passives so the driver's support parts fit inside r 7.8 mm
+    Cat("R_2K94_0402", "2.94k", "RC0402FR-072K94L", "Yageo", "", R0402,
+        "Resistor 2.94 kOhm 1% 0402 (LP5012 RIREF: 105 x 0.7 V / 2.94 k = 25.0 mA/channel)", unit_gbp=0.01, moq=50),
+    Cat("R_2K4_0402", "2.4k", "RC0402FR-072K4L", "Yageo", "", R0402, "Resistor 2.4 kOhm 1% 0402 (LP5012 EN pull-up)",
+        unit_gbp=0.01, moq=50),
+    Cat("C_1U_0402", "1u 25V", "GRM155R61E105KA12D", "Murata", "", C0402, "MLCC 1 uF 25 V X5R 0402 (LP5012 VCC / VCAP)",
+        unit_gbp=0.03, moq=10),
+    Cat("C_100N_0402", "100n", "GRM155R71C104KA88D", "Murata", "", C0402, "MLCC 100 nF 16 V X7R 0402", unit_gbp=0.01,
+        moq=50),
+    Cat("C_10U_0603", "10u 10V", "GRM188R61A106KE69D", "Murata", "", C0603, "MLCC 10 uF 10 V X5R 0603 (LED board bulk)",
+        unit_gbp=0.05, moq=10),
     Cat("C_100N", "100n", "MC0603B104K500CT", "Multicomp Pro", "1759122", C0603, "MLCC 100 nF 50 V X7R 0603", unit_gbp=0.01, moq=50),
     Cat("C_1U", "1u", "CL10A105KB8NNNC", "Samsung", "3013385", C0603, "MLCC 1 uF 50 V X5R 0603", unit_gbp=0.03, moq=10),
     Cat("C_4U7", "4.7u 16V", "CL10A475KO8NNNC", "Samsung", "3013398", C0603, "MLCC 4.7 uF 16 V X5R 0603", unit_gbp=0.04, moq=10),

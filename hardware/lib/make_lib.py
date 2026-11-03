@@ -27,6 +27,19 @@ tlc = ic_symbol(
     datasheet="https://www.ti.com/lit/ds/symlink/tlc59116.pdf", keywords="LED driver I2C constant current")
 
 
+# LP5012 (LED board v0.2): TI LP5009/LP5012 datasheet SLVSEH2B, RUK (WQFN-20) pinout, Figure 6-2 / Pin Functions.
+# Pin 21 = exposed thermal pad, which is also the GND pin of the WQFN package.
+lp5012 = ic_symbol(
+    "LP5012RUK", "U",
+    left=[("16", "VCC", "power_in"), ("17", "SDA", "bidirectional"), ("18", "SCL", "input"), ("19", "EN", "input"),
+          None, ("20", "IREF", "passive"), ("1", "VCAP", "passive"), None,
+          ("14", "ADDR0", "input"), ("15", "ADDR1", "input"), None, ("21", "GND", "power_in")],
+    right=[(str(2 + k), f"OUT{k}", "open_collector") for k in range(12)],
+    width=17.78,
+    desc="12-channel I2C constant-current RGB LED sink driver, 25.5 mA max (RIREF), 12-bit 29 kHz PWM, WQFN-20 3x3",
+    footprint="Package_DFN_QFN:Texas_RUK0020B_WQFN-20-1EP_3x3mm_P0.4mm_EP1.7x1.7mm",
+    datasheet="https://www.ti.com/lit/ds/symlink/lp5012.pdf", keywords="LED driver I2C constant current RGB")
+
 
 def lm75bdp():
     """KiCad's Sensor_Temperature:LM75B (derived from LM75C) flattened into a stand-alone LM75BDP (NXP, TSSOP-8).
@@ -53,5 +66,5 @@ def lm75bdp():
 
 
 if __name__ == "__main__":
-    write_lib(OUT, [tlc, lm75bdp()])
+    write_lib(OUT, [tlc, lp5012, lm75bdp()])
     print("wrote", OUT)

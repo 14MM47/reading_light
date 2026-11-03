@@ -116,7 +116,7 @@ def _note(p):
     fp = p.footprint
     n = []
     if "2835" in fp:
-        n.append("polarity: pad 1 = cathode (the large pad); cathode mark on silk")
+        n.append("polarity: pad 1 = cathode (the large pad); silk brackets mark the cathode half")
     elif "Wuerth" in fp or "RGB" in fp or "ABRG" in p.lib_id:
         n.append("polarity: pad 1 (silk '1') = common anode; the package's polarity mark (chamfer/dot) is pin 3, "
                  "red cathode, and goes on the silk chamfer")

@@ -1,0 +1,11 @@
+Item #,Designator,Qty,Manufacturer,Mfg Part #,Description / Value,Package/Footprint,Type,Your Instructions / Notes,Farnell
+1,"D1,D3,D5,D7",4,Bridgelux,BXEN-27S-11M-3C-00-0-3,"2700K CRI97 - Mid-power white LED 2835, 2700 K, CRI 97 (Thrive), 3 V class",LED_PLCC_2835_Dense,SMD,polarity: pad 1 = cathode (the large pad); silk brackets mark the cathode half,3498849
+2,"D2,D4,D6,D8",4,Bridgelux,BXEN-50S-11M-3C-00-0-3,"5000K CRI97 - Mid-power white LED 2835, 5000 K, CRI 97 (Thrive), 3 V class",LED_PLCC_2835_Dense,SMD,polarity: pad 1 = cathode (the large pad); silk brackets mark the cathode half,3498853
+3,D9,1,Wurth Elektronik,150141M173100,"RGB 3528 CA - RGB LED PLCC-4 3528, common anode (1 A, 2 B-K, 3 R-K, 4 G-K), 30 mA max/die, R 625 / G 520 / B 470 nm",LED_RGB_Wuerth-PLCC4_3.2x2.8mm_150141M173100,SMD,"polarity: pad 1 (silk '1') = common anode; the package's polarity mark (chamfer/dot) is pin 3, red cathode, and goes on the silk chamfer",2322115
+4,U1,1,Texas Instruments,LP5012RUKR,"LP5012 - 12-ch I2C constant-current RGB LED sink driver, 25.5 mA max, 12-bit (9+3 dither) 29 kHz PWM, WQFN-20 3x3 0.4 mm pitch",Texas_RUK0020B_WQFN-20-1EP_3x3mm_P0.4mm_EP1.7x1.7mm,SMD,check pin-1 / orientation in preview,
+5,R1,1,Yageo,RC0402FR-072K94L,2.94k (25 mA) - Resistor 2.94 kOhm 1% 0402 (LP5012 RIREF: 105 x 0.7 V / 2.94 k = 25.0 mA/channel),R_0402_1005Metric,SMD,,
+6,"C1,C4",2,Murata,GRM155R61E105KA12D,1u 25V - MLCC 1 uF 25 V X5R 0402 (LP5012 VCC / VCAP),C_0402_1005Metric,SMD,,
+7,C2,1,Murata,GRM188R61A106KE69D,10u 10V - MLCC 10 uF 10 V X5R 0603 (LED board bulk),C_0603_1608Metric,SMD,,
+8,U2,1,Microchip,MCP9800A0T-M/OT,"MCP9800A0 - I2C temperature sensor, LM75 register compatible (8-bit CONFIG), address 0x48, 2.7-5.5 V, open-drain ALERT, +/-1 C typ / +/-3 C max, SOT-23-5",SOT-23-5,SMD,check pin-1 / orientation in preview,1439485
+9,R2,1,Yageo,RC0402FR-072K4L,2.4k - Resistor 2.4 kOhm 1% 0402 (LP5012 EN pull-up),R_0402_1005Metric,SMD,,
+10,C3,1,Murata,GRM155R71C104KA88D,100n - MLCC 100 nF 16 V X7R 0402,C_0402_1005Metric,SMD,,

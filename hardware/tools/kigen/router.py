@@ -26,7 +26,7 @@ class RouteError(RuntimeError):
 
 class Router:
     def __init__(self, board: pcbnew.BOARD, grid=0.05, clearance=0.2, edge_clear=0.35, via_d=0.6, via_drill=0.3,
-                 margin_cells=0.75):
+                 margin_cells=0.75, align=None):
         self.b = board
         self.g = grid
         self.cl = clearance
@@ -37,6 +37,10 @@ class Router:
         bb = board.GetBoardEdgesBoundingBox()
         self.x0 = TO(bb.GetX()) - 1.0
         self.y0 = TO(bb.GetY()) - 1.0
+        if align is not None:                     # put this point on a cell centre (fine-pitch pads on a round grid)
+            ax, ay = align
+            self.x0 += ((ax - self.x0) / grid - 0.5) % 1.0 * grid
+            self.y0 += ((ay - self.y0) / grid - 0.5) % 1.0 * grid
         self.W = int(math.ceil((TO(bb.GetWidth()) + 2.0) / grid))
         self.H = int(math.ceil((TO(bb.GetHeight()) + 2.0) / grid))
         self.netcode = {}
@@ -381,12 +385,16 @@ class Router:
         return items
 
     # ------------------------------------------------------- stitching vias
-    def stitch_pads(self, net, width=0.3, max_mm=2.5, layer=0):
-        """Give every SMD pad of `net` on `layer` a short track to a via (for the other-layer pour)."""
+    def stitch_pads(self, net, width=0.3, max_mm=2.5, layer=0, skip_connected=False):
+        """Give every SMD pad of `net` on `layer` a short track to a via (for the other-layer pour).
+        skip_connected: leave out pads whose copper already reaches a via or plated hole (e.g. a pre-placed via)."""
         if net not in self.copper and "/" + net in self.copper:
             net = "/" + net
         added = 0
         free, freev = self._free_masks(net, width, (0, 1))
+        if skip_connected:
+            lab = self._components(net)
+            via_labels = set(np.unique(lab[layer][self.through[net]])) - {0}
         for fp in self.b.GetFootprints():
             for pad in fp.Pads():
                 if pad.GetNetname() != net or pad.GetAttribute() != pcbnew.PAD_ATTRIB_SMD:
@@ -397,6 +405,8 @@ class Router:
                 for pts in self._sps_points(pad.GetEffectivePolygon(LAYERS[layer], pcbnew.ERROR_INSIDE)):
                     self._poly_to(img, pts)
                 pm = np.array(img, bool)
+                if skip_connected and (set(np.unique(lab[layer][pm])) & via_labels):
+                    continue
                 start = pm & free[layer]
                 if not start.any():
                     continue

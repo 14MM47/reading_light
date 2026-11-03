@@ -29,9 +29,11 @@ def build_pcb(board: str, d, parts, attempts=12):
     rng = random.Random(7)
     order = list(d.ROUTE)
     best = None
+    optional = {r[0] for r in d.ROUTE if len(r) > 2 and r[2].get("optional")}
     for k in range(attempts):
         report = _build_once(board, d, parts, order)
-        nf = len(report["failed"])
+        # an optional net (e.g. GND under a pour) may fail its track tree as long as DRC finds nothing unconnected
+        nf = len([n for n in report["failed"] if n not in optional or report["drc"]["unconnected"]])
         if best is None or nf < best[0]:
             best = (nf, list(order))
         if nf == 0:
@@ -102,13 +104,16 @@ def _build_once(board: str, d, parts, order):
         B.via(**v)
     # route
     R = Router(B.b, grid=getattr(d, "ROUTE_GRID", 0.05), clearance=d.RULES.get("clearance", 0.2) + 0.03,
-               edge_clear=d.RULES.get("edge_clear", 0.3) + 0.05)
+               edge_clear=d.RULES.get("edge_clear", 0.3) + 0.05, align=getattr(d, "ROUTE_ALIGN", None))
     report = {"routed": [], "failed": []}
     for net, layer in getattr(d, "PRE_STITCH", []):
-        print(f"  pre-stitched {R.stitch_pads(net, layer=layer, width=0.3, max_mm=2.0)} {net} pads")
+        n = R.stitch_pads(net, layer=layer, width=0.3, max_mm=2.0,
+                          skip_connected=getattr(d, "STITCH_SKIP_CONNECTED", False))
+        print(f"  pre-stitched {n} {net} pads")
     base_kw = getattr(d, "ROUTE_OPTS", {})
     for net, width, *opt in order:
         kw = dict(base_kw, **(opt[0] if opt else {}))
+        kw.pop("optional", None)
         done = False
         for w in [width] + [x for x in (0.4, 0.3, 0.25, 0.2) if x < width]:
             try:

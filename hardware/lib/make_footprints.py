@@ -2,7 +2,10 @@
 
 SW_CK_PTS645SM43SMTR92: C&K PTS645 SMD 6x6 mm, 4.3 mm, gull-wing. Pads 1/2 are one contact pair and 3/4 the
 other (internally connected pairs) - see docs/datasheets/INDEX.md for the land-pattern source and check.
-LED_WirePads_1x04: four 0.9 mm plated holes, 2.0 mm pitch, for soldering the moon cable to the LED board.
+LED_WirePads_1x04: four SMD pads, 2.0 mm pitch, for soldering the moon cable to the LED board (v0.1).
+LED_WirePads_2x02: the same four pads in a 2 x 2 block (1.9 mm pitch) for the 18 mm LED board (v0.2).
+LED_PLCC_2835_Dense: KiCad's LED_PLCC_2835 land pattern (pads unchanged) with an IPC-7351 "least" (level C,
+0.1 mm) courtyard and a silk mark kept inside it, so eight 2835s fit on a 5.8 mm ring (v0.2 LED board).
 """
 from pathlib import Path
 
@@ -53,6 +56,41 @@ def wirepads():
                "wire pads", lines, pads, ref_y=-2.2, val_y=2.2, attr="smd")
 
 
+def wirepads_2x2():
+    """2 x 2 block of SMD solder pads for the moon cable: 1.2 x 1.2 mm on a 1.9 mm pitch (0.7 mm gaps, enough to
+    tin and tack 26-28 AWG wire with a fine tip). Pad 1 is marked by a silk corner."""
+    pads = []
+    for num, (sx, sy) in (("1", (-1, -1)), ("2", (1, -1)), ("3", (-1, 1)), ("4", (1, 1))):
+        pads.append(f'\t(pad "{num}" smd roundrect (at {sx * 0.95:.3f} {sy * 0.95:.3f}) (size 1.2 1.2) '
+                    f'(layers "F.Cu" "F.Mask") (roundrect_rratio 0.15))')
+    lines = [
+        '\t(fp_rect (start -1.7 -1.7) (end 1.7 1.7) (stroke (width 0.05) (type solid)) (fill no) (layer "F.CrtYd"))',
+        '\t(fp_line (start -1.75 -0.6) (end -1.75 -1.75) (stroke (width 0.12) (type solid)) (layer "F.SilkS"))',
+        '\t(fp_line (start -1.75 -1.75) (end -0.6 -1.75) (stroke (width 0.12) (type solid)) (layer "F.SilkS"))',
+        '\t(fp_rect (start -1.55 -1.55) (end 1.55 1.55) (stroke (width 0.1) (type solid)) (fill no) (layer "F.Fab"))',
+    ]
+    return _fp("LED_WirePads_2x02_P1.90mm", "2x2 SMD solder pads for the moon cable (1 GND, 2 VLED, 3 SDA, 4 SCL)",
+               "wire pads", lines, pads, ref_y=-2.6, val_y=2.6, attr="smd")
+
+
+def led_2835_dense():
+    """LED_PLCC_2835 (KiCad 9 library) pads and body; courtyard = pads/body + 0.1 mm (IPC-7351 level C)."""
+    pads = ['\t(pad "1" smd rect (at -0.9 0) (size 2.2 2.2) (layers "F.Cu" "F.Mask" "F.Paste"))',
+            '\t(pad "2" smd rect (at 1.375 0) (size 1.25 2.2) (layers "F.Cu" "F.Mask" "F.Paste"))']
+    lines = [
+        '\t(fp_rect (start -2.1 -1.5) (end 2.1 1.5) (stroke (width 0.05) (type solid)) (fill no) (layer "F.CrtYd"))',
+        # body outline with the cathode-corner chamfer, as in the library footprint
+        '\t(fp_poly (pts (xy -1.05 -1.4) (xy 1.75 -1.4) (xy 1.75 1.4) (xy -1.75 1.4) (xy -1.75 -0.7)) '
+        '(stroke (width 0.1) (type solid)) (fill no) (layer "F.Fab"))',
+        # cathode mark: silk brackets on the cathode half only (inside the courtyard, clear of the pads)
+        '\t(fp_line (start -2.05 -1.42) (end -0.5 -1.42) (stroke (width 0.12) (type solid)) (layer "F.SilkS"))',
+        '\t(fp_line (start -2.05 1.42) (end -0.5 1.42) (stroke (width 0.12) (type solid)) (layer "F.SilkS"))',
+    ]
+    return _fp("LED_PLCC_2835_Dense", "PLCC-2835 LED, KiCad LED_PLCC_2835 land pattern with a 0.1 mm (IPC level C) courtyard; "
+               "pad 1 (large) = cathode", "LED 2835", lines, pads, ref_y=-2.2, val_y=2.2, attr="smd",
+               model="${KICAD9_3DMODEL_DIR}/LED_SMD.3dshapes/LED_PLCC_2835.step")
+
+
 def _fp(name, descr, tags, lines, pads, ref_y, val_y, attr="smd", model=None):
     s = [f'(footprint "{name}"', '\t(version 20241229)', '\t(generator "kigen")', '\t(layer "F.Cu")',
          f'\t(descr "{descr}")', f'\t(tags "{tags}")',
@@ -68,6 +106,6 @@ def _fp(name, descr, tags, lines, pads, ref_y, val_y, attr="smd", model=None):
 
 if __name__ == "__main__":
     OUT.mkdir(exist_ok=True)
-    for name, text in (wirepads(),):   # PTS645: use KiCad's SW_SPST_PTS645Sx43SMTR92 (matches the C&K land pattern)
+    for name, text in (wirepads(), wirepads_2x2(), led_2835_dense()):   # PTS645: use KiCad's SW_SPST_PTS645Sx43SMTR92 (matches the C&K land pattern)
         (OUT / f"{name}.kicad_mod").write_text(text)
         print("wrote", name)
