@@ -18,12 +18,12 @@ extern "C" {
 #define REPEAT_EVERY_MS   150
 #define DEBOUNCE_MS       15
 #define FADE_MS           160       // cross-fade on any change
-#define I_CHANNEL_MA      25.0f     // TLC59116 full-scale current: 1.26 V / 750 R x 15 x CG 0.992 (led-board R1)
+#define I_CHANNEL_MA      25.0f     // LP5012 full-scale current: 105 x 0.7 V / 2.94 k (led-board R1, RIREF)
 #define I_CAP_MA          200.0f    // total LED current cap while the temperature sensor is trusted (short bursts)
 #define I_CAP_UNTRUSTED_MA 110.0f   // hard cap without a trusted sensor: ~0.4 W in the head at 4.2 V (thermal review)
 #define T_DERATE_START_C  45.0f     // LED-board temperature where derating starts (keeps the PLA <= ~47 C)
 #define T_DERATE_KNEE_C   52.0f     // 30 % at the knee
-#define T_DERATE_MAX_C    58.0f     // 5 % (faint glow) at/above this; the LM75B OS thermostat cuts the TLC at 60 C
+#define T_DERATE_MAX_C    58.0f     // 5 % (faint glow) at/above this; the MCP9800 ALERT pulls the LP5012 EN low at 60 C
 #define T_PLAUSIBLE_MIN_C (-20.0f)
 #define T_PLAUSIBLE_MAX_C 100.0f
 #define T_FROZEN_MS       300000UL  // reading unchanged this long while > 50 mA flows = sensor not trusted
@@ -76,15 +76,13 @@ typedef struct {
     uint32_t load_since;              // when > 50 mA started flowing (0 = not loaded): the frozen-sensor timer
 } core_t;
 
-// TLC59116 current-gain steps (IREF register {CM,HC,CC}), all inside the datasheet's output-current ranges:
-// 8.3 / 12.5 / 25.0 mA at REXT 750 R. Drive values are fractions of the 25.0 mA full scale (CG_FULL).
-#define CG_STEP_COUNT 3
-#define CG_FULL 0.9922f
-extern const uint8_t CG_CODE[CG_STEP_COUNT];
-extern const float CG_GAIN[CG_STEP_COUNT];
-// Lowest gain step that can show max_drive without clipping; steps down only when max_drive is below 80 % of the
-// lower step (hysteresis). current = index in use, or CG_STEP_COUNT if unknown.
-uint8_t cg_select(float max_drive, uint8_t current);
+// LP5012 (LED board v0.2): duty = OUTx_COLOR/255 x LEDx_BRIGHTNESS/255 (linear scale), at the 25 mA RIREF current.
+// Each LEDx_BRIGHTNESS register covers three outputs that belong to different groups on this board, so the firmware
+// writes one brightness b to all four and a colour byte per group. b is the smallest step that still shows the
+// strongest group, so the colours keep 7-8 bits for the mix ratios; it moves only when the strongest group leaves
+// [b/2, b]/255 (hysteresis: a fade does not rewrite b on every step). current = b in use (0 = unknown).
+uint8_t lp_brightness(float max_drive, uint8_t current);
+uint8_t lp_colour(float drive, uint8_t brightness);    // colour byte that shows drive at brightness b
 
 void core_init(core_t *c, const saved_t *saved, uint32_t now);
 void core_buttons(core_t *c, const bool pressed[BTN_COUNT], uint32_t now);

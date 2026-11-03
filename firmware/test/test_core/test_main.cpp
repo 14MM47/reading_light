@@ -289,34 +289,43 @@ void test_thermal_slew_independent_per_instance(void) {
     TEST_ASSERT_FLOAT_WITHIN(0.01f, 0.05f, b.t_cap);
 }
 
-void test_channel_current_matches_rext_750(void) {
-    const float i_fs = 1.26f / 750.0f * 15.0f * (127.0f / 128.0f) * 1000.0f;
+void test_channel_current_matches_riref_2k94(void) {
+    const float i_fs = 105.0f * 0.7f / 2940.0f * 1000.0f;      // LP5012: ISET = KIREF x VIREF / RIREF
     TEST_ASSERT_FLOAT_WITHIN(0.1f, i_fs, I_CHANNEL_MA);
+    TEST_ASSERT_TRUE(I_CHANNEL_MA <= 25.5f);                  // IMAX with Max_Current_Option = 0
 }
 
-// ---- round 2: IREF step choice (R2-F1), faded cap changes and the frozen timer (R2-F2)
-void test_cg_step_never_clips_and_green_blue_stay_at_12mA(void) {
+// ---- LED board v0.2: LP5012 brightness x colour quantiser (replaces the TLC59116 IREF steps)
+void test_lp_quantise_tracks_every_mode_and_level(void) {
     float d[G_COUNT];
     for (int m = 0; m < MODE_COUNT; m++)
         for (int l = 0; l < LEVELS; l++) {
             mode_targets(m, l, 1.0f, I_CAP_MA, d);
             float mx = 0;
             for (int g = 0; g < G_COUNT; g++) if (d[g] > mx) mx = d[g];
-            uint8_t k = cg_select(mx, CG_STEP_COUNT);
-            // the chosen step shows mx at <= 255 PWM counts (no clipping) ...
-            TEST_ASSERT_TRUE(mx * CG_FULL / CG_GAIN[k] <= 1.0f + 1e-3f);
-            // ... and is the lowest such step
-            if (k > 0) TEST_ASSERT_TRUE(mx * CG_FULL / CG_GAIN[k - 1] > 1.0f);
-            if (strcmp(MODES[m].name, "Green") == 0 || strcmp(MODES[m].name, "Blue") == 0)
-                TEST_ASSERT_TRUE(CG_GAIN[k] <= 0.4961f + 1e-4f);    // never the 25 mA step
+            uint8_t b = lp_brightness(mx, 0);
+            TEST_ASSERT_TRUE(b >= 1);
+            for (int g = 0; g < G_COUNT; g++) {
+                uint8_t col = lp_colour(d[g], b);
+                float shown = (float)col * (float)b / 65025.0f;
+                // within half a colour step of the target, and never clipped
+                TEST_ASSERT_FLOAT_WITHIN(0.5f * (float)b / 65025.0f + 1e-6f, d[g], shown);
+                if (d[g] == mx && mx > 0) TEST_ASSERT_TRUE(col >= 127);   // b is the smallest that fits
+            }
         }
 }
 
-void test_cg_step_hysteresis(void) {
-    TEST_ASSERT_EQUAL_UINT8(2, cg_select(0.8f, CG_STEP_COUNT));
-    TEST_ASSERT_EQUAL_UINT8(2, cg_select(0.45f, 2));        // just below the 12.5 mA step: stay at 25 mA
-    TEST_ASSERT_EQUAL_UINT8(1, cg_select(0.39f, 2));        // well below (< 80 %): step down
-    TEST_ASSERT_EQUAL_UINT8(2, cg_select(0.51f, 1));        // above the step: step up at once
+void test_lp_brightness_hysteresis_and_ends(void) {
+    TEST_ASSERT_EQUAL_UINT8(128, lp_brightness(0.5f, 0));
+    TEST_ASSERT_EQUAL_UINT8(128, lp_brightness(0.45f, 128));     // still fits with >= 7-bit colour: keep
+    TEST_ASSERT_EQUAL_UINT8(51, lp_brightness(0.2f, 128));       // below half: step down (0.2 x 255 = 51)
+    TEST_ASSERT_EQUAL_UINT8(131, lp_brightness(0.51f, 128));     // above: step up at once
+    TEST_ASSERT_EQUAL_UINT8(255, lp_brightness(1.0f, 40));
+    TEST_ASSERT_EQUAL_UINT8(255, lp_colour(1.0f, 255));
+    TEST_ASSERT_EQUAL_UINT8(0, lp_colour(0.0f, 77));
+    TEST_ASSERT_EQUAL_UINT8(77, lp_brightness(0.0f, 77));        // all off: keep b, colours are 0
+    TEST_ASSERT_EQUAL_UINT8(2, lp_brightness(LEVEL_MIN_FRAC, 0)); // level 0 of a full-drive group
+    TEST_ASSERT_TRUE(lp_colour(LEVEL_MIN_FRAC, 2) >= 127);
 }
 
 void test_trust_change_fades_instead_of_stepping(void) {
@@ -373,9 +382,9 @@ int main(int, char **) {
     RUN_TEST(test_no_strobe_after_24_8_days_on);
     RUN_TEST(test_no_refade_after_49_7_days_on);
     RUN_TEST(test_thermal_slew_independent_per_instance);
-    RUN_TEST(test_channel_current_matches_rext_750);
-    RUN_TEST(test_cg_step_never_clips_and_green_blue_stay_at_12mA);
-    RUN_TEST(test_cg_step_hysteresis);
+    RUN_TEST(test_channel_current_matches_riref_2k94);
+    RUN_TEST(test_lp_quantise_tracks_every_mode_and_level);
+    RUN_TEST(test_lp_brightness_hysteresis_and_ends);
     RUN_TEST(test_trust_change_fades_instead_of_stepping);
     RUN_TEST(test_frozen_timer_starts_when_load_starts);
     return UNITY_END();

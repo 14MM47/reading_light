@@ -33,7 +33,7 @@ def load_design(board):
 
 def board_map():
     txt = (ROOT / "firmware" / "include" / "board_map.h").read_text()
-    return [int(x) for x in re.search(r"OUT_GROUP\[16\] = \{([^}]*)\}", txt).group(1).split(",")]
+    return [int(x) for x in re.search(r"OUT_GROUP\[N_OUT\] = \{([^}]*)\}", txt).group(1).split(",")]
 
 
 def test_board_map_matches_led_netlist():
@@ -41,8 +41,8 @@ def test_board_map_matches_led_netlist():
     nets = netlist("led-board")
     led_group = {ref: grp for ref, grp, _ in d.WHITE}
     rgb_pin = {"3": "R", "4": "G", "2": "B"}            # Device:LED_ABRG / Wurth 150141M173100
-    rgb_refs = {ref for ref, _ in d.RGB}
-    expect = [-1] * 16
+    rgb_refs = {d.RGB_REF}
+    expect = [-1] * d.N_OUT
     for out, pin in d.PIN_OF_OUT.items():
         for name, nodes in nets.items():
             if ("U1", pin) in nodes:
@@ -67,11 +67,13 @@ def test_firmware_pins_match_main_board():
     assert mcu["11"] == "SCL" and mcu["10"] == "SDA" and mcu["16"] == "UPDI" and mcu["17"] == "TX"
 
 
-def test_channel_current_constant_matches_rext():
+def test_channel_current_constant_matches_riref():
     d = load_design("led-board")
-    rext = next(p for p in d.parts() if p.ref == "R1")
-    ohms = float(rext.value.split()[0])
-    i_ma = 1.26 / ohms * 15 * 0.992 * 1000                 # TLC59116 DS eq. 3-5, CG at power-up
+    riref = next(p for p in d.parts() if p.ref == "R1")
+    assert riref.pins["1"] == "IREF"
+    v = riref.value.split()[0]
+    ohms = float(v[:-1]) * 1000 if v.endswith("k") else float(v)
+    i_ma = 105 * 0.7 / ohms * 1000                         # LP5012: ISET = KIREF x VIREF / RIREF (SLVSEH2B)
     core = (ROOT / "firmware" / "lib" / "core" / "lightcore.h").read_text()
     fw = float(re.search(r"#define I_CHANNEL_MA\s+([\d.]+)f", core).group(1))
     assert abs(fw - i_ma) < 0.2, (fw, i_ma)
@@ -83,5 +85,4 @@ def test_group_led_counts_match_firmware():
     counts = [int(x) for x in re.search(r"GROUP_LEDS\[G_COUNT\] = \{([^}]*)\}", core).group(1).split(",")]
     ww = sum(1 for w in d.WHITE if w[1] == "WW")
     cw = sum(1 for w in d.WHITE if w[1] == "CW")
-    n = len(d.RGB)
-    assert counts == [ww, cw, n, n, n]
+    assert counts == [ww, cw, 1, 1, 1]                     # one RGB LED (D9) on LED board v0.2

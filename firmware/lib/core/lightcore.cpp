@@ -3,18 +3,22 @@
 #include <math.h>
 #include <string.h>
 
-const uint8_t GROUP_LEDS[G_COUNT] = {4, 4, 2, 2, 2};
+const uint8_t GROUP_LEDS[G_COUNT] = {4, 4, 1, 1, 1};
 
-// CG = (1+HC)(1+CC/64)/4 * 3^(CM-1): 0x7F -> 0.3307, 0xBF -> 0.4961, 0xFF -> 0.9922
-const uint8_t CG_CODE[CG_STEP_COUNT] = {0x7F, 0xBF, 0xFF};
-const float CG_GAIN[CG_STEP_COUNT] = {0.3307f, 0.4961f, 0.9922f};
+uint8_t lp_brightness(float mx, uint8_t cur) {
+    if (mx <= 0.0f) return cur ? cur : 1;                   // all colours are 0: b does not matter, keep it
+    const float need = mx * 255.0f;
+    if (cur && need <= (float)cur + 1e-3f && need >= 0.5f * (float)cur) return cur;
+    int b = (int)ceilf(need - 1e-3f);                       // a hair of tolerance: an exact step fits
+    if (b < 1) b = 1;
+    if (b > 255) b = 255;
+    return (uint8_t)b;
+}
 
-uint8_t cg_select(float mx, uint8_t cur) {
-    // compare in drive units (fraction of full scale), with a hair of tolerance so an exact step (e.g. 0.5) fits
-    uint8_t k = 0;
-    while (k < CG_STEP_COUNT - 1 && CG_GAIN[k] / CG_FULL * 1.0005f < mx) k++;
-    if (cur < CG_STEP_COUNT && k < cur && mx > 0.8f * CG_GAIN[k] / CG_FULL) k = cur;   // not far enough below: stay
-    return k;
+uint8_t lp_colour(float d, uint8_t b) {
+    if (!b || d <= 0.0f) return 0;
+    const int v = (int)(d * 255.0f * 255.0f / (float)b + 0.5f);
+    return (uint8_t)(v > 255 ? 255 : v);
 }
 
 #define SAVED_MAGIC 0xA5

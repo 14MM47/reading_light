@@ -9,148 +9,139 @@
 #include "lightcore.h"
 
 static core_t core;
-static uint8_t cg_idx = CG_STEP_COUNT;             // IREF step in use (index into CG_CODE), CG_STEP_COUNT = unknown
-static uint8_t last_pwm[16];
-static bool tlc_ok = false;
-static uint8_t tlc_fails = 0;
+static uint8_t lp_b = 0;                           // LEDx_BRIGHTNESS in use (0 = unknown, forces a full write)
+static uint8_t last_regs[4 + N_OUT];              // 07h..16h as last written: 4 x brightness, N_OUT x colour
+static bool lp_ok = false;
+static uint8_t lp_fails = 0;
 static float last_temp_c = 25.0f;
 
-// ------------------------------------------------------------------ TLC59116
-static bool tlc_write(uint8_t reg, const uint8_t *d, uint8_t n) {
-    Wire.beginTransmission(ADDR_TLC);
-    // AI=100 (all registers, rolls over after 1Bh) only for block writes; single registers (IREF 1Ch) without AI
-    Wire.write((uint8_t)(n > 1 ? (0x80 | reg) : reg));
+// -------------------------------------------------------------------- LP5012
+// Registers (SLVSEH2B): 00h DEVICE_CONFIG0 (b6 Chip_EN), 01h DEVICE_CONFIG1, 02h LED_CONFIG0 (bank control),
+// 07h-0Ah LED0..3_BRIGHTNESS (each covers OUT 3k..3k+2), 0Bh-16h OUT0..11_COLOR, 17h RESET (write FFh).
+#define LP_DEVICE_CONFIG0 0x00
+#define LP_DEVICE_CONFIG1 0x01
+#define LP_LED_CONFIG0    0x02
+#define LP_BRIGHTNESS0    0x07
+#define LP_COLOR0         0x0B
+#define LP_RESET          0x17
+#define LP_CHIP_EN        0x40
+// Log_Scale_EN 0 (the core already maps levels geometrically), Power_Save_EN 1, Auto_Incr_EN 1,
+// PWM_Dithering_EN 1, Max_Current_Option 0 (IMAX 25.5 mA), LED_Global_Off 0
+#define LP_CONFIG1        0x1C
+
+static bool lp_write(uint8_t reg, const uint8_t *d, uint8_t n) {   // auto-increment (CONFIG1 b3) for n > 1
+    Wire.beginTransmission(ADDR_LP5012);
+    Wire.write(reg);
     for (uint8_t i = 0; i < n; i++) Wire.write(d[i]);
     return Wire.endTransmission() == 0;
 }
 
-static int16_t tlc_read(uint8_t reg) {          // -1 on bus error
-    Wire.beginTransmission(ADDR_TLC);
-    Wire.write(reg);                             // control byte, no auto-increment
+static int16_t lp_read(uint8_t reg) {            // -1 on bus error
+    Wire.beginTransmission(ADDR_LP5012);
+    Wire.write(reg);
     if (Wire.endTransmission(false) != 0) return -1;
-    if (Wire.requestFrom((uint8_t)ADDR_TLC, (uint8_t)1) != 1) return -1;
+    if (Wire.requestFrom((uint8_t)ADDR_LP5012, (uint8_t)1) != 1) return -1;
     return (int16_t)Wire.read();
 }
 
-static bool tlc_init() {
-    const uint8_t mode[2] = {0x00, 0x00};       // MODE1: oscillator on, no sub/all-call; MODE2: dimming, defaults
-    if (!tlc_write(0x00, mode, 2)) return false;
-    delayMicroseconds(600);                      // oscillator start-up (500 us max)
-    bool ok = true;
-    uint8_t zero[16] = {0};
-    ok &= tlc_write(0x02, zero, 16);             // PWM0..15 = 0
-    const uint8_t grp[2] = {0xFF, 0x00};         // GRPPWM, GRPFREQ (group dimming unused: LDR=10)
-    ok &= tlc_write(0x12, grp, 2);
-    uint8_t ledout[4] = {0, 0, 0, 0};
-    for (uint8_t o = 0; o < 16; o++)
-        if (OUT_GROUP[o] >= 0) ledout[o / 4] |= (uint8_t)(0x2 << (2 * (o % 4)));   // LDRx = 10: individual PWM
-    ok &= tlc_write(0x14, ledout, 4);
-    cg_idx = CG_STEP_COUNT - 1;
-    const uint8_t iref = CG_CODE[cg_idx];         // CM=1 HC=1 CC=63 -> CG 0.992 (full scale)
-    ok &= tlc_write(0x1C, &iref, 1);
-    memset(last_pwm, 0, sizeof(last_pwm));
-    return ok;                                   // any failed write -> caller retries the whole init
+static bool lp_init() {
+    // EN high (R2 pull-up, ALERT released) for > 500 us before the first access (tEN_H): led_board_on() waits 10 ms
+    const uint8_t en = LP_CHIP_EN, cfg1 = LP_CONFIG1, bank = 0x00;
+    bool ok = lp_write(LP_DEVICE_CONFIG0, &en, 1);            // STANDBY -> NORMAL
+    ok &= lp_write(LP_DEVICE_CONFIG1, &cfg1, 1);
+    ok &= lp_write(LP_LED_CONFIG0, &bank, 1);                 // no bank control: every output on its own colour
+    memset(last_regs, 0, sizeof(last_regs));
+    ok &= lp_write(LP_BRIGHTNESS0, last_regs, sizeof(last_regs));   // all dark
+    lp_b = 0;
+    ok &= lp_read(LP_DEVICE_CONFIG1) == LP_CONFIG1;           // the device took the configuration
+    return ok;                                               // any failure -> caller retries the whole init
 }
 
-// IREF current-gain steps and their selection live in lib/core (cg_select, host-tested): 8.3 / 12.5 / 25.0 mA
-static bool tlc_output(const float drive[G_COUNT]) {   // false on a bus error: caller re-initialises
+// Brightness / colour split lives in lib/core (lp_brightness, lp_colour; host-tested).
+static bool lp_output(const float drive[G_COUNT]) {   // false on a bus error: caller re-initialises
     float mx = 0;
     for (uint8_t g = 0; g < G_COUNT; g++) if (drive[g] > mx) mx = drive[g];
-    const uint8_t k = cg_select(mx, cg_idx);
-    const float cg = CG_GAIN[k];
-    uint8_t pwm[16];
-    bool changed = false;
-    for (uint8_t o = 0; o < 16; o++) {
-        int8_t g = OUT_GROUP[o];
-        float v = (g >= 0) ? drive[g] * CG_FULL / cg : 0.0f;   // drive is a fraction of full scale (CG 0.992)
-        int p = (int)(v * 255.0f + 0.5f);
-        pwm[o] = (uint8_t)(p > 255 ? 255 : (p < 0 ? 0 : p));
-        changed |= pwm[o] != last_pwm[o];
+    const uint8_t b = lp_brightness(mx, lp_b);
+    uint8_t col[G_COUNT], regs[4 + N_OUT];
+    for (uint8_t g = 0; g < G_COUNT; g++) col[g] = lp_colour(drive[g], b);
+    memset(regs, b, 4);
+    for (uint8_t o = 0; o < N_OUT; o++) regs[4 + o] = OUT_GROUP[o] >= 0 ? col[OUT_GROUP[o]] : 0;
+    if (!memcmp(regs, last_regs, sizeof(regs))) return true;
+    // Each register acts when written. Order the writes so the in-between state is never brighter than either
+    // end: brightness up -> colours first, brightness down (or same) -> brightness first (one auto-increment write).
+    if (lp_b && b > lp_b) {
+        if (!lp_write(LP_COLOR0, regs + 4, N_OUT) || !lp_write(LP_BRIGHTNESS0, regs, 4)) return false;
+    } else if (!lp_write(LP_BRIGHTNESS0, regs, sizeof(regs))) {
+        return false;
     }
-    if (k != cg_idx) {
-        const uint8_t code = CG_CODE[k];
-        // IREF acts when written; PWM acts at STOP (MODE2.OCH=0 covers 02h..17h only). Order the writes so the
-        // in-between state is never brighter than either end: gain up -> PWM first, gain down -> IREF first.
-        const bool gain_up = cg_idx >= CG_STEP_COUNT || k > cg_idx;
-        if (gain_up) {
-            if (!tlc_write(0x02, pwm, 16)) return false;
-            memcpy(last_pwm, pwm, 16);
-            if (!tlc_write(0x1C, &code, 1)) return false;
-        } else {
-            if (!tlc_write(0x1C, &code, 1)) return false;
-            cg_idx = k;
-            if (!tlc_write(0x02, pwm, 16)) return false;
-            memcpy(last_pwm, pwm, 16);
-        }
-        cg_idx = k;
-        return true;
-    }
-    if (changed) {
-        if (!tlc_write(0x02, pwm, 16)) return false;
-        memcpy(last_pwm, pwm, 16);
-    }
+    memcpy(last_regs, regs, sizeof(regs));
+    lp_b = b;
     return true;
 }
 
-static void tlc_sleep() {
-    uint8_t zero[16] = {0};
-    tlc_write(0x02, zero, 16);
-    const uint8_t mode1 = 0x10;                  // OSC=1: oscillator off (low power)
-    tlc_write(0x00, &mode1, 1);
+static void lp_sleep() {                         // outputs off, then STANDBY (Chip_EN = 0, ~10 uA)
+    uint8_t zero[N_OUT] = {0};
+    lp_write(LP_COLOR0, zero, N_OUT);
+    const uint8_t off = 0x00;
+    lp_write(LP_DEVICE_CONFIG0, &off, 1);
 }
 
-// --------------------------------------------------------------------- LM75B
-static bool lm75_config(uint8_t conf) {        // Conf register (pointer 01h): B0 = SHUTDOWN
-    Wire.beginTransmission(ADDR_LM75);
+static void lp_reset() {                         // RESET register: every register back to its default
+    const uint8_t r = 0xFF;
+    lp_write(LP_RESET, &r, 1);
+}
+
+// ------------------------------------------------------- MCP9800 (LM75-compatible)
+static bool ts_config(uint8_t conf) {            // CONFIG (pointer 01h)
+    Wire.beginTransmission(ADDR_TSENSE);
     Wire.write((uint8_t)0x01);
     Wire.write(conf);
     return Wire.endTransmission() == 0;
 }
 
-// Tos / Thyst (pointers 03h / 02h): 9-bit two's complement, 0.5 C/LSB, left-aligned in 16 bits (D15..D7)
-static bool lm75_write_limit(uint8_t reg, int16_t celsius) {
+// TSET / THYST (pointers 03h / 02h): 9-bit two's complement, 0.5 C/LSB, left-aligned in 16 bits (D15..D7)
+static bool ts_write_limit(uint8_t reg, int16_t celsius) {
     const uint16_t v = (uint16_t)((int16_t)(celsius * 2) << 7);
-    Wire.beginTransmission(ADDR_LM75);
+    Wire.beginTransmission(ADDR_TSENSE);
     Wire.write(reg);
     Wire.write((uint8_t)(v >> 8));
     Wire.write((uint8_t)(v & 0xFF));
     return Wire.endTransmission() == 0;
 }
 
-// Hardware thermostat: OS (comparator mode, active low, fault queue 2) holds the TLC59116 RESET low above TOS and
+// Hardware thermostat: ALERT (comparator mode, active low, fault queue 2) holds the LP5012 EN low above TSET and
 // releases it below THYST. The firmware derates from 45 C, so this is a backstop for a hung or wrong firmware.
-// LM75B POR defaults are Tos 80 C / Thyst 75 C, so a POR on the LED board leaves a looser backstop until re-init.
-static bool lm75_ok = false;
-static bool lm75_setup() {
-    lm75_ok = lm75_write_limit(0x02, LM75_THYST_C) && lm75_write_limit(0x03, LM75_TOS_C) &&
-              lm75_config(0x08);                  // B4:B3 = 01 (2 faults), B2 = 0 (active low), B1 = 0 (comparator)
-    return lm75_ok;
+// MCP9800 POR defaults are TSET 80 C / THYST 75 C, so a POR on the LED board leaves a looser backstop until re-init.
+static bool ts_ok = false;
+static bool ts_setup() {
+    ts_ok = ts_write_limit(0x02, TSENSE_THYST_C) && ts_write_limit(0x03, TSENSE_TSET_C) && ts_config(TSENSE_CONFIG);
+    return ts_ok;
 }
 
-// Read back Conf and Tos (R2-F5): a bus glitch that loosened the hardware thermostat is re-armed within 10 s
-static bool lm75_config_intact() {
-    Wire.beginTransmission(ADDR_LM75);
+// Read back CONFIG and TSET (R2-F5): a bus glitch that loosened the hardware thermostat is re-armed within 10 s
+static bool ts_config_intact() {
+    Wire.beginTransmission(ADDR_TSENSE);
     Wire.write((uint8_t)0x01);
-    if (Wire.endTransmission(false) != 0 || Wire.requestFrom((uint8_t)ADDR_LM75, (uint8_t)1) != 1) return false;
-    if ((uint8_t)Wire.read() != 0x08) return false;
-    Wire.beginTransmission(ADDR_LM75);
+    if (Wire.endTransmission(false) != 0 || Wire.requestFrom((uint8_t)ADDR_TSENSE, (uint8_t)1) != 1) return false;
+    if ((uint8_t)Wire.read() != TSENSE_CONFIG) return false;
+    Wire.beginTransmission(ADDR_TSENSE);
     Wire.write((uint8_t)0x03);
-    if (Wire.endTransmission(false) != 0 || Wire.requestFrom((uint8_t)ADDR_LM75, (uint8_t)2) != 2) return false;
+    if (Wire.endTransmission(false) != 0 || Wire.requestFrom((uint8_t)ADDR_TSENSE, (uint8_t)2) != 2) return false;
     const uint8_t msb = (uint8_t)Wire.read();
     const uint8_t lsb = (uint8_t)Wire.read();
-    const uint16_t tos = (uint16_t)((int16_t)(LM75_TOS_C * 2) << 7);
-    return msb == (uint8_t)(tos >> 8) && (lsb & 0x80) == (uint8_t)(tos & 0x80);
+    const uint16_t tset = (uint16_t)((int16_t)(TSENSE_TSET_C * 2) << 7);
+    return msb == (uint8_t)(tset >> 8) && (lsb & 0x80) == (uint8_t)(tset & 0x80);
 }
 
-static bool lm75_read(float *t) {
-    Wire.beginTransmission(ADDR_LM75);
+static bool ts_read(float *t) {
+    Wire.beginTransmission(ADDR_TSENSE);
     Wire.write((uint8_t)0x00);
     if (Wire.endTransmission(false) != 0) return false;
-    if (Wire.requestFrom((uint8_t)ADDR_LM75, (uint8_t)2) != 2) return false;
+    if (Wire.requestFrom((uint8_t)ADDR_TSENSE, (uint8_t)2) != 2) return false;
     const uint8_t msb = (uint8_t)Wire.read();     // two statements: operand evaluation order is unspecified
     const uint8_t lsb = (uint8_t)Wire.read();
     const int16_t raw = (int16_t)(((uint16_t)msb << 8) | lsb);
-    *t = (float)(raw >> 5) * 0.125f;              // 11-bit two's complement, 0.125 C/LSB (arithmetic shift)
+    *t = (float)(raw >> 4) * 0.0625f;             // 12-bit two's complement, 0.0625 C/LSB (arithmetic shift)
     return *t > -55.0f && *t < 125.0f;            // outside the sensor's range = treat as a failed read
 }
 
@@ -181,14 +172,14 @@ ISR(RTC_PIT_vect) { RTC.PITINTFLAGS = RTC_PI_bm; }
 
 static void i2c_bus_recover();
 
-static uint32_t lm75_valid_after;                // first LM75B conversion (~100 ms) after the LED board powers up
+static uint32_t ts_valid_after;                  // first 12-bit MCP9800 conversion (600 ms max) after power-up
 
 // bleed = true for a recovery power-cycle: SDA/SCL are driven low so VLED discharges through the 3.3 k pull-ups
-// (tau ~16 ms with ~9 uF) and the TLC59116 really sees VCC < 0.2 V, its POR threshold (round2 R2-E2).
+// and the LP5012 really drops below its UVLO (2.0 V) and restarts from a clean POR (round2 R2-E2).
 static void led_board_off(bool bleed) {
-    tlc_sleep();                                 // outputs off before the rail goes
+    lp_sleep();                                  // outputs off before the rail goes
     Wire.end();
-    digitalWriteFast(PIN_LED_EN_N, HIGH);        // Q4 off (soft, R13/C8): TLC59116 + LM75B unpowered; R12 holds it
+    digitalWriteFast(PIN_LED_EN_N, HIGH);        // Q4 off (soft, R13/C8): LP5012 + MCP9800 unpowered; R12 holds it
     if (bleed) {
         pinMode(PIN_PB0, OUTPUT);                // PORT OUT is 0: both lines low, sinking VLED through the pull-ups
         pinMode(PIN_PB1, OUTPUT);
@@ -205,21 +196,13 @@ static void led_board_on() {
     pinMode(PIN_PB1, INPUT);
     pinMode(PIN_LED_EN_N, OUTPUT);
     digitalWriteFast(PIN_LED_EN_N, LOW);          // Q4 on: ~2 ms soft ramp (R13/C8) to VLED, pull-ups included
-    delay(10);                                    // VLED rise + TLC59116 / LM75B power-on reset
+    delay(10);                                    // VLED rise, POR, LP5012 EN high > 500 us (tEN_H)
     PORTB.PIN0CTRL = 0;                           // input buffers back on (led_board_off() disabled them)
     PORTB.PIN1CTRL = 0;
     i2c_bus_recover();
     Wire.begin();
     Wire.setClock(I2C_HZ);
-    lm75_valid_after = millis() + 300;            // ignore the LM75B until its first conversion is done
-}
-
-// TLC59116 software reset (SWRST call address 0x6B, bytes A5h 5Ah): registers back to power-on defaults
-static void tlc_swrst() {
-    Wire.beginTransmission((uint8_t)0x6B);
-    Wire.write((uint8_t)0xA5);
-    Wire.write((uint8_t)0x5A);
-    Wire.endTransmission();
+    ts_valid_after = millis() + 700;              // the MCP9800 reads 0 C until its first conversion is done
 }
 
 static void sleep_until_resumed() {
@@ -246,7 +229,7 @@ static void sleep_until_resumed() {
 }
 
 // ---------------------------------------------------------------------- main
-// A reset in the middle of a transfer can leave a slave holding SDA low until its own time-out (TLC59116: ~25 ms):
+// A reset in the middle of a transfer can leave a slave holding SDA low (neither LED-board part has a time-out):
 // clock SCL until SDA is released, then send a STOP. Pins are open-drain here (PORT OUT = 0, external pull-ups).
 static void i2c_bus_recover() {
     pinMode(PIN_PB0, INPUT);
@@ -282,12 +265,12 @@ void setup() {
     saved_t saved;
     EEPROM.get(0, saved);
     core_init(&core, &saved, millis());
-    lm75_setup();                                 // best effort: a dead sensor is handled by the core (fail-safe cap)
-    tlc_ok = tlc_init();
+    ts_setup();                                   // best effort: a dead sensor is handled by the core (fail-safe cap)
+    lp_ok = lp_init();
 }
 
 void loop() {
-    static uint32_t last_ms, last_t, last_v, last_tlc_retry, last_tlc_check;
+    static uint32_t last_ms, last_t, last_v, last_lp_retry, last_lp_check;
     uint32_t now = millis();
     if (now != last_ms) {
         last_ms = now;
@@ -297,7 +280,7 @@ void loop() {
         if (now - last_t >= 1000) {
             last_t = now;
             float t = 0.0f;
-            bool ok = (int32_t)(now - lm75_valid_after) >= 0 && lm75_read(&t);
+            bool ok = (int32_t)(now - ts_valid_after) >= 0 && ts_read(&t);
 #if defined(FAULT_T_NACK)                         // bench fault injection only (VERIFY T5a/T5b): never in a release
             ok = false;
 #elif defined(FAULT_T_STUCK)
@@ -305,12 +288,12 @@ void loop() {
             t = 25.0f;
 #endif
             if (ok) last_temp_c = t;
-            static uint8_t lm75_check_div;
-            if (!ok) lm75_ok = false;
-            else if (!lm75_ok) lm75_setup();      // sensor came back: re-arm the thermostat thresholds
-            else if (++lm75_check_div >= 10) {    // every 10 s: is the thermostat still armed as we set it?
-                lm75_check_div = 0;
-                if (!lm75_config_intact()) lm75_setup();
+            static uint8_t ts_check_div;
+            if (!ok) ts_ok = false;
+            else if (!ts_ok) ts_setup();          // sensor came back: re-arm the thermostat thresholds
+            else if (++ts_check_div >= 10) {      // every 10 s: is the thermostat still armed as we set it?
+                ts_check_div = 0;
+                if (!ts_config_intact()) ts_setup();
             }
             core_temperature(&core, ok, t, now);
 #ifdef DEBUG_SERIAL
@@ -324,28 +307,28 @@ void loop() {
             core_battery(&core, vdd_mv(), now);
         }
         core_tick(&core, now);
-        if (!tlc_ok && now - last_tlc_retry >= 500) {
-            last_tlc_retry = now;
-            lm75_setup();                         // same rail: a TLC POR means the LM75B lost its limits too
-            tlc_ok = tlc_init();
-            // 4 failed inits (2 s) and not a thermostat trip (OS holds RESET only while hot): power-cycle the LED
-            // board through Q4. A sag that left VCC between 0.2 and 2.5 V can leave the TLC59116 undefined (m6).
-            tlc_fails = tlc_ok ? 0 : (uint8_t)(tlc_fails + 1);
-            if (tlc_fails >= 4 && (!lm75_ok || last_temp_c < (float)LM75_THYST_C)) {
-                tlc_fails = 0;
-                tlc_swrst();                      // cheap first: a TLC that still listens is reset without a power cut
+        if (!lp_ok && now - last_lp_retry >= 500) {
+            last_lp_retry = now;
+            ts_setup();                           // same rail: an LP5012 POR means the MCP9800 lost its limits too
+            lp_ok = lp_init();
+            // 4 failed inits (2 s) and not a thermostat trip (ALERT holds EN low only while hot, and the LP5012
+            // does not answer in shutdown): power-cycle the LED board through Q4 (m6)
+            lp_fails = lp_ok ? 0 : (uint8_t)(lp_fails + 1);
+            if (lp_fails >= 4 && (!ts_ok || last_temp_c < (float)TSENSE_THYST_C)) {
+                lp_fails = 0;
+                lp_reset();                       // cheap first: an LP5012 that still listens is reset in place
                 led_board_off(true);
                 delay(200);                       // >10 tau of the VLED bleed; well under the 2 s watchdog
                 led_board_on();
-                lm75_setup();
-                tlc_ok = tlc_init();
+                ts_setup();
+                lp_ok = lp_init();
             }
         }
-        if (tlc_ok && (now & 3) == 0 && !tlc_output(core.drive)) tlc_ok = false;   // 250 Hz, writes on change
-        if (tlc_ok && now - last_tlc_check >= 1000) {   // LED board POR (cable, VLED dropout) resets MODE1 to 11h
-            last_tlc_check = now;
-            int16_t m1 = tlc_read(0x00);
-            if (m1 < 0 || (m1 & 0x11)) tlc_ok = false;  // OSC or ALLCALL set = not our configuration -> re-init
+        if (lp_ok && (now & 3) == 0 && !lp_output(core.drive)) lp_ok = false;   // 250 Hz, writes on change
+        if (lp_ok && now - last_lp_check >= 1000) {   // LED-board POR (cable, VLED dropout) or a thermostat EN
+            last_lp_check = now;                       // cycle reset the LP5012 to STANDBY with Chip_EN = 0
+            int16_t c0 = lp_read(LP_DEVICE_CONFIG0);
+            if (c0 < 0 || !(c0 & LP_CHIP_EN)) lp_ok = false;   // not our configuration -> re-init
         }
         if (core.save_request) {
             core.save_request = false;
