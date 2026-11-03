@@ -1,18 +1,20 @@
 """LED board v0.2 (in the moon's base), 18 mm round, 2 layers, 1.0 mm FR4, WHITE solder mask (reflector).
 
 Top face (into the moon): 8 x CRI-97 white 2835 (4 x 2700 K, 4 x 5000 K) radial on a 5.8 mm ring, cathode pad
-inward, and one Wurth RGB (common anode) at the centre. Bottom face: TI LP5012 12-channel constant-current driver
-(WQFN-20, 3 x 3 mm) at the centre, NXP LM75B temperature sensor (its OS output holds the driver's EN low above
-60 C: hardware thermostat), and 2 x 2 solder pads for the 4-wire cable up the neck.
+inward, one Wurth RGB (common anode) at the centre, and R2 (EN pull-up, 0402) in the gap between D1 and D2.
+Bottom face: TI LP5012 12-channel constant-current driver (WQFN-20, 3 x 3 mm) at the centre, Microchip MCP9800A0
+temperature sensor (its open-drain ALERT holds the driver's EN low above 60 C: hardware thermostat), the IREF/VCAP/
+supply passives, and 2 x 2 solder pads for the 4-wire cable up the neck.
 
-Layout idea (docs/design/electronics.md, LED board v0.2): every LED cathode drops through a via onto a ring of
-11 vias around the driver (r 2.9-3.6 mm). The bottom fan-in stays inside that ring, so the rest of the bottom
-face is free for the sensor, the passives and the cable pads. The driver's control side (VCC, SDA, SCL, EN, IREF)
-faces north into the one wide gap of the ring (the two north LEDs put their vias on the ring's bisectors).
+Layout (docs/design/led-board-v0.2.md): every LED cathode drops through a via (r 3.25 on the LED centreline; the
+two north LEDs put theirs on the ring bisectors at r 3.6, the RGB's three sit beside its pads) and a pre-routed
+bottom fan-in (fanin_tracks) takes each to its LP5012 output in planar clockwise order. The driver's control side
+(VCC, SDA, SCL, EN, IREF) faces north into the one wide gap of the via ring; the I2C/EN bundle to the cable pads
+and the sensor is pre-routed too (bundle_tracks). The autorouter does only IREF, VCAP, GND and VLED.
 
-Optics (docs/design/optics.md): LED plane below the moon's bottom opening, with a 30 degree flared skirt bore so
-the opening never shadows the low-angle light. The edge band r 8.0-9.0 mm is clamped by the moon ring: no copper
-or parts there (edge clearance 1.0 mm).
+Optics (docs/design/optics/head_v02.py, moon_shell B13/B14): the LED plane sits 1.2 mm below the moon's 9.0 mm
+radius opening, which is the aperture; the bore below it is never narrower than the opening. The edge band
+r 8.0-9.0 mm is clamped by the moon ring: no copper or parts there (edge clearance 1.0 mm).
 """
 from __future__ import annotations
 
@@ -175,7 +177,7 @@ NOTES = [("LEDs - top face (into the moon)", (22, 30)), ("Driver, sensor, cable 
 BOXES = [(20, 25, 400, 95), (20, 115, 400, 210)]
 COMMENTS = [
     "LP5012 RIREF 2.94k -> 105 x 0.7 V / 2.94 k = 25.0 mA per output (Wurth RGB abs max 30 mA). All anodes on VLED.",
-    "I2C: LP5012 0x14 (ADDR1 = ADDR0 = GND), LM75B 0x48. Pull-ups on the main board. EN <- LM75B OS (thermostat).",
+    "I2C: LP5012 0x14 (ADDR1 = ADDR0 = GND), MCP9800A0 0x48. Pull-ups on the main board. EN <- MCP9800 ALERT (60/52 C).",
     "Top face white mask (reflector). Edge band r 8-9 mm is clamped by the moon ring: no copper there.",
 ]
 

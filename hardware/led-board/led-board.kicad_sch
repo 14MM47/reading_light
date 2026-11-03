@@ -10,7 +10,7 @@
 		(rev "0.2")
 		(company "14MM47 / reading_light")
 		(comment 1 "LP5012 RIREF 2.94k -> 105 x 0.7 V / 2.94 k = 25.0 mA per output (Wurth RGB abs max 30 mA). All anodes on VLED.")
-		(comment 2 "I2C: LP5012 0x14 (ADDR1 = ADDR0 = GND), LM75B 0x48. Pull-ups on the main board. EN <- LM75B OS (thermostat).")
+		(comment 2 "I2C: LP5012 0x14 (ADDR1 = ADDR0 = GND), MCP9800A0 0x48. Pull-ups on the main board. EN <- MCP9800 ALERT (60/52 C).")
 		(comment 3 "Top face white mask (reflector). Edge band r 8-9 mm is clamped by the moon ring: no copper there.")
 	)
 	(lib_symbols

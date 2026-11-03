@@ -108,8 +108,8 @@ def parts():
         P("SW3", "TACT", {"1": "BTN_MAIN", "2": "GND"}, (240, 200, 0), value="MAIN"),
         P("SW4", "TACT", {"1": "BTN_DN", "2": "GND"}, (240, 220, 0), value="DOWN"),
         # LED-board supply switch: the MCU (PB2 low) powers the LED board; off at reset (R12) and when the battery
-        # is empty, so a flat cell is not drained by the TLC59116's ~25 mA (review M2). Pull-ups sit on the switched
-        # rail so the unpowered LED board is never back-fed through SDA/SCL.
+        # is empty, so a flat cell is not drained by the LED board (LP5012 ~5 mA; v0.1 TLC59116 ~25 mA, review M2).
+        # Pull-ups sit on the switched rail so the unpowered LED board is never back-fed through SDA/SCL.
         P("Q4", "PFET", {"1": "Q4_G", "2": "VSYS", "3": "VLED"}, (280, 240, 0), value="DMG2305UX"),
         P("R12", "R_100K", {"1": "VSYS", "2": "Q4_G"}, (265, 245, 0)),
         # soft turn-on (round2 R2-E1): R13 into C8 gate-drain sets dV/dt ~2.5 V/ms on VLED, so charging the LED board's
