@@ -15,6 +15,7 @@ import csv
 import hashlib
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -24,8 +25,20 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "deliverable"
-REV = "0.1"
 BOARDS = ("main-board", "led-board")
+
+
+def _board_rev(board):
+    """REV from hardware/<board>/design.py (the fab folder is fab/<board>/v<REV>/)."""
+    m = re.search(r'^REV = "([^"]+)"', (ROOT / "hardware" / board / "design.py").read_text(), re.M)
+    if not m:
+        raise SystemExit(f"no REV in hardware/{board}/design.py")
+    return m.group(1)
+
+
+BREV = {b: _board_rev(b) for b in BOARDS}
+REV = max(BREV.values())          # the lamp build is named after its newest board
+BUILD = f"v{REV} (main board v{BREV['main-board']}, LED board v{BREV['led-board']})"
 PRINT_GROUPS = [   # (folder, title, parts) in print order
     ("1-coupons-print-first", "Coupons: print and check these first (fits, bayonet, lithophane contrast)",
      ["coupon_fit", "coupon_bayonet", "coupon_litho_wedge"]),
@@ -111,7 +124,8 @@ class Builder:
             dst.parent.mkdir(parents=True, exist_ok=True)
             args += [html, dst]
         if args:
-            sh(["node", ROOT / "tools" / "html2pdf.js", *args], cwd=ROOT)
+            sh(["node", ROOT / "tools" / "html2pdf.js", *args], cwd=ROOT,
+               env={**os.environ, "DOC_LABEL": f"Moon reading light {BUILD}"})
         shutil.rmtree(tmp)
 
 
@@ -183,13 +197,14 @@ def main():
     B.pdf(Path("PLAN.md"), Path("00-overview/PLAN-requirements-architecture-decisions.pdf"), "PLAN")
     B.pdf(Path("docs/verification/round1.md"), Path("00-overview/open-decisions-and-round1-summary.pdf"),
           "Verification round 1")
+    B.pdf(Path("docs/design/led-board-v0.2.md"), Path("00-overview/what-changed-in-v0.2.pdf"), "What changed in v0.2")
 
     # ---------------------------------------------------------------- 01 PCB manufacture
     B.pdf(Path("docs/handoffs/01-pcb-order.md"), Path("01-pcb-manufacture/handoff-01-pcb-order.pdf"), "Handoff 01")
     for b in BOARDS:
-        fab = Path("fab") / b / f"v{REV}"
+        fab = Path("fab") / b / f"v{BREV[b]}"
         d = Path("01-pcb-manufacture") / b
-        B.copy(fab / f"{b}-v{REV}-gerbers.zip", d / f"{b}-v{REV}-gerbers.zip")
+        B.copy(fab / f"{b}-v{BREV[b]}-gerbers.zip", d / f"{b}-v{BREV[b]}-gerbers.zip")
         B.copy(fab / "FAB_NOTES.md", d / "FAB_NOTES.md")
         B.pdf(fab / "FAB_NOTES.md", d / "FAB_NOTES.pdf", f"{b} fab notes")
         B.copy(fab / "schematic.pdf", d / f"{b}-schematic.pdf")
@@ -213,7 +228,7 @@ def main():
     B.pdf(Path("docs/handoffs/02-parts-order.md"), d / "handoff-02-parts-order.pdf", "Handoff 02")
     B.copy(Path("bom/ORDER.md"), d / "ORDER-summary.md")
     B.pdf(Path("bom/ORDER.md"), d / "ORDER-summary.pdf", "Order summary")
-    for f in ("farnell_quickpaste.txt", "farnell_order.csv", "other_purchases.csv", "BOM.csv"):
+    for f in ("farnell_quickpaste.txt", "farnell_order.csv", "digikey_order.csv", "other_purchases.csv", "BOM.csv"):
         B.copy(Path("bom") / f, d / f)
     B.pdf(Path("bom/assembly_routes.md"), d / "assembly-routes-cost-comparison.pdf", "Assembly routes")
     B.write(d / "README.md", readme_parts())
@@ -251,7 +266,7 @@ def main():
     d = Path("05-assembly-and-bring-up")
     B.pdf(Path("docs/handoffs/05-assembly-bringup.md"), d / "handoff-05-assembly-bringup.pdf", "Handoff 05")
     for b in BOARDS:
-        fab = Path("fab") / b / f"v{REV}"
+        fab = Path("fab") / b / f"v{BREV[b]}"
         for side in ("top", "bottom"):
             B.copy(fab / f"assembly_{side}.pdf", d / "drawings" / f"{b}_assembly_{side}.pdf")
             B.copy(fab / "renders" / f"{b}_assembly_{side}.png", d / "drawings" / f"{b}_assembly_{side}-zoomed.png")
@@ -266,8 +281,10 @@ def main():
     B.copy(Path("docs/verification/VERIFY.md"), d / "VERIFY-bench-checklist.md")
     B.pdf(Path("docs/verification/round1.md"), d / "verification-round1-dispositions.pdf", "Verification round 1")
     B.pdf(Path("docs/verification/round2.md"), d / "verification-round2-dispositions.pdf", "Verification round 2")
+    B.pdf(Path("docs/verification/round3.md"), d / "verification-round3-dispositions.pdf", "Verification round 3")
     for rnd, names in (("round1", ("electrical", "adversarial", "firmware", "thermal_optical")),
-                       ("round2", ("electrical_firmware", "dfm_fit"))):
+                       ("round2", ("electrical_firmware", "dfm_fit")),
+                       ("round3", ("electrical_firmware", "mechanical_optics", "docs_consistency"))):
         for n in names:
             B.pdf(Path("docs/verification") / rnd / f"{n}.md", d / "reviewer-reports" / f"{rnd}-{n}.pdf",
                   f"{rnd} {n} review")
@@ -276,6 +293,7 @@ def main():
     # ---------------------------------------------------------------- 07 design reference
     d = Path("07-design-reference")
     for src, name, title in (
+            ("docs/design/led-board-v0.2.md", "led-board-v0.2-and-slim-head-design-note.pdf", "LED board v0.2"),
             ("docs/design/electronics.md", "electronics-design-notes.pdf", "Electronics notes"),
             ("docs/datasheets/KEYSPECS.md", "datasheet-key-specs.pdf", "Datasheet key specs"),
             ("docs/research/light-modes.md", "research-light-modes.pdf", "Light modes research"),
@@ -283,6 +301,8 @@ def main():
             ("docs/research/neck-battery-pcb-pricing.md", "research-neck-battery-pcb-pricing.pdf", "Pricing research"),
             ("docs/handoffs/06-thingiverse-survey.md", "handoff-06-thingiverse-survey.pdf", "Handoff 06")):
         B.pdf(Path(src), d / name, title)
+    B.copy(Path("docs/design/optics/head_v02.txt"), d / "optics/head_v02.txt")
+    B.copy(Path("docs/design/optics/head_v02.py"), d / "optics/head_v02.py")
     B.copy(Path("docs/design/optics/sphere_illum.csv"), d / "optics/sphere_illum.csv")
     B.copy(Path("docs/design/optics/sphere_illum.txt"), d / "optics/sphere_illum.txt")
     B.copy(Path("docs/design/moon_preview.png"), d / "images/moon-lithophane-preview.png")
@@ -302,7 +322,7 @@ def main():
 
 
 def write_manifest(B, commit, dirty):
-    lines = [f"# deliverable/ manifest - Moon reading light v{REV}",
+    lines = [f"# deliverable/ manifest - Moon reading light {BUILD}",
              f"# generated by tools/build_deliverable.py from commit {commit}"
              f"{' WITH UNCOMMITTED CHANGES' if dirty else ''}",
              "# sha256  bytes  path  <-  source", ""]
@@ -318,23 +338,25 @@ def readme_top(commit, dirty, status, prows):
     st = "\n".join(
         f"| {b} | {s['erc']} | {s['drc_err']} | {s['drc_warn']} | {s['unconnected']} | {s['parity']} |"
         for b, s in status.items())
-    return f"""# Moon reading light v{REV}: deliverable pack
+    return f"""# Moon reading light {BUILD}: deliverable pack
 
 This folder holds everything needed to manufacture, print, flash, assemble and test the lamp, in build order. It is
 **generated** by `python3 tools/build_deliverable.py` from commit `{commit}`{" (with uncommitted changes)" if dirty else ""}.
 Don't edit it by hand: change the design, then re-run the generator. `MANIFEST.txt` lists every file with its
 SHA-256 and its source in the repo.
 
-**Nothing has been ordered.** Matt places every order and starts every print. The design has been through two
-verification rounds; it has not been built or tested on hardware yet.
+**Nothing has been ordered.** Matt places every order and starts every print. The design has been through three
+verification rounds; it has not been built or tested on hardware yet. **What changed in v0.2** (the 18 mm LED board
+with the TI LP5012 driver, one RGB LED, the slim moon head, and a corrected optics model):
+`00-overview/what-changed-in-v0.2.pdf`.
 
 ## Build order
 
 | Step | Folder | What you do | Instructions |
 |---|---|---|---|
-| 0 | `00-overview/` | Read the plan, look at the renders and `fitment/` views, check the open decisions | `00-START-HERE.pdf`, `PLAN-…pdf` |
-| 1 | `01-pcb-manufacture/` | Upload each board's Gerber zip to PCBWay (or JLCPCB) with the specs in its `FAB_NOTES` | `handoff-01-pcb-order.pdf` |
-| 2 | `02-parts-order/` | Paste `farnell_quickpaste.txt` into Farnell's Quick Paste; buy the off-board items | `handoff-02-parts-order.pdf` |
+| 0 | `00-overview/` | Read the plan and what changed in v0.2, look at the renders and `fitment/` views, check the open decisions | `00-START-HERE.pdf`, `PLAN-…pdf` |
+| 1 | `01-pcb-manufacture/` | Upload each board's Gerber zip to PCBWay (or JLCPCB) with the specs in its `FAB_NOTES`; decide how the LED board's WQFN side is assembled | `handoff-01-pcb-order.pdf` |
+| 2 | `02-parts-order/` | Paste `farnell_quickpaste.txt` into Farnell's Quick Paste; the LP5012 from DigiKey UK (`digikey_order.csv`); buy the off-board items | `handoff-02-parts-order.pdf` |
 | 3 | `03-3d-printing/` | Print the coupons first, then the moon head, the pack and the jig | `handoff-03-printing.pdf` |
 | 4 | `04-firmware/` | Set the fuses once, then flash `release/` (or `debug/` for bring-up) | `handoff-04-firmware.pdf` |
 | 5 | `05-assembly-and-bring-up/` | Assemble the boards, cable, moon and pack; first light | `handoff-05-assembly-bringup.pdf` |
@@ -348,8 +370,8 @@ verification rounds; it has not been built or tested on hardware yet.
 {st}
 
 The main board's 2 DRC warnings are intended: the slide-switch outline crosses the board edge where its knob
-overhangs. Every printed part passes the 3dprint-contract checks ({len(prows)} parts). The firmware's 29 host tests
-pass, and all four builds compile without warnings.
+overhangs. Every printed part passes the 3dprint-contract checks ({len(prows)} parts). The firmware's host tests
+pass, and all four builds compile.
 
 ## Decisions still open for Matt
 See `00-overview/open-decisions-and-round1-summary.pdf` §5. In short:
@@ -357,7 +379,10 @@ See `00-overview/open-decisions-and-round1-summary.pdf` §5. In short:
    downward reading LED.
 2. No cell-temperature sensing on the charger, so charge at room temperature. v0.2 option: an NTC charger.
 3. Soft-orange night mode includes some warm white (recommended: keep it).
-4. Green/blue drift at low battery (accepted for v0.1).
+4. Green/blue drift at low battery: worse with the LP5012 (no per-channel current step), accepted; option R1
+   3.65 kΩ (20 mA on every channel, −20 % white).
+5. LED board assembly: the LP5012 is a 0.4 mm-pitch WQFN. Hand assembly needs a stencil and a hot plate; the
+   recommendation is fab assembly of that board's bottom face (`02-parts-order/assembly-routes-cost-comparison.pdf`).
 
 ## Safety rules that apply to every step
 - Meter the battery lead before plugging it in: + goes to J2 pin 1 (silk "+").
@@ -370,13 +395,14 @@ See `00-overview/open-decisions-and-round1-summary.pdf` §5. In short:
 def readme_pcb(status):
     return f"""# 01: PCB manufacture
 
-Two boards, rev {REV}. For each board, upload **`<board>-v{REV}-gerbers.zip`** to the fab and copy the specs from
-**`FAB_NOTES.pdf`** (or `.md`) into the order form. Instructions: `handoff-01-pcb-order.pdf`.
+Two boards: main board rev {BREV['main-board']}, LED board rev {BREV['led-board']}. For each board, upload
+**`<board>-v<rev>-gerbers.zip`** to the fab and copy the specs from **`FAB_NOTES.pdf`** (or `.md`) into the order
+form. Instructions: `handoff-01-pcb-order.pdf`.
 
 | Board | Size | Stack | Finish / mask | Stencil | Qty |
 |---|---|---|---|---|---|
 | `main-board/` (in the pack) | 35 × 62 mm | 2 layers, 1.6 mm FR4, 1 oz | HASL lead-free, green / white silk | top, 0.12 mm | 5 |
-| `led-board/` (in the moon base) | Ø 26 mm round | 2 layers, **1.0 mm** FR4, 1 oz | **ENIG, white mask / black silk** | top **and** bottom, 0.12 mm | 5 |
+| `led-board/` (in the moon base) | **Ø 18 mm** round, 0.15/0.15 mm rules | 2 layers, **1.0 mm** FR4, 1 oz | **ENIG, white mask / black silk** | top 0.12 mm **and** bottom **0.10 mm** | 5 |
 
 Files per board:
 - `*-gerbers.zip`: Gerber X2 for every layer, plus PTH and NPTH Excellon drill files. **This is the upload.**
@@ -384,7 +410,8 @@ Files per board:
 - `*-schematic.pdf`, `*.step`: some fabs ask for these. The STEP lacks 3D models for J1, J2, F1 and the 2835 LEDs;
   re-export it locally before using it for fit checks.
 - `optional-assembly-service/`: BOM and placement files for PCBWay or JLCPCB, **only if you choose fab assembly**.
-  The recommended route is bare boards plus hand assembly (`02-parts-order/assembly-routes-cost-comparison.pdf`).
+  Main board: bare board plus hand assembly. LED board: fab assembly of the bottom face (U1, U2, R1, C1–C4) is
+  recommended, then hand-fit the top (`02-parts-order/assembly-routes-cost-comparison.pdf`).
 - `images/`: top and bottom renders for a visual check against the fab's online viewer.
 
 `kicad-source/`: the generated KiCad 9 projects with their project symbol and footprint library, so the
@@ -410,6 +437,7 @@ Quantities are for **2 complete lamps plus spares**. To regenerate for another q
 |---|---|
 | `farnell_quickpaste.txt` | Paste into Farnell UK **Quick Paste / BOM upload** ({n} lines: order code or MPN, quantity) |
 | `farnell_order.csv` | The same basket with MPNs, indicative prices and notes |
+| `digikey_order.csv` | Parts Farnell does not stock: the TI LP5012RUKR (WQFN-20) from DigiKey UK |
 | `other_purchases.csv` | Not from Farnell: LiPo, gooseneck, cable kit (RS), nut, screws, sleeve, Kapton, CA, silicone, filament, programmer |
 | `ORDER-summary.pdf` / `.md` | Human summary with totals |
 | `BOM.csv` | Every line on both boards, plus the off-board parts, per lamp |
@@ -481,12 +509,15 @@ Things that are easy to get wrong (all covered in the handoff):
 - **LED board:** solder the bottom side first, then the top side in the printed jig.
   - The silk letter beside each white LED says which colour goes there: **W = 2700 K** (D1, D3, D5, D7) and
     **C = 5000 K** (D2, D4, D6, D8).
-  - **Würth RGB (D9, D10):** the package mark is pin 3, the red cathode. It goes on the silk chamfer, which puts
-    the common anode on the "1".
+  - **Würth RGB (D9, at the centre):** the package mark is pin 3, the red cathode. It goes on the silk chamfer,
+    which puts the common anode on the "1".
+  - **R2 (2.4 kΩ, 0402) is on the top face**, between D1 and D2: the LP5012's EN pull-up. Without it nothing lights.
+  - The bottom face's LP5012 is a 0.4 mm-pitch WQFN with an exposed pad: 0.10 mm stencil and a hot plate (or have
+    the fab assemble that face).
 - **SW1 (slide switch) by iron only.** It is rated 255 °C max.
 - **Battery:** meter the polarity, then pass the plug up through the 6.4 × 5.0 mm slot beside J2.
 - **Moon base:** file the gooseneck thread flush with the nut, and put a Kapton disc over U1 on the LED board's
-  underside.
+  underside. The moon's skirt slides over the cup and turns 30° to lock; hold the cup when you turn it.
 - **Cable colours:** black GND, red VLED, blue SDA, yellow SCL. They go to the LED-board pads G / V / D / C.
 """
 
@@ -495,13 +526,15 @@ def readme_verify():
     return """# 06: Test and verification
 
 - **`VERIFY-bench-checklist.pdf`** (also `.md`, for recording results): every value nobody has measured yet, with
-  how to check it, the pass band, and the action if it fails. It covers electrical (E1–E15), firmware bring-up
+  how to check it, the pass band, and the action if it fails. It covers electrical (E1–E17), firmware bring-up
   (F1–F6), thermal (T1–T7; bench-only firmware in `04-firmware/bench-only/`), optics and colour (O1–O7) and
   mechanical fit (M1–M14).
-- `verification-round1-dispositions.pdf`, `verification-round2-dispositions.pdf`: every reviewer finding and what
-  was done about it (fixed, mitigated, accepted, VERIFY, or Matt's decision).
-- `reviewer-reports/`: the six full reviewer reports (electrical, adversarial, firmware, thermal/optical; round 2
-  electrical/firmware and DFM/fit), with datasheet references.
+- `verification-round{1,2,3}-dispositions.pdf`: every reviewer finding and what was done about it (fixed,
+  mitigated, accepted, VERIFY, or Matt's decision). Round 3 reviewed the v0.2 LED board, its firmware and the slim
+  moon head.
+- `reviewer-reports/`: the nine full reviewer reports (round 1 electrical, adversarial, firmware, thermal/optical;
+  round 2 electrical/firmware and DFM/fit; round 3 electrical/firmware, mechanical/optics and docs consistency),
+  with datasheet references.
 
 Record the measured values in the repo's `docs/verification/VERIFY.md` (not in this generated folder), and raise
 anything outside its pass band before the second lamp is built.
@@ -511,11 +544,14 @@ anything outside its pass band before the second lamp is built.
 def readme_reference():
     return """# 07: Design reference
 
+- `led-board-v0.2-and-slim-head-design-note.pdf`: why the LP5012 and the MCP9800, the 18 mm layout, the optics
+  correction, the slim head, what changes for the user, cost.
 - `electronics-design-notes.pdf`: power path, charger, LED drive, thermal protection, runtimes, I²C.
 - `datasheet-key-specs.pdf`: the datasheet values the design relies on, with page references.
 - `research-*.pdf`: light modes (melanopic guidance, colour targets), Farnell/RS sourcing, gooseneck, battery and
   PCB pricing.
-- `optics/`: integrating-sphere illumination model results (the model itself is `docs/design/optics/` in the repo).
+- `optics/`: `head_v02.py` and its output `head_v02.txt` (v0.2 head, the opening as the aperture), and the round-1
+  integrating-sphere results `sphere_illum.*`.
 - `handoff-06-thingiverse-survey.pdf`: survey of existing moon models. Not done from the cloud, because the site's
   bot protection blocks automated access.
 - `images/moon-lithophane-preview.png`: the NASA-data lithophane, lit.

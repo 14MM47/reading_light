@@ -9,6 +9,7 @@ const path = require('path');
     console.error('usage: html2pdf.js in.html out.pdf [...]');
     process.exit(2);
   }
+  const label = (process.env.DOC_LABEL || 'Moon reading light').replace(/[<>&]/g, '');
   const browser = await chromium.launch();
   const page = await browser.newPage();
   for (let i = 0; i < args.length; i += 2) {
@@ -20,7 +21,7 @@ const path = require('path');
       displayHeaderFooter: true,
       headerTemplate: '<div></div>',
       footerTemplate: '<div style="font-size:8px;width:100%;text-align:center;color:#666">' +
-        'Moon reading light v0.1 &middot; <span class="title"></span> &middot; page <span class="pageNumber"></span>' +
+        label + ' &middot; <span class="title"></span> &middot; page <span class="pageNumber"></span>' +
         ' / <span class="totalPages"></span></div>',
     });
   }
