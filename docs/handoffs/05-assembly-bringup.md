@@ -6,11 +6,13 @@ against `docs/verification/VERIFY.md` and records them there. Allow about 3 h fo
 **You need:**
 - **Tools:** fine-tip iron, hot plate and/or hot air, flux, IPA, tweezers, a 10× loupe, a multimeter with diode test,
   and a bench supply with a current limit (or a spare charged cell plus the meter).
-- **Stencils and jig:** 0.12 mm stencils, plus the printed `jig_led_board` (PETG, from `print/`).
+- **Stencils and jig:** main board 0.12 mm; LED board **0.10 mm bottom** (WQFN-20) and 0.12 mm top; plus the printed
+  `jig_led_board` (PETG, from `print/`). If the LED board's bottom face was fab-assembled (handoff 01), skip §2.1.
 - **Fitment views:** `docs/design/fitment/`, rendered by `cad/tools/fitment.py`. They show where every part sits:
   the exploded pack and moon head, and sections through the pack and the head.
-- **Drawings:** `fab/<board>/v0.1/assembly_top.pdf` / `assembly_bottom.pdf`. These have values on the Fab layer
-  and J4 crossed out as DNP. The zoomed views are easier to read: `fab/<board>/v0.1/renders/*_assembly_*.png`.
+- **Drawings:** `fab/main-board/v0.1/` and `fab/led-board/v0.2/`: `assembly_top.pdf` / `assembly_bottom.pdf`.
+  These have values on the Fab layer and J4 crossed out as DNP. The zoomed views are easier to read:
+  `renders/*_assembly_*.png` in the same folders.
 - **Off-board items** (`bom/other_purchases.csv`): Kapton tape, PTFE sleeve, heat-shrink, CA gel, and neutral-cure
   silicone (or E6000).
 
@@ -34,25 +36,31 @@ against `docs/verification/VERIFY.md` and records them there. Allow about 3 h fo
 6. Flash the firmware: handoff 04, steps 1–5. With no LED board fitted, the lamp just retries quietly. The debug log
    shows `T=-99` and then the 30 % fail-safe cap, which is expected.
 
-## 2. LED board (bottom first, then top)
-1. **Bottom side** (its own stencil): U1 TLC59116 (TSSOP-28, pin-1 dot), U2 LM75BDP (TSSOP-8), R1 750 Ω, R2 2.4 kΩ,
-   C1–C3. Reflow on the hot plate, then check every TSSOP pin for bridges under the loupe. Put a **Kapton disc over
-   U1** afterwards: it faces the gooseneck's metal tube end (round2 R2-D3).
+## 2. LED board v0.2 (18 mm; bottom first, then top)
+1. **Bottom side** (0.10 mm stencil): U1 LP5012 (WQFN-20, 3 × 3 mm, pin-1 dot to the silk dot; the exposed pad is
+   GND), U2 MCP9800A0 (SOT-23-5), R1 2.94 kΩ, C1 and C4 1 µF, C3 100 nF (all 0402), C2 10 µF (0603). Reflow on the
+   hot plate. A WQFN's joints are hidden: look at its sides under the loupe for paste balls or bridges, then meter
+   V–G, D–G, C–G and D–C on the cable pads: none may be a short. Put a **Kapton disc over U1** afterwards: it faces
+   the gooseneck's metal tube end (round2 R2-D3).
 2. **Top side.** Put the board in `jig_led_board`, LEDs up. The jig supports only the part-free edge band, so the
-   bottom parts hang free and the board top is flush with the jig top. Stencil, then place:
-   - **8 × white 2835.** The silk letter next to each one says which: **W = 2700 K** (D1, D3, D5, D7) and
-     **C = 5000 K** (D2, D4, D6, D8). The cathode is the large pad and goes to the silk cathode mark.
-   - **2 × Würth RGB (D9, D10).** The package's polarity mark (chamfer/dot) is **pin 3, the red cathode**: put it
-     on the **silk chamfer**. Pin 1, the common anode, then lands on the pad marked "1". Don't put the package's
-     mark on the "1" (round2 R2-D4).
+   bottom parts hang free and the board top is flush with the jig top. Stencil (or paste dots), then place:
+   - **8 × white 2835, radial, large cathode pad toward the board centre.** The silk letter next to each one says
+     which: **W = 2700 K** (D1, D3, D5, D7) and **C = 5000 K** (D2, D4, D6, D8).
+   - **1 × Würth RGB (D9) at the centre.** The package's polarity mark (chamfer/dot) is **pin 3, the red cathode**:
+     put it on the **silk chamfer**. Pin 1, the common anode, then lands on the pad marked "1". Don't put the
+     package's mark on the "1" (round2 R2-D4).
+   - **R2 2.4 kΩ (0402)** in the outer gap between D1 and D2: the LP5012's EN pull-up. Without it the driver stays in
+     shutdown and every LED stays dark.
 
    Reflow with hot air, ≤ 260 °C and ≤ 10 s at peak. Or lift the board off the jig onto two metal spacers under the
    edge band and use the hot plate. The jig is PETG, so it is for stencilling and hot air, not a 240 °C plate. The
    2835s have bottom-only terminations, so an iron can't solder them. The bottom parts will re-melt; surface
    tension holds them.
-3. Diode-test each LED: + probe on pad V (VLED, all anodes), − probe on its TLC output pin. Each one should glow
-   faintly in the right colour; a dark one is reversed or open. Green and blue need about 2.6 V to glow, so a meter
-   whose diode test gives less can only check them at first light.
+3. Diode-test each LED (VERIFY E16): + probe on pad V (VLED, all anodes), − probe on the exposed inner end of its
+   cathode pad (it sticks out 0.25 mm past the body; the vias are tented). Each one should glow faintly in the right
+   colour; a dark one is reversed or open on top. Green and blue need about 2.6 V to glow, so a meter whose diode test
+   gives less can only check them at first light. Opens under U1 show up only at first light (§5): each mode lights a
+   known set (2700 K = the four W, 5000 K = the four C, red/green/blue = one die each).
 
 ## 3. Cable and neck (round1 M-7: abrasion and strain relief)
 Qwiic cable colours: **black = GND, red = VLED, blue = SDA, yellow = SCL**. The LED board pads are labelled **G V D C**
@@ -67,12 +75,14 @@ on its bottom silk.
    the nut top**: file it flush if it does (VERIFY M12). Thread the wires through the M10×1 nut, then spin the
    **nut** (not the gooseneck) down into the hex socket. The wires leave the bore above the nut, into the 4.5 mm
    space under the board.
-4. Solder G / V / D / C on the LED board. Cover the joints and 5 mm of wire with neutral-cure silicone, and keep the
-   blob **inside r ≈ 11 mm**, toward the board centre: silicone on the ledge band would tilt the board. Let it cure.
-   This is the strain relief.
-5. Lay the LED board in the base pocket (LEDs up; it stands 0.12 mm proud of the step), then put the PETG
-   `moon_ring` on its edge band. Fit the moon: lugs into the entry slots, then turn 30° to lock. To remove the moon,
-   **hold the base cup**, so the turn doesn't unscrew the base from the neck.
+4. Solder G / V / D / C on the LED board (the 2 × 2 pads on its bottom). Cover the joints and 5 mm of wire with
+   neutral-cure silicone, and keep the blob **inside r ≈ 8 mm** (the pads end at r 7.7; the cup's ledge starts at
+   r 8.35): silicone on the ledge would tilt the board. Let it cure. This is the strain relief.
+5. Lay the LED board in the cup's pocket (Ø18.4, LEDs up; its top stands 0.1 mm proud of the rim land), then put the
+   PETG `moon_ring` on its edge band, chamfer up. Fit the moon: slide its skirt down over the cup with the three
+   entry slots on the cup's lugs, then turn 30° until it stops (the grooves run one way only). The cam pulls the moon
+   down onto the ring; the board must not rattle (VERIFY M5). To remove the moon, **hold the base cup**, so the turn
+   doesn't unscrew the base from the neck.
 
 ## 4. Pack
 1. Put Kapton tape over the top face of the pouch, and a patch on the PCB back under U1, D3 and Q1–Q3.
@@ -88,7 +98,7 @@ on its bottom silk.
 ## 5. First light and checks
 1. Switch ON with no USB. The lamp should fade into Soft white 3000 K at level 10. Run through the modes, UP/DOWN
    and hold-to-save (two dips).
-2. Debug build (handoff 04 §5): run VERIFY **F2–F5** and **E7–E15**. E13 is the scope check of the LED-board
+2. Debug build (handoff 04 §5): run VERIFY **F2–F5** and **E7–E17**. E13 is the scope check of the LED-board
    soft turn-on.
 3. Before regular use, run at least **T3** (4000 K full for 2 h with thermocouples, or a contact thermometer on the
    moon skirt) and **T6** (the thermostat). Record the results in VERIFY.md and send them to Claude, who re-fits the

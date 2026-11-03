@@ -31,8 +31,11 @@
    pio run -e attiny3216 -t upload --upload-port /dev/ttyUSB0
    ```
 5. **Debug log:** flash `-e attiny3216_debug` instead. Connect a 3.3 V USB-UART RX to J4 pin 3 at 115200 baud. Once
-   a second it prints `T=` (°C), `V=` (VDD mV), mode, level and the thermal cap. A `BOD OFF` line at boot means step
-   3 was skipped. Disconnect the adapter before you switch the lamp off: its RX pull-up can back-power the MCU (N6).
+   a second it prints `T=` (°C, from the MCP9800; −99 = no reading), `V=` (VDD mV), mode, level, the thermal cap,
+   `lp=` (the LP5012's DEVICE_CONFIG1 read-back: **1C** when the driver is configured, `--` when it does not answer)
+   and `ts=` (1 = thermostat limits written and verified). A `BOD OFF` line at boot means step 3 was skipped.
+   LED board v0.2 addresses: LP5012 **0x14**, MCP9800A0 **0x48**. If `lp=--` with the board powered, check U1's
+   joints (VERIFY E16) and the cable order (G V D C). Disconnect the adapter before you switch the lamp off: its RX pull-up can back-power the MCU (N6).
 6. **VDD calibration check (VERIFY F3).** With the debug build, compare `V=` against a meter on TP3 (VSYS) at about
    3.5, 3.8 and 4.1 V. Use a bench supply on J2, or a cell at those states. If the error is more than ±50 mV, ask
    Claude to add a calibration factor to `config.h` (`vdd_mv()` scales by it).

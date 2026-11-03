@@ -5,21 +5,23 @@
 
 The print-ready files are `print/<part>.stl` and `print/<part>.3mf`. The geometry is already in print orientation,
 so don't let the slicer re-orient it. Settings, sizes and check results: [`print/README.md`](../../print/README.md)
-(generated). Every part builds PASS through the 3dprint-contract checks.
+(generated). Every part builds PASS through the 3dprint-contract checks. The moon head is the v0.2 design
+(2026-11-03, `docs/design/led-board-v0.2.md` §6): the moon's Ø25.3 mm skirt slides over a slim Ø20.8 mm cup and
+locks with an inside-out bayonet (lugs on the cup, grooves in the skirt).
 
 | Order | Part | Material | Process | Notes |
 |---|---|---|---|---|
-| 1 | `coupon_fit` | PETG | 0.20 mm | Bores for the gooseneck self-tap socket, the button caps, the skirt in the base bore, and the LED board pocket |
-| 2 | `coupon_bayonet` | PETG | 0.16 mm | Lugs enter, turn 30° and pull down onto a 1.0 mm disc, without forcing (VERIFY M4) |
+| 1 | `coupon_fit` | PETG | 0.20 mm | Gooseneck self-tap socket trials (9.1–9.5 mm) and button-cap holes (7.2–7.6 mm); dots index the sizes |
+| 2 | `coupon_bayonet` | PETG | 0.16 mm | Two pieces: the cup's top and the moon's real skirt and clamp cone. Put an 18 mm × 1.0 mm disc (or a bare LED board) and a `moon_ring` in the cup, slide the skirt over, lugs into the slots, turn 30°: it should pull down onto the ring without forcing and hold the disc without rattle (VERIFY M4, M5) |
 | 3 | `coupon_litho_wedge` | **white PLA** (the moon's spool) | 0.12 mm | 0.6–3.0 mm steps. Backlight it with the LED board for VERIFY O1 |
-| 4 | `moon_base` | PETG | 0.16 mm | Upright, no supports |
-| 5 | `moon_ring` | PETG | 0.20 mm | 0.6 mm clamp ring (3 layers). Keeps the PLA moon off the warm LED board (round1 F5). **Do not print it in PLA** |
+| 4 | `moon_base` | PETG | 0.16 mm | Upright, no supports. The lugs' 45° faces print without support |
+| 5 | `moon_ring` | PETG | 0.20 mm | 0.8 mm clamp ring (4 layers) with a 45° chamfer on the top outer edge (chamfer up). Keeps the PLA moon off the warm LED board (round1 F5). **Do not print it in PLA**. Print two: one for the coupon |
 | 6 | `pack_front` | PETG | 0.20 mm | Face down |
 | 7 | `pack_back` | PETG | 0.20 mm | Outer face down |
 | 8 | `pack_clip` | PETG | 0.20 mm | Flat, layers along the arm |
 | 9 | `button_caps` | PETG | 0.12 mm | One plate of 3 caps, flange down. Use a brim |
-| 10 | `moon_shell` | **white PLA** | 0.12 mm, 6 walls, 100 % infill | 3 mm outer brim (only the skirt ring touches the bed). The inner dome closes as a short bridge at the top, which is expected |
-| — | `jig_led_board` | PETG | 0.20 mm | Assembly aid for the LED board's second side (handoff 05 §2). Print it before the boards arrive |
+| 10 | `moon_shell` | **white PLA** | 0.12 mm, 6 walls, 100 % infill | 3 mm outer brim (only the skirt ring touches the bed). The bayonet grooves inside the skirt have 45° roofs and floors, no supports. The inner dome closes as a short bridge at the top, which is expected |
+| — | `jig_led_board` | PETG | 0.20 mm | Assembly aid for the 18 mm LED board's second side (handoff 05 §2). Print it before the boards arrive |
 
 ## Steps
 1. Print the coupons first (rows 1–3). Record which fits work in `docs/verification/VERIFY.md` (M2–M4, O1). If they

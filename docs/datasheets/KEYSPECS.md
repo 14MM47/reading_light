@@ -402,7 +402,7 @@ Legend: **OK** means the footprint matches the datasheet. **MISMATCH** or **NOTE
 - Supply current: normal ~4 mA typ / 6 mA max at 10 mA per output (modes text: 10 mA typ); power-save
   (all LEDs off > 30 ms) 6–10 µA; standby (Chip_EN = 0) 6–10 µA; shutdown (EN low) 0.2 / 1 µA.
 - EN: EN low → SHUTDOWN from any state; EN high → INITIALIZATION, **all registers reset**. First I2C access
-  ≤ 500 µs after the EN rising edge (tEN_H). The thermostat (LM75B OS, open drain) pulls EN low.
+  ≤ 500 µs after the EN rising edge (tEN_H). The thermostat (MCP9800 ALERT, open drain) pulls EN low.
 - I2C: up to 400 kHz. Address 0010 1 A1 A0 → **0x14** with ADDR1 = ADDR0 = GND. Broadcast 0x0C.
 - Registers: 00h DEVICE_CONFIG0 (bit 6 Chip_EN, reset 0); 01h DEVICE_CONFIG1 (reset 3Ch: b5 Log_Scale_EN,
   b4 Power_Save_EN, b3 Auto_Incr_EN, b2 PWM_Dithering_EN, b1 Max_Current_Option, b0 LED_Global_Off);
@@ -411,3 +411,19 @@ Legend: **OK** means the footprint matches the datasheet. **MISMATCH** or **NOTE
   covers three consecutive outputs (LED0 = OUT0–2 … LED3 = OUT9–11).
 - Required parts: 1 µF VCAP → GND and 1 µF VCC → GND, both close to the device; RIREF close to the device.
 - Thermal: RθJA 53.7 °C/W (RUK, JEDEC board), RθJB 27.4 °C/W. Thermal shutdown 160 °C (hysteresis 15 °C).
+
+## Microchip MCP9800A0 (LED board v0.2 temperature sensor): datasheet DS21909D
+- Source: https://ww1.microchip.com/downloads/en/DeviceDoc/21909d.pdf (downloaded 2026-11-03). Farnell 1439485
+  (MCP9800A0T-M/OT).
+- SOT-23-5 pinout: 1 VDD, 2 GND, 3 ALERT, 4 SCLK, 5 SDA (the reverse of the LP5012's SDA/SCL/EN order on the same
+  face, so the bundle arrives without a crossing). MCP9800/01 have **no bus time-out** (the 02/03 do).
+- Address: factory 1001 + A2 A1 A0; the A0 suffix part is 1001 000 = **0x48**. I2C up to 400 kHz. VIH 0.7 × VDD.
+- Supply 2.7–5.5 V; IDD 200 µA typ / 400 µA max continuous; shutdown 0.1 / 1 µA. POR threshold 1.7 V.
+- Accuracy (12-bit): ±0.5 °C typ at 25 °C; ±1 °C max −10…+85 °C; ±2 °C max −10…+125 °C; ±3 °C max −55…+125 °C.
+- Conversion time: 30 ms (9-bit) … **240 ms typ / 600 ms max at 12-bit** (firmware waits 700 ms before trusting it).
+- Registers: pointer 00 temperature (12-bit two's complement, left-justified, °C × 16 in the top 12 bits),
+  01 CONFIG (8-bit: b7 One-Shot, b6–5 resolution, b4–3 fault queue 1/2/4/6, b2 ALERT polarity, b1 COMP/INT,
+  b0 shutdown), 10 THYST, 11 TSET (9-bit, 0.5 °C, left-justified in 16 bits). LM75 register compatible.
+- Power-up defaults: 9-bit, fault queue 1, ALERT active low, comparator mode, TSET 80 °C, THYST 75 °C.
+  This design writes CONFIG 0x68 (12-bit, fault queue 2, comparator, active low), TSET 60 °C, THYST 52 °C.
+- ALERT: open drain; in comparator mode it asserts above TSET and releases below THYST.

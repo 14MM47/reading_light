@@ -299,7 +299,10 @@ void loop() {
 #ifdef DEBUG_SERIAL
             Serial.print(F("T=")); Serial.print(ok ? t : -99.0f); Serial.print(F(" V=")); Serial.print(core.vbat_mv);
             Serial.print(F(" mode=")); Serial.print(core.mode); Serial.print(F(" lvl=")); Serial.print(core.level[core.mode]);
-            Serial.print(F(" cap=")); Serial.println(core.t_cap);
+            Serial.print(F(" cap=")); Serial.print(core.t_cap);
+            const int16_t c1 = lp_read(LP_DEVICE_CONFIG1);   // bring-up (VERIFY E16): expect 1C
+            Serial.print(F(" lp=")); if (c1 < 0) Serial.print(F("--")); else Serial.print((uint8_t)c1, HEX);
+            Serial.print(F(" ts=")); Serial.println(ts_ok ? 1 : 0);
 #endif
         }
         if (now - last_v >= 500) {
