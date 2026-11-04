@@ -6,7 +6,7 @@
 	(paper "A3")
 	(title_block
 		(title "Moon reading light - LED board (moon base)")
-		(date "2026-11-03")
+		(date "2026-11-04")
 		(rev "0.2")
 		(company "14MM47 / reading_light")
 		(comment 1 "LP5012 RIREF 2.94k -> 105 x 0.7 V / 2.94 k = 25.0 mA per output (Wurth RGB abs max 30 mA). All anodes on VLED.")
@@ -4469,7 +4469,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "I2C temperature sensor, LM75 register compatible (8-bit CONFIG), address 0x48, 2.7-5.5 V, open-drain ALERT, +/-1 C typ / +/-3 C max, SOT-23-5"
+		(property "Description" "I2C temperature sensor, LM75 register compatible (8-bit CONFIG), address 0x48, 2.7-5.5 V, open-drain ALERT, +/-0.5 C typ, +/-1 C max (-10..85 C), SOT-23-5"
 			(at 190.5 160.02 0)
 			(effects
 				(font

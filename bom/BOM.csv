@@ -28,7 +28,7 @@ LEDDRV,1,led:U1,LP5012RUKR,Texas Instruments,LP5012RUKR,"12-ch I2C constant-curr
 R_2K94_0402,1,led:R1,2.94k,Yageo,RC0402FR-072K94L,Resistor 2.94 kOhm 1% 0402 (LP5012 RIREF: 105 x 0.7 V / 2.94 k = 25.0 mA/channel),R_0402_1005Metric,,
 C_1U_0402,2,led:C1 led:C4,1u 25V,Murata,GRM155R61E105KA12D,MLCC 1 uF 25 V X5R 0402 (LP5012 VCC / VCAP),C_0402_1005Metric,,
 C_10U_0603,1,led:C2,10u 10V,Murata,GRM188R61A106KE69D,MLCC 10 uF 10 V X5R 0603 (LED board bulk),C_0603_1608Metric,,
-TEMP,1,led:U2,MCP9800A0,Microchip,MCP9800A0T-M/OT,"I2C temperature sensor, LM75 register compatible (8-bit CONFIG), address 0x48, 2.7-5.5 V, open-drain ALERT, +/-1 C typ / +/-3 C max, SOT-23-5",SOT-23-5,1439485,https://ww1.microchip.com/downloads/en/DeviceDoc/21909d.pdf
+TEMP,1,led:U2,MCP9800A0,Microchip,MCP9800A0T-M/OT,"I2C temperature sensor, LM75 register compatible (8-bit CONFIG), address 0x48, 2.7-5.5 V, open-drain ALERT, +/-0.5 C typ, +/-1 C max (-10..85 C), SOT-23-5",SOT-23-5,1439485,https://ww1.microchip.com/downloads/en/DeviceDoc/21909d.pdf
 R_2K4_0402,1,led:R2,2.4k,Yageo,RC0402FR-072K4L,Resistor 2.4 kOhm 1% 0402 (LP5012 EN pull-up),R_0402_1005Metric,,
 C_100N_0402,1,led:C3,100n,Murata,GRM155R71C104KA88D,MLCC 100 nF 16 V X7R 0402,C_0402_1005Metric,,
 OTHER,1,,,Pimoroni,BAT0004,"LiPo pouch 3.7 V 1200 mAh, protected, JST-PH 2.0 lead (64 x 35.5 x 5.3 mm)",,,https://shop.pimoroni.com/products/lipo-battery-pack

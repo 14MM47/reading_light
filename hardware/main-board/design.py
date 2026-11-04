@@ -39,7 +39,7 @@ LIB = {
     "PFET": "Transistor_FET:Q_PMOS_GSD", "SCHOTTKY": "Device:D_Schottky", "RECT": "Device:D", "TVS": "Device:D_Zener",
     "LED_RED_0603": "Device:LED", "USBC": "Connector:USB_C_Receptacle_PowerOnly_6P", "TACT": "Switch:SW_Push",
     "SLIDE": "Switch:SW_SPDT", "JST_PH2": "Connector_Generic:Conn_01x02", "JST_SH4": "Connector_Generic:Conn_01x04",
-    "R_5K1": "Device:R", "R_2K4": "Device:R", "R_1K": "Device:R", "R_10K": "Device:R", "R_100K": "Device:R",
+    "R_5K1": "Device:R", "R_1K": "Device:R", "R_10K": "Device:R", "R_100K": "Device:R",
     "R_1M": "Device:R", "R_3K3": "Device:R", "C_100N": "Device:C", "C_1U": "Device:C", "C_4U7": "Device:C",
     "C_10U": "Device:C", "R_3K9": "Device:R", "PTC": "Device:Polyfuse",
 }

@@ -219,6 +219,8 @@ def main():
             B.copy(Path("hardware") / b / f"{b}{ext}", Path("01-pcb-manufacture/kicad-source") / b / f"{b}{ext}")
         for t in ("fp-lib-table", "sym-lib-table"):
             B.copy(Path("hardware") / b / t, Path("01-pcb-manufacture/kicad-source") / b / t)
+        if (ROOT / "hardware" / b / f"{b}.kicad_dru").exists():     # custom DRC rules (connection width)
+            B.copy(Path("hardware") / b / f"{b}.kicad_dru", Path("01-pcb-manufacture/kicad-source") / b / f"{b}.kicad_dru")
     B.copy(Path("hardware/lib/reading_light.kicad_sym"), Path("01-pcb-manufacture/kicad-source/lib/reading_light.kicad_sym"))
     for fp in sorted((ROOT / "hardware/lib/reading_light.pretty").glob("*.kicad_mod")):
         B.copy(fp.relative_to(ROOT), Path("01-pcb-manufacture/kicad-source/lib/reading_light.pretty") / fp.name)

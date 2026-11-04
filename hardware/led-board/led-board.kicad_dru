@@ -1,0 +1,3 @@
+(version 1)
+(rule "neck_min"
+  (constraint connection_width (min 0.15mm)))

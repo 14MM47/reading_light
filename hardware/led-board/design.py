@@ -35,7 +35,8 @@ DATE = "2026-11-03"
 PAPER = "A3"
 CX, CY, R_BOARD = 50.0, 50.0, 9.0
 RING_R = 5.8              # white LED centres; 2835 bodies reach r 7.68 (inside the r 7.8 part limit)
-PART_R_MAX = 7.8          # bodies and pads stay inside this radius (moon_base ledge / moon ring clamp at r 8-9)
+PART_R_MAX = 7.8          # bodies stay inside this radius; 2835 anode-pad corners reach r 7.88, inside the r 8.0
+                          # copper limit (moon_base ledge / moon ring clamp the r 8-9 band; the ring ID is r 8.2)
 
 LIB = {"LEDDRV": "reading_light:LP5012RUK", "TEMP": "Sensor_Temperature:MCP9800Ax-xOT", "LED_WW": "Device:LED",
        "LED_CW": "Device:LED", "LED_RGB": "Device:LED_ABRG", "R_2K94_0402": "Device:R", "R_2K4_0402": "Device:R",
@@ -154,7 +155,7 @@ def parts():
         P("U1", "LEDDRV", drv, (95, 160, 0), value="LP5012"),
         P("R1", "R_2K94_0402", {"1": "IREF", "2": "GND"}, (50, 180, 0), value="2.94k (25 mA)"),
         P("C1", "C_1U_0402", {"1": "VLED", "2": "GND"}, (40, 150, 0)),      # VCC bypass
-        P("C4", "C_1U_0402", {"1": "VCAP", "2": "GND"}, (60, 180, 0)),      # internal LDO cap, at pin 1
+        P("C4", "C_1U_0402", {"1": "VCAP", "2": "GND"}, (60, 180, 0)),      # internal LDO cap for pin 1 (VCAP)
         P("C2", "C_10U_0603", {"1": "VLED", "2": "GND"}, (28, 150, 0)),     # bulk at the LEDs (end of the cable)
         # hardware thermostat: MCP9800 ALERT (open drain, active low, comparator mode; firmware sets TSET 60 C /
         # THYST 52 C) pulls the LP5012 EN low (shutdown, all outputs off) even if the MCU or the bus has failed.
@@ -163,7 +164,7 @@ def parts():
         # 2.4 k: a stiff EN node next to the metal neck (round2 R2-E5). ALERT sinks <= 1.75 mA while asserted.
         P("R2", "R_2K4_0402", {"1": "VLED", "2": "EN"}, (150, 145, 0)),
         P("C3", "C_100N_0402", {"1": "VLED", "2": "GND"}, (215, 145, 0)),
-        # J1 pin numbers are arbitrary (solder pads): 1 GND, 2 VLED, 3 SCL, 4 SDA; the wires go by the G V C D silk
+        # J1 pin numbers are arbitrary (solder pads): 1 GND, 2 VLED, 3 SCL, 4 SDA; the wires go by the G V D C silk
         Part("J1", "Connector_Generic:Conn_02x02_Odd_Even", "MOON CABLE", "reading_light:LED_WirePads_2x02_P1.90mm",
              {"1": "GND", "2": "VLED", "3": "SCL", "4": "SDA"}, sch=(270, 160, 180),
              fields={"Description": "2x2 solder pads for the 4-wire cable (Qwiic colours: black GND, red VLED, "
@@ -363,10 +364,21 @@ TRACKS = [dict(pts=[(CX - 0.8, CY - 1.4), (CX - 0.8, CY - 2.2), (CX - 1.0, CY - 
     dict(pts=[(CX - 1.4, CY - 0.4), (CX - 0.6, CY - 0.4)], width=0.2, layer="B", net="GND"),
     # ... and out of pin 15 to the north, between the NNW cathode leg and the VCC via, into the GND pour
     dict(pts=[(CX - 1.5, CY - 0.8), (CX - 1.75, CY - 1.05), (CX - 1.75, CY - 3.4)], width=0.3, layer="B", net="GND"),
-] + bundle_tracks()
+] + bundle_tracks() + [
+    # IREF from the pin-20 pad centre to R1 pad 1's centre (round3 R3-E1: the routed track met the pad corner and
+    # left a 0.106 mm copper neck); straight north beside EN (x CX+0.4), then 45 deg onto R1
+    dict(pts=[_pad_xy(CAT["LEDDRV"].footprint, *PLACE["U1"], "20"),
+              (CX + 0.8, CY - 3.96),
+              _pad_xy(CAT["R_2K94_0402"].footprint, *PLACE["R1"], "1")], width=0.15, layer="B", net="IREF"),
+]
+# copper necks at track-to-pad joints are invisible to the default DRC (round3 R3-E1)
+CUSTOM_RULES = """(version 1)
+(rule "neck_min"
+  (constraint connection_width (min 0.15mm)))
+"""
 # (the LED cathodes are pre-routed: fanin_tracks). 0.15 mm for every net that leaves an LP5012 pin: its pads are 0.2 mm wide on a 0.4 mm pitch, and the router's
 # clearance margin does not let a 0.2 mm track out of a middle pin (0.15 / 0.15 mm is a standard fab rule)
-ROUTE = [("IREF", 0.15), ("VCAP", 0.15),
+ROUTE = [("VCAP", 0.15),
          ("GND", 0.3, {"layers": (1,), "optional": True}),   # the bottom pour finishes GND (DRC checks it)
          ("VLED", 0.3, {"layers": (0,)})]   # top-only tree joining every anode and the pre-stitched vias
 PRE_STITCH = [("VLED", 1)]   # every bottom-side VLED pad gets a via to the top VLED pour before routing

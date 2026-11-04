@@ -27,6 +27,6 @@ Farnell Order Code,Manufacturer Part Number,Manufacturer,Quantity,Needed for bui
 (search MPN),RC0402FR-072K94L,Yageo,50,2,0.010,0.50,Resistor 2.94 kOhm 1% 0402 (LP5012 RIREF: 105 x 0.7 V / 2.94 k = 25.0 mA/channel),reading-light R_2K94_0402
 (search MPN),GRM155R61E105KA12D,Murata,10,4,0.030,0.30,MLCC 1 uF 25 V X5R 0402 (LP5012 VCC / VCAP),reading-light C_1U_0402
 (search MPN),GRM188R61A106KE69D,Murata,10,2,0.050,0.50,MLCC 10 uF 10 V X5R 0603 (LED board bulk),reading-light C_10U_0603
-1439485,MCP9800A0T-M/OT,Microchip,5,2,0.550,2.75,"I2C temperature sensor, LM75 register compatible (8-bit CONFIG), address 0x48, 2.7-5.5 V, open-drain ALERT, +/-1 C typ / +/-3 C max, SOT-23-5",reading-light TEMP
+1439485,MCP9800A0T-M/OT,Microchip,5,2,0.550,2.75,"I2C temperature sensor, LM75 register compatible (8-bit CONFIG), address 0x48, 2.7-5.5 V, open-drain ALERT, +/-0.5 C typ, +/-1 C max (-10..85 C), SOT-23-5",reading-light TEMP
 (search MPN),RC0402FR-072K4L,Yageo,50,2,0.010,0.50,Resistor 2.4 kOhm 1% 0402 (LP5012 EN pull-up),reading-light R_2K4_0402
 (search MPN),GRM155R71C104KA88D,Murata,50,2,0.010,0.50,MLCC 100 nF 16 V X7R 0402,reading-light C_100N_0402

@@ -6,6 +6,6 @@ Item #,Designator,Qty,Manufacturer,Mfg Part #,Description / Value,Package/Footpr
 5,R1,1,Yageo,RC0402FR-072K94L,2.94k (25 mA) - Resistor 2.94 kOhm 1% 0402 (LP5012 RIREF: 105 x 0.7 V / 2.94 k = 25.0 mA/channel),R_0402_1005Metric,SMD,,
 6,"C1,C4",2,Murata,GRM155R61E105KA12D,1u 25V - MLCC 1 uF 25 V X5R 0402 (LP5012 VCC / VCAP),C_0402_1005Metric,SMD,,
 7,C2,1,Murata,GRM188R61A106KE69D,10u 10V - MLCC 10 uF 10 V X5R 0603 (LED board bulk),C_0603_1608Metric,SMD,,
-8,U2,1,Microchip,MCP9800A0T-M/OT,"MCP9800A0 - I2C temperature sensor, LM75 register compatible (8-bit CONFIG), address 0x48, 2.7-5.5 V, open-drain ALERT, +/-1 C typ / +/-3 C max, SOT-23-5",SOT-23-5,SMD,check pin-1 / orientation in preview,1439485
+8,U2,1,Microchip,MCP9800A0T-M/OT,"MCP9800A0 - I2C temperature sensor, LM75 register compatible (8-bit CONFIG), address 0x48, 2.7-5.5 V, open-drain ALERT, +/-0.5 C typ, +/-1 C max (-10..85 C), SOT-23-5",SOT-23-5,SMD,check pin-1 / orientation in preview,1439485
 9,R2,1,Yageo,RC0402FR-072K4L,2.4k - Resistor 2.4 kOhm 1% 0402 (LP5012 EN pull-up),R_0402_1005Metric,SMD,,
 10,C3,1,Murata,GRM155R71C104KA88D,100n - MLCC 100 nF 16 V X7R 0402,C_0402_1005Metric,SMD,,

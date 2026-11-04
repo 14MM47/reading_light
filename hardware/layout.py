@@ -141,6 +141,8 @@ def _build_once(board: str, d, parts, order):
         print(f"  refs moved to Fab (no room on silk): {fab_refs}")
     pcb = bdir / f"{d.PROJECT}.kicad_pcb"
     B.save(str(pcb))
+    if getattr(d, "CUSTOM_RULES", None):           # project .kicad_dru: rules the board setup cannot express
+        (bdir / f"{d.PROJECT}.kicad_dru").write_text(d.CUSTOM_RULES)
     drc = run_drc(bdir, d.PROJECT)
     report["drc"] = drc
     (bdir / "reports" / "route.json").write_text(json.dumps(report, indent=1))

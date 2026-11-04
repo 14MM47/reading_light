@@ -48,7 +48,7 @@ CAT = {c.key: c for c in [
         supplier_code="LP5012RUKR (cut tape) - digikey.co.uk"),
     Cat("TEMP", "MCP9800A0", "MCP9800A0T-M/OT", "Microchip", "1439485", "Package_TO_SOT_SMD:SOT-23-5",
         "I2C temperature sensor, LM75 register compatible (8-bit CONFIG), address 0x48, 2.7-5.5 V, open-drain ALERT, "
-        "+/-1 C typ / +/-3 C max, SOT-23-5", "https://ww1.microchip.com/downloads/en/DeviceDoc/21909d.pdf", 0.55, moq=5,
+        "+/-0.5 C typ, +/-1 C max (-10..85 C), SOT-23-5", "https://ww1.microchip.com/downloads/en/DeviceDoc/21909d.pdf", 0.55, moq=5,
         alt="LM75BDP,118 (NXP, TSSOP-8) on LED board v0.1: too large for the 18 mm board v0.2"),
     # --------------------------------------------------------- discretes
     Cat("PFET", "DMG2305UX", "DMG2305UX-7", "Diodes Inc", "2543533", "Package_TO_SOT_SMD:SOT-23",
@@ -98,7 +98,6 @@ CAT = {c.key: c for c in [
         "JST SH 4-pin side-entry SMD header (Qwiic pinout, moon cable)", "", 0.45),
     # ---------------------------------------------------------- passives
     Cat("R_5K1", "5.1k", "MCWR06X5101FTL", "Multicomp Pro", "", R0603, "Resistor 5.1 kOhm 1% 0603", unit_gbp=0.01, moq=50),
-    Cat("R_2K4", "2.4k", "MCWR06X2401FTL", "Multicomp Pro", "", R0603, "Resistor 2.4 kOhm 1% 0603 (LED board RESET_N pull-up)", unit_gbp=0.01, moq=50),
     Cat("R_1K", "1k", "MCWR06X1001FTL", "Multicomp Pro", "", R0603, "Resistor 1 kOhm 1% 0603", unit_gbp=0.01, moq=50),
     Cat("R_10K", "10k", "MCWR06X1002FTL", "Multicomp Pro", "2447230", R0603, "Resistor 10 kOhm 1% 0603", unit_gbp=0.01, moq=50),
     Cat("R_100K", "100k", "MCWR06X1003FTL", "Multicomp Pro", "", R0603, "Resistor 100 kOhm 1% 0603", unit_gbp=0.01, moq=50),
