@@ -10,6 +10,10 @@ Correction of 2026-11-03: an earlier version of the sweep let rays pass a flared
 opening at the cut plane, i.e. through the PLA wall, and reported max/min 1.01 at 2.9 mm depth. With the opening as
 the aperture the same layout gives 1.21; the LED depth below the opening is what matters (B13).
 
+Round 3 (2026-11-04, R3-O1/O2): the RGB package at the centre (2.8 x 3.5 mm, 1.9 mm tall, i.e. 1.2 mm above the
+white emitters) now shades the white LEDs' low rays across the centre, and the wall's area element includes the
+slant of the 40-50 deg band where the wall radius changes (it overstated the band's area, so the escape fraction).
+
 Usage: python docs/design/optics/head_v02.py     (prints the table; ~5 min)
 """
 import math
@@ -27,6 +31,10 @@ def geom(board_d, open_r=None):
     return open_r, -math.sqrt(R_IN0 ** 2 - open_r ** 2)
 
 
+RGB_HALF = (1.4, 1.75)     # Wurth PLCC-4 3528 at the centre (rot 90): half-sizes in x, y
+RGB_H = 1.9                 # package height above the board top (moonlib RGB_TOP_H); board top = emitters - 0.7
+
+
 def grid(open_r, n_t=200, n_p=144):
     t0 = math.asin(open_r / R_IN0)
     th = np.linspace(t0 + 1e-3, math.pi - 1e-3, n_t)
@@ -35,12 +43,31 @@ def grid(open_r, n_t=200, n_p=144):
     w = np.clip((np.degrees(T) - 40.0) / 10.0, 0, 1)
     R = (1 - w) * R_IN0 + w * R_IN_MEAN                     # 2.6 mm collar band, 1.75 mm mean wall above
     X = np.stack([R * np.sin(T) * np.cos(P), R * np.sin(T) * np.sin(P), -R * np.cos(T)], -1)
-    nrm = -X / R[..., None]
-    dA = (R ** 2 * np.sin(T)) * (th[1] - th[0]) * (2 * math.pi / n_p)
+    # surface normal and area of r = R(theta): tangent (R' sin + R cos, ., R sin - R' cos) in the meridian plane
+    in_band = (np.degrees(T) > 40.0) & (np.degrees(T) < 50.0)
+    dR = np.where(in_band, (R_IN_MEAN - R_IN0) / math.radians(10.0), 0.0)   # analytic: R is linear in the band
+    slant = np.sqrt(1.0 + (dR / R) ** 2)
+    nr, nz = R * np.sin(T) - dR * np.cos(T), -(R * np.cos(T) + dR * np.sin(T))   # outward normal (unnormalised)
+    nn = np.hypot(nr, nz)
+    nrm = -np.stack([nr / nn * np.cos(P), nr / nn * np.sin(P), nz / nn], -1)     # facing the inside
+    dA = (R ** 2 * np.sin(T)) * slant * (th[1] - th[0]) * (2 * math.pi / n_p)
     return th, X, nrm, dA
 
 
-def direct(L, X, nrm, z_cut, open_r):
+def _box_blocks(l, v, box):
+    """True where the segment l -> l + v passes through the axis-aligned box ((x0, x1), (y0, y1), (z0, z1))."""
+    t0 = np.zeros(v.shape[:-1])
+    t1 = np.ones(v.shape[:-1])
+    for k in range(3):
+        lo, hi = box[k]
+        vk = np.where(np.abs(v[..., k]) > 1e-12, v[..., k], 1e-12)
+        a, b = (lo - l[k]) / vk, (hi - l[k]) / vk
+        t0 = np.maximum(t0, np.minimum(a, b))
+        t1 = np.minimum(t1, np.maximum(a, b))
+    return t1 > t0
+
+
+def direct(L, X, nrm, z_cut, open_r, box=None):
     E = np.zeros(X.shape[:-1])
     for l in L:
         v = X - l
@@ -51,12 +78,14 @@ def direct(L, X, nrm, z_cut, open_r):
         t = (z_cut - l[2]) / np.where(np.abs(v[..., 2]) > 1e-9, v[..., 2], 1e-9)
         r_at_cut = np.hypot(l[0] + t * v[..., 0], l[1] + t * v[..., 1])
         blocked = (t > 0) & (t < 1) & (r_at_cut > open_r)  # the opening is the aperture
+        if box is not None:
+            blocked |= _box_blocks(l, v, box)
         E += np.where(blocked, 0.0, e)
     return E
 
 
-def total(L, X, nrm, dA, z_cut, open_r):
-    Ed = direct(L, X, nrm, z_cut, open_r)
+def total(L, X, nrm, dA, z_cut, open_r, box=None):
+    Ed = direct(L, X, nrm, z_cut, open_r, box)
     phi_wall, phi_led = (Ed * dA).sum(), math.pi * len(L)
     A_wall, A_port = dA.sum(), math.pi * open_r ** 2
     A_tot = A_wall + A_port
@@ -98,14 +127,18 @@ def colour_spread(Eww, Ecw, vis, share_ww=0.37):
     return np.hypot(u - u0, v - v0).max()
 
 
-def run(board_d, ring_r, depth, n_cct=4, n_rgb=1, open_r=None):
+def run(board_d, ring_r, depth, n_cct=4, n_rgb=1, open_r=None, rgb_box=True):
     open_r, z_cut = geom(board_d, open_r)
     th, X, nrm, dA = grid(open_r)
-    ww, cw, rgb = layout(n_cct, n_rgb, ring_r, z_cut - depth)
+    z_led = z_cut - depth
+    ww, cw, rgb = layout(n_cct, n_rgb, ring_r, z_led)
+    box = None
+    if rgb_box and n_rgb == 1:      # the centred RGB package shades the whites' low rays across the centre
+        box = ((-RGB_HALF[0], RGB_HALF[0]), (-RGB_HALF[1], RGB_HALF[1]), (z_led - 0.7, z_led - 0.7 + RGB_H))
     vis = np.broadcast_to((th > math.radians(50))[:, None], X.shape[:-1])
-    Eww, eta, fp = total(ww, X, nrm, dA, z_cut, open_r)
-    Ecw, _, _ = total(cw, X, nrm, dA, z_cut, open_r)
-    Eall, _, _ = total(np.vstack([ww, cw]), X, nrm, dA, z_cut, open_r)
+    Eww, eta, fp = total(ww, X, nrm, dA, z_cut, open_r, box)
+    Ecw, _, _ = total(cw, X, nrm, dA, z_cut, open_r, box)
+    Eall, _, _ = total(np.vstack([ww, cw]), X, nrm, dA, z_cut, open_r, box)
     Ergb, _, _ = total(rgb, X, nrm, dA, z_cut, open_r)
     U = lambda E: E[vis].max() / E[vis].min()   # noqa: E731
     escape = 0.20 * eta / (1 - RHO * ((1 - fp) + RHO_PORT * fp))

@@ -170,7 +170,10 @@ def head_parts(g):
     d = moon_base.dims()
     P = []
     P.append(("base cup (PETG)", tm(moon_base.part()), COL["cup"], "cup"))
-    P.append(("M10x1 nut", tm(moon_base.context(None)["nut"]), COL["nut"], "nut"))
+    ctx = moon_base.context(None)
+    P.append(("M10x1 nut", tm(ctx["nut"]), COL["nut"], "nut"))
+    P.append(("M10 washer", tm(ctx["washer"]), COL["nut"], "nut_lo"))
+    P.append(("M10x1 jam nut", tm(ctx["nut_lower"]), COL["nut"], "nut_lo"))
     xf = lambda x, y: (x - 50.0, 50.0 - y)       # noqa: E731
     for name, m, c in board_meshes(g["led-board"], xf, d["ledge_z"], L.BOARD_T, COL["pcb_led"]):
         P.append((name, m, c, "board"))
@@ -427,7 +430,8 @@ def main():
            labels, cut=((-1, 0, 0), (X2, 0, 0)), notes=notes_pack)
 
     # ---- 4. head, exploded
-    offh = {"neck": (0, 0, -18), "nut": (0, 0, -9), "wires": (0, 0, -9), "cup": (0, 0, 0), "board": (0, 0, 14),
+    offh = {"neck": (0, 0, -20), "nut_lo": (0, 0, -10), "nut": (0, 0, 7), "wires": (0, 0, -9), "cup": (0, 0, 0),
+            "board": (0, 0, 14),
             "ring": (0, 0, 24), "moon": (0, 0, 36)}
     v = View(eye=(0.7, -1.0, 0.45), up=(0, 0, 1), px_per_mm=9)
     labels = [("lithophane moon 50 mm (PLA): skirt with 3 bayonet grooves", "moon", None),
@@ -435,9 +439,10 @@ def main():
               ("LED board 18 mm: 8 white + 1 RGB LEDs on top", "board", None),
               ("(LP5012 driver + MCP9800 sensor underneath)", "D9", None),
               ("base cup (PETG) inside the skirt: pocket, ledge, 3 lugs", "cup", None),
-              ("M10x1 nut in the hex socket", "nut", None),
+              ("M10x1 nut: drops into the hex socket in the floor", "nut", None),
+              ("washer + jam nut under the floor (clamp the cup)", "nut_lo", None),
               ("4 wires GND / VLED / SDA / SCL", "wires", None),
-              ("gooseneck tube, thread filed flush with the nut", "neck", None)]
+              ("gooseneck tube, thread cut flush with the top nut", "neck", None)]
     render(exploded(hd, offh), v, OUT / "head_exploded.png", "Moon head: exploded", labels,
            notes=["LED board and its components from the generated KiCad board; moon at preview resolution."])
 
@@ -447,10 +452,11 @@ def main():
               ("white LEDs 1.2 mm below the opening", "D4", (0, -6, d["board_top"] + 0.6)),
               ("45 deg clamp cone presses the PETG ring", "moon", (0, -9.3, d["ring_top"])),
               ("PETG clamp ring", "ring", (0, -8.6, d["board_top"] + 0.4)),
-              ("LED board, 0.1 mm proud of the cup rim", "board", (0, -8.8, d["ledge_z"] + 0.5)),
+              ("LED board, 0.4 mm proud of the cup rim (ring roll gap)", "board", (0, -8.8, d["ledge_z"] + 0.5)),
               ("LP5012 under the board centre", "U1", None),
               ("4.5 mm for the wires above the nut", "wires", (0, 0, d["nut_top"] + 2.5)),
               ("M10x1 nut", "nut", None),
+              ("washer + jam nut", "nut_lo", None),
               ("gooseneck tube end", "neck", (0, -4.6, -12)),
               ("cup lug in the skirt's bayonet groove", "cup", (0, L.LUG_R_OUT, L.cup_z(L.Z_LUG_FACE_TOP))),
               ("base cup (PETG) inside the moon's skirt", "cup", (0, L.CUP_R, d["floor_top"] + 3))]

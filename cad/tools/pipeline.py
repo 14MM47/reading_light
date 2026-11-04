@@ -98,8 +98,15 @@ def check_mesh(m: trimesh.Trimesh, P: dict, contexts: dict, sample_walls=6000, s
     areas = m.area_faces
     # sample only facets with area: a revolve or boolean can leave a few zero-area slivers, and sampling without
     # replacement needs at least n non-zero weights (else numpy raises instead of checking the part)
-    n = min(sample_walls, int((areas > 0).sum()))
+    nz = areas > 0
+    n = min(sample_walls, int(nz.sum()))
     idx = rng.choice(len(m.faces), n, replace=False, p=areas / areas.sum())
+    # ... plus facets drawn uniformly per facet (round 3): a thin feature with little area (a 0.03 mm lip at the
+    # moon's groove roofs) is made of many small facets, so area weighting alone almost never samples it
+    n_f = min(10 * sample_walls, int(nz.sum()))
+    idx_f = rng.choice(np.flatnonzero(nz), n_f, replace=False)
+    idx = np.union1d(idx, idx_f)
+    n = len(idx)
     c = m.triangles_center[idx]
     d = -m.face_normals[idx]
     origins = c + d * 1e-3

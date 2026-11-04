@@ -7,7 +7,7 @@ Requirements (newest last; never renumber):
   B2  GIVEN    (Matt) pre-made metal bendable arm (gooseneck); chosen: 120 mm, 10 mm OD, M10x1 ends, 6.8 mm bore
   B3  RULE     (optics model, v0.1 head) LED emitters 2.9 mm below the moon's opening plane (superseded by B12)
   B9  RULE     (thermal review) a 0.6 mm PETG clamp ring (moon_ring.py) sits between the board edge and the PLA moon:
-               the PLA never touches the board, which runs up to ~45-55 C
+               the PLA never touches the board, which runs up to ~45-55 C (v0.2: 0.8 mm, moon_ring B3)
   B4  RULE     (LED board design) the board's edge band (v0.2: r 8-9 mm) is clamped between a ledge and the ring; parts
                on the board's underside stay inside r 7.8 mm and need 1.5 mm of height
   B5  ASSUMED  (v0.1) bayonet: 3 vertical entry slots + 30 deg grooves in the cup (superseded by B13)
@@ -19,13 +19,20 @@ Requirements (newest last; never renumber):
   B10 RULE     (round2 R2-D3) >= 4.5 mm free height between the nut top and the board underside: the wires leave the
                gooseneck bore above the nut and turn to the pads; the thread must end at or below the nut top (VERIFY)
   B11 RULE     (round2 R2-D15) the board is located by the pocket wall but its top stands proud of the cup, so only the
-               ring bears on it and the bayonet's cam preloads it
+               ring bears on it and the bayonet's cam preloads it (round 3: the preload's spring is B17)
   B12 RULE     (corrected optics model, v0.2) white emitters 1.2 mm below the moon's opening plane (board top 1.9 mm)
   B13 ASSUMED  (v0.2) bayonet turned inside out: 3 lugs on the cup's outside (3 mm wide, 0.8 mm radial, 45 deg top and
                bottom so they print without support) lock into grooves inside the moon's skirt (moon_shell B15)
   B14 RULE     (v0.2) the cup's rim is a flat land (>= 0.84 mm, 0.1 under the board top) and a 45 deg bevel 0.25 mm
-               under the moon's clamp cone (moon_shell B16); the lug tops lie on the bevel's cone
+               under the moon's clamp cone (moon_shell B16); the lug tops lie on the bevel's cone (round 3: land 0.4
+               under the board top, B17; bevel 0.35 mm, GAP_45)
   B15 RULE     (v0.2) the cavity under the board (r 8.35) clears the nut socket's corners: no ceiling to print
+  B16 RULE     (round3 R3-M4) the floor is jammed between the socket nut and a second M10x1 nut + washer underneath, so
+               the cup cannot turn or slide on the thread (the gooseneck end has no shoulder: VERIFY M1); the thread
+               needs >= NUT_T + FLOOR_T + WASHER_T + NUT_T = 9 mm at the moon end
+  B17 RULE     (round3 R3-M1) the clamp is a designed spring: the land sits LAND_DROP (0.4) under the board top, so the
+               ring's overhang can roll down about the board's top edge; travel at the cone 0.23-0.39 mm for a 0.9-1.1
+               board covers the moon's preload LOCK_OFFSET + (board - 1.0) = 0.05-0.25 (moon_shell B18)
 """
 from __future__ import annotations
 
@@ -51,7 +58,10 @@ VERIFY = {
     "NUT_AF": f"{L.NUT_AF} mm across flats, {L.NUT_T} mm thick: measure the nut supplied with the gooseneck",
     "NECK_THREAD_D": "M10x1 thread on the gooseneck ends (seller listing): measure with calipers",
     "BOARD_T": "LED board thickness 1.0 mm as ordered",
-    "thread_protrusion": "gooseneck thread must not stand more than 0.5 mm above the nut top: file it flush (R2-D3)",
+    "thread_protrusion": "gooseneck thread must not stand more than 0.5 mm above the nut top: cut/file it to length "
+                         "BEFORE the cable goes in (R2-D3, R3-M5)",
+    "thread_length": f"moon-end thread >= {L.THREAD_LEN_MIN:.0f} mm (lower nut + washer + floor + socket nut, B16)",
+    "shoulder": "if the gooseneck end has a shoulder >= 12 mm, the lower nut may be replaced by it (B16)",
 }
 
 
@@ -103,7 +113,10 @@ def context(p):
     board = Pos(0, 0, d["ledge_z"]) * Cylinder(L.BOARD_R, L.BOARD_T, align=(Align.CENTER, Align.CENTER, Align.MIN))
     nut = Pos(0, 0, d["floor_top"]) * extrude(RegularPolygon(L.NUT_AF / math.sqrt(3), 6, major_radius=True),
                                               amount=L.NUT_T)
-    return {"led_board": board, "nut": nut}
+    washer = Pos(0, 0, -L.WASHER_T) * Cylinder(10.0, L.WASHER_T, align=(Align.CENTER, Align.CENTER, Align.MIN))
+    nut_lo = Pos(0, 0, -L.WASHER_T - L.NUT_T) * extrude(RegularPolygon(L.NUT_AF / math.sqrt(3), 6, major_radius=True),
+                                                        amount=L.NUT_T)
+    return {"led_board": board, "nut": nut, "washer": washer, "nut_lower": nut_lo}
 
 
 def spec(m, p):
@@ -130,8 +143,16 @@ def spec(m, p):
     zl = (L.cup_z(L.Z_LUG_FACE_TOP) + L.cup_z(L.Z_LUG_FACE_BOT)) / 2
     out.append(claim("B13", "lug present", bool(m.contains([[(L.LUG_R_OUT - 0.2) * math.cos(a),
                                                             (L.LUG_R_OUT - 0.2) * math.sin(a), zl]])[0])))
-    out.append(claim("B14", "rim bevel 0.25 mm under the moon's clamp cone", abs((L.CONE_C - L.TOP_C) / math.sqrt(2) - 0.25) < 1e-9))
+    out.append(claim("B14", "rim bevel GAP_45 (0.35 mm) under the moon's clamp cone",
+                     abs((L.CONE_C - L.TOP_C) / math.sqrt(2) - L.GAP_45) < 1e-9 and abs(L.GAP_45 - 0.35) < 1e-9))
     out.append(claim("B14", "rim land >= 0.84 mm wide", L.LAND_R_OUT - L.POCKET_R >= 0.84, round(L.LAND_R_OUT - L.POCKET_R, 3)))
+    out.append(claim("B17", "land LAND_DROP under the board top (the ring's roll gap)",
+                     abs(d["board_top"] - d["rim_in_z"] - L.LAND_DROP) < 1e-9, round(d["board_top"] - d["rim_in_z"], 3)))
+    closure = [(t, round(L.ring_preload(t), 3), round(L.ring_travel(t), 3)) for t in (0.9, 1.0, 1.1)]
+    out.append(claim("B17", "preload 0.03 mm .. roll travel for a 0.9 / 1.0 / 1.1 mm board",
+                     all(0.03 <= pre <= trav for _, pre, trav in closure), closure))
+    out.append(claim("B17", "the ring's overhang lands on the land, not the bevel", L.RING_R_OUT < L.LAND_R_OUT - 0.1,
+                     round(L.LAND_R_OUT - L.RING_R_OUT, 3)))
     out.append(claim("B15", "nut socket corners inside the cavity radius", (L.NUT_AF + 0.4) / math.sqrt(3) < L.BOARD_LEDGE_IN_R,
                      round((L.NUT_AF + 0.4) / math.sqrt(3), 3)))
     return out

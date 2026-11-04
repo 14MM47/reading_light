@@ -41,9 +41,14 @@ OTHER = [
     dict(item="Silicone tube 10 mm ID x 12 mm OD, 150 mm (sleeve for the gooseneck: the plastic-coated finish)",
          qty_per_lamp=1, supplier="Amazon UK / eBay (food-grade silicone tube)", code="10x12mm silicone tube 1 m",
          url="", gbp=6.0, note="Or 12 mm heat-shrink 2:1 in black/white."),
-    dict(item="M10x1 brass hex nut, ~14 mm AF, 3 mm thick (moon base)", qty_per_lamp=1,
+    dict(item="M10x1 brass hex nut, ~14 mm AF, 3 mm thick (moon base: one in the cup's socket, one jam nut under "
+              "the floor)", qty_per_lamp=2,
          supplier="Lamp Spares UK / any lamp-parts shop", code="M10x1 lamp nut", url="", gbp=0.5,
-         note="Often supplied with the gooseneck. Measure AF/thickness (VERIFY in cad/parts/_lib/moonlib.py)."),
+         note="Often supplied with the gooseneck. Measure AF/thickness (VERIFY in cad/parts/_lib/moonlib.py). The "
+              "moon-end thread must be >= 9 mm long (VERIFY M1)."),
+    dict(item="M10 flat washer, <= 20 mm OD, ~1 mm thick (under the cup floor, above the jam nut)", qty_per_lamp=1,
+         supplier="Lamp Spares UK / Accu.co.uk", code="M10 washer (lamp) or M10 form A", url="", gbp=0.2,
+         note="Brass or steel; the PETG floor is clamped between it and the socket nut."),
     dict(item="Qwiic / STEMMA QT 4-pin JST-SH cable >= 200 mm (cut one end; bare end solders to the LED board)",
          qty_per_lamp=1, supplier="RS Components", code="288-4665 (SparkFun KIT-15081 Qwiic cable kit, 50-500 mm)",
          url="https://uk.rs-online.com/web/p/cable-assemblies/2884665", gbp=11.0,

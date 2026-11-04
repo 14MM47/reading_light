@@ -61,7 +61,8 @@ Order these from the supplier named (`bom/digikey_order.csv`): DigiKey UK ships 
 | LiPo pouch 3.7 V 1200 mAh, protected, JST-PH 2.0 lead (64 x 35.5 x 5.3 mm) | 2 | Pimoroni | BAT0004 | 8.25 | Alternative: The Pi Hut 105188 (62 x 35 x 5 mm). Meter polarity: + must land on J2 pin 1 (silk +). |
 | Gooseneck 120 mm, 10 mm OD, M10x1 male ends, hollow (6.8 mm bore) | 2 | Amazon UK (PATIKIL 4.7in M10 gooseneck) | search: PATIKIL gooseneck M10 120mm | 8.00 | Backup: PATIKIL 100 mm M10/M8 (8 mm OD; bore unstated - VERIFY). Check bore >= 4.5 mm. |
 | Silicone tube 10 mm ID x 12 mm OD, 150 mm (sleeve for the gooseneck: the plastic-coated finish) | 2 | Amazon UK / eBay (food-grade silicone tube) | 10x12mm silicone tube 1 m | 6.00 | Or 12 mm heat-shrink 2:1 in black/white. |
-| M10x1 brass hex nut, ~14 mm AF, 3 mm thick (moon base) | 2 | Lamp Spares UK / any lamp-parts shop | M10x1 lamp nut | 0.50 | Often supplied with the gooseneck. Measure AF/thickness (VERIFY in cad/parts/_lib/moonlib.py). |
+| M10x1 brass hex nut, ~14 mm AF, 3 mm thick (moon base: one in the cup's socket, one jam nut under the floor) | 4 | Lamp Spares UK / any lamp-parts shop | M10x1 lamp nut | 0.50 | Often supplied with the gooseneck. Measure AF/thickness (VERIFY in cad/parts/_lib/moonlib.py). The moon-end thread must be >= 9 mm long (VERIFY M1). |
+| M10 flat washer, <= 20 mm OD, ~1 mm thick (under the cup floor, above the jam nut) | 2 | Lamp Spares UK / Accu.co.uk | M10 washer (lamp) or M10 form A | 0.20 | Brass or steel; the PETG floor is clamped between it and the socket nut. |
 | Qwiic / STEMMA QT 4-pin JST-SH cable >= 200 mm (cut one end; bare end solders to the LED board) | 2 | RS Components | 288-4665 (SparkFun KIT-15081 Qwiic cable kit, 50-500 mm) | 11.00 | Kit has several lengths: use the 200 or 500 mm one. Farnell alternative: SHR-04V-S-B housings + pre-crimped leads. |
 | M2 x 6 mm self-tapping pan-head screws (PCB to front shell) | 4 | Amazon/Accu.co.uk | M2x6 self tapping pan head A2 | 0.10 | Accu.co.uk sells singles. |
 | M2 x 12 mm self-tapping pan-head screws (clip + back plate to front shell) | 4 | Amazon/Accu.co.uk | M2x12 self tapping pan head A2 | 0.10 |  |
@@ -72,7 +73,7 @@ Order these from the supplier named (`bom/digikey_order.csv`): DigiKey UK ships 
 | Kapton (polyimide) tape 10-20 mm: over the pouch under the PCB, under U1/D3/Q1-Q3, and a disc over the LED board's LP5012 (faces the gooseneck's metal end) | 1 | any |  | 3.00 | One roll covers many builds (round1 B-2). |
 | USB-C charger >= 1 A at 5 V (if you don't have one) | 1 | any |  | 0.00 | The lamp can draw ~0.5-0.6 A while charging with the light on (round1 M4). |
 
-**Other subtotal ≈ £83.30.**
+**Other subtotal ≈ £84.70.**
 
 ## 3. Tools (once)
 
@@ -91,4 +92,4 @@ then hand-fit the top; or bare with both stencils if you already do QFNs. Boards
 
 ## 5. Total for this build (main board by hand, LED board bottom face by JLCPCB)
 
-Farnell ≈ £47 + DigiKey ≈ £15 + other ≈ £83 + programmer ≈ £15 (if needed) + PCBs ≈ £15–60 + LED bottom-face assembly ≈ £10–25 → **≈ £159–246 for 2 lamps.** (If the fab sources the LP5012 from LCSC, drop the DigiKey line.)
+Farnell ≈ £47 + DigiKey ≈ £15 + other ≈ £85 + programmer ≈ £15 (if needed) + PCBs ≈ £15–60 + LED bottom-face assembly ≈ £10–25 → **≈ £160–247 for 2 lamps.** (If the fab sources the LP5012 from LCSC, drop the DigiKey line.)

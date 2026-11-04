@@ -34,7 +34,8 @@ C_100N_0402,1,led:C3,100n,Murata,GRM155R71C104KA88D,MLCC 100 nF 16 V X7R 0402,C_
 OTHER,1,,,Pimoroni,BAT0004,"LiPo pouch 3.7 V 1200 mAh, protected, JST-PH 2.0 lead (64 x 35.5 x 5.3 mm)",,,https://shop.pimoroni.com/products/lipo-battery-pack
 OTHER,1,,,Amazon UK (PATIKIL 4.7in M10 gooseneck),search: PATIKIL gooseneck M10 120mm,"Gooseneck 120 mm, 10 mm OD, M10x1 male ends, hollow (6.8 mm bore)",,,
 OTHER,1,,,Amazon UK / eBay (food-grade silicone tube),10x12mm silicone tube 1 m,"Silicone tube 10 mm ID x 12 mm OD, 150 mm (sleeve for the gooseneck: the plastic-coated finish)",,,
-OTHER,1,,,Lamp Spares UK / any lamp-parts shop,M10x1 lamp nut,"M10x1 brass hex nut, ~14 mm AF, 3 mm thick (moon base)",,,
+OTHER,2,,,Lamp Spares UK / any lamp-parts shop,M10x1 lamp nut,"M10x1 brass hex nut, ~14 mm AF, 3 mm thick (moon base: one in the cup's socket, one jam nut under the floor)",,,
+OTHER,1,,,Lamp Spares UK / Accu.co.uk,M10 washer (lamp) or M10 form A,"M10 flat washer, <= 20 mm OD, ~1 mm thick (under the cup floor, above the jam nut)",,,
 OTHER,1,,,RS Components,"288-4665 (SparkFun KIT-15081 Qwiic cable kit, 50-500 mm)",Qwiic / STEMMA QT 4-pin JST-SH cable >= 200 mm (cut one end; bare end solders to the LED board),,,https://uk.rs-online.com/web/p/cable-assemblies/2884665
 OTHER,2,,,Amazon/Accu.co.uk,M2x6 self tapping pan head A2,M2 x 6 mm self-tapping pan-head screws (PCB to front shell),,,
 OTHER,2,,,Amazon/Accu.co.uk,M2x12 self tapping pan head A2,M2 x 12 mm self-tapping pan-head screws (clip + back plate to front shell),,,
