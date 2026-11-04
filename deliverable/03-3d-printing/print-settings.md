@@ -7,16 +7,17 @@ textured PEI. See `docs/handoffs/03-printing.md` (coupons first, then parts; Mat
 
 | Part | Qty | Material | Process | Supports | Slicer overrides | Size (mm) | Verdict | Check warnings |
 |---|---|---|---|---|---|---|---|---|
-| `moon_shell` | 1 | pla-basic-white | 0.12-fine | none | wall_loops=6, sparse_infill_density=100%, top_shell_layers=0, bottom_shell_layers=3, seam_position=back, brim_type=outer_only, brim_width=3 | 50.0 x 50.0 x 46.7 | PASS | wall_min:0.84 |
-| `moon_base` | 1 | petg-basic | 0.16-fine | none | - | 38.7 x 38.7 x 14.1 | PASS | - |
-| `moon_ring` | 1 | petg-basic | 0.20-standard | none | - | 33.2 x 33.2 x 0.6 | PASS | wall_min:0.55 |
+| `moon_shell` | 1 | pla-basic-white | 0.12-fine | none | wall_loops=6, sparse_infill_density=100%, top_shell_layers=0, bottom_shell_layers=3, seam_position=back, brim_type=outer_only, brim_width=3 | 50.0 x 50.0 x 51.5 | PASS | wall_min:0.84, first_layer_contact |
+| `moon_base` | 1 | petg-basic | 0.16-fine | none | - | 20.8 x 21.6 x 10.2 | PASS | wall_min:0.84, first_layer_contact |
+| `moon_ring` | 1 | petg-basic | 0.12-fine | none | - | 19.8 x 19.8 x 0.8 | PASS | wall_min:0.55, first_layer_contact |
 | `pack_front` | 1 | petg-basic | 0.20-standard | none | - | 39.3 x 76.9 x 18.6 | PASS | wall_min:0.84 |
 | `pack_back` | 1 | petg-basic | 0.20-standard | none | - | 35.3 x 73.8 x 3.8 | PASS | wall_min:0.84 |
 | `pack_clip` | 1 | petg-basic | 0.20-standard | none | - | 34.0 x 61.3 x 3.7 | PASS | - |
 | `button_caps` | 1 plate (3 caps) | petg-basic | 0.12-fine | none | - | 33.0 x 9.0 x 4.3 | PASS | wall_min:0.84, first_layer_contact |
-| `jig_led_board` | 1 | petg-basic | 0.20-standard | none | - | 40.0 x 40.0 x 4.0 | PASS | wall_min:0.84 |
+| `jig_led_board` | 1 | petg-basic | 0.20-standard | none | - | 32.0 x 32.0 x 4.0 | PASS | wall_min:0.84 |
 | `coupon_fit` | 1 | petg-basic | 0.20-standard | none | - | 70.0 x 36.0 x 8.5 | PASS | wall_min:0.84 |
-| `coupon_bayonet` | 1 | petg-basic | 0.16-fine | none | - | 80.0 x 38.7 x 5.8 | PASS | wall_min:0.84 |
+| `coupon_bayonet_cup` | 1 | petg-basic | 0.16-fine | none | - | 20.8 x 21.6 x 4.9 | PASS | wall_min:0.84, first_layer_contact |
+| `coupon_bayonet_skirt` | 1 | pla-basic-white | 0.12-fine | none | wall_loops=6, sparse_infill_density=100%, brim_type=outer_only, brim_width=3 | 31.7 x 31.7 x 7.0 | PASS | wall_min:0.84, first_layer_contact |
 | `coupon_litho_wedge` | 1 | pla-basic-white | 0.12-fine | none | - | 86.0 x 14.0 x 3.2 | PASS | wall_min:0.55 |
 
 Process names map to Bambu Studio presets: `0.12-fine` = 0.12 mm Fine, `0.16-fine` = 0.16 mm Optimal,

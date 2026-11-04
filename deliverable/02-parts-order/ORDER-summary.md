@@ -4,7 +4,7 @@ Indicative prices from Farnell UK listings and seller pages, 2026-11. **Matt pla
 record the actual codes and prices in `bom/ORDER_ACTUALS.md` (handoff 02).
 
 ## 1. Farnell UK basket
-Upload `bom/farnell_quickpaste.txt` (Quick Paste / BOM upload). 29 lines, quantities include spares and
+Upload `bom/farnell_quickpaste.txt` (Quick Paste / BOM upload). 31 lines, quantities include spares and
 MOQ rounding. Lines without an order code are listed by MPN: pick that exact MPN on the site (substitution rules
 in handoff 02).
 
@@ -14,7 +14,7 @@ in handoff 02).
 | (search MPN) | MF-MSMF110/16X-2 | Bourns | 5 | 2 | 2.00 | Resettable fuse 1.1 A hold / 2.2 A trip |
 | (search MPN) | MCWR06X5101FTL | Multicomp Pro | 50 | 4 | 0.50 | Resistor 5.1 kOhm 1% 0603 |
 | 2691565 | SMF5.0A | Littelfuse | 5 | 2 | 0.75 | TVS unidirectional 5.0 V standoff |
-| (search MPN) | CL21A106KOQNNNE | Samsung | 20 | 10 | 1.60 | MLCC 10 uF 16 V X5R 0805 (0603 10 V part keeps only 2.9 uF at 5 V) |
+| (search MPN) | CL21A106KOQNNNE | Samsung | 20 | 8 | 1.60 | MLCC 10 uF 16 V X5R 0805 (0603 10 V part keeps only 2.9 uF at 5 V) |
 | 1332158 | MCP73831T-2ACI/OT | Microchip | 3 | 2 | 1.77 | Li-ion/LiPo linear charger 4.20 V |
 | (search MPN) | MCWR06X3901FTL | Multicomp Pro | 50 | 2 | 0.50 | Resistor 3.9 kOhm 1% 0603 (charge current 256 mA) |
 | (search MPN) | MCWR06X1001FTL | Multicomp Pro | 50 | 4 | 0.50 | Resistor 1 kOhm 1% 0603 |
@@ -24,7 +24,7 @@ in handoff 02).
 | 2447230 | MCWR06X1002FTL | Multicomp Pro | 50 | 8 | 0.50 | Resistor 10 kOhm 1% 0603 |
 | (search MPN) | S1J-E3/61T | Vishay | 5 | 2 | 0.60 | Silicon rectifier 1 A 600 V |
 | (search MPN) | MCWR06X1004FTL | Multicomp Pro | 50 | 2 | 0.50 | Resistor 1 MOhm 1% 0603 |
-| 1759122 | MC0603B104K500CT | Multicomp Pro | 50 | 10 | 0.50 | MLCC 100 nF 50 V X7R 0603 |
+| 1759122 | MC0603B104K500CT | Multicomp Pro | 50 | 6 | 0.50 | MLCC 100 nF 50 V X7R 0603 |
 | 9575146 | PCM12SMTR | C&K | 3 | 2 | 2.55 | Mini slide switch SPDT |
 | 3018703 | ATTINY3216-SN | Microchip | 3 | 2 | 3.12 | 8-bit AVR MCU |
 | 3013385 | CL10A105KB8NNNC | Samsung | 10 | 2 | 0.30 | MLCC 1 uF 50 V X5R 0603 |
@@ -34,13 +34,25 @@ in handoff 02).
 | 1830839 | SM04B-SRSS-TB(LF)(SN) | JST | 3 | 2 | 1.35 | JST SH 4-pin side-entry SMD header (Qwiic pinout |
 | 3498849 | BXEN-27S-11M-3C-00-0-3 | Bridgelux | 10 | 8 | 1.00 | Mid-power white LED 2835 |
 | 3498853 | BXEN-50S-11M-3C-00-0-3 | Bridgelux | 10 | 8 | 1.80 | Mid-power white LED 2835 |
-| 2322115 | 150141M173100 | Wurth Elektronik | 5 | 4 | 2.20 | RGB LED PLCC-4 3528 |
-| 3119169 | TLC59116IPWR | Texas Instruments | 3 | 2 | 5.67 | 16-ch I2C constant-current LED sink driver |
-| (search MPN) | MCWR06X7500FTL | Multicomp Pro | 50 | 2 | 0.50 | Resistor 750 Ohm 1% 0603 (TLC59116 REXT: 25.0 mA/channel) |
-| (search MPN) | LM75BDP,118 | NXP | 5 | 2 | 2.75 | I2C digital temperature sensor |
-| (search MPN) | MCWR06X2401FTL | Multicomp Pro | 50 | 2 | 0.50 | Resistor 2.4 kOhm 1% 0603 (LED board RESET_N pull-up) |
+| 2322115 | 150141M173100 | Wurth Elektronik | 3 | 2 | 1.32 | RGB LED PLCC-4 3528 |
+| (search MPN) | RC0402FR-072K94L | Yageo | 50 | 2 | 0.50 | Resistor 2.94 kOhm 1% 0402 (LP5012 RIREF: 105 x 0.7 V / 2.94 k = 25.0 mA/channel) |
+| (search MPN) | GRM155R61E105KA12D | Murata | 10 | 4 | 0.30 | MLCC 1 uF 25 V X5R 0402 (LP5012 VCC / VCAP) |
+| (search MPN) | GRM188R61A106KE69D | Murata | 10 | 2 | 0.50 | MLCC 10 uF 10 V X5R 0603 (LED board bulk) |
+| 1439485 | MCP9800A0T-M/OT | Microchip | 5 | 2 | 2.75 | I2C temperature sensor |
+| (search MPN) | RC0402FR-072K4L | Yageo | 50 | 2 | 0.50 | Resistor 2.4 kOhm 1% 0402 (LP5012 EN pull-up) |
+| (search MPN) | GRM155R71C104KA88D | Murata | 50 | 2 | 0.50 | MLCC 100 nF 16 V X7R 0402 |
 
-**Farnell subtotal ≈ £44.53 ex VAT (≈ £53.44 inc VAT).**
+**Farnell subtotal ≈ £39.28 ex VAT (≈ £47.14 inc VAT).**
+
+## 1b. Electronic parts Farnell does not stock
+
+Order these from the supplier named (`bom/digikey_order.csv`): DigiKey UK ships cut tape from quantity 1.
+
+| Supplier | Code / search | MPN | Manufacturer | Qty | Needed | Line GBP ex VAT | What |
+|---|---|---|---|---|---|---|---|
+| DigiKey UK | LP5012RUKR (cut tape) - digikey.co.uk | LP5012RUKR | Texas Instruments | 3 | 2 | 2.70 | 12-ch I2C constant-current RGB LED sink driver |
+
+**Subtotal ≈ £2.70 ex VAT (≈ £3.24 inc VAT; DigiKey UK ships free above its threshold, otherwise ≈ £12).**
 
 ## 2. Other purchases (not Farnell)
 
@@ -49,7 +61,8 @@ in handoff 02).
 | LiPo pouch 3.7 V 1200 mAh, protected, JST-PH 2.0 lead (64 x 35.5 x 5.3 mm) | 2 | Pimoroni | BAT0004 | 8.25 | Alternative: The Pi Hut 105188 (62 x 35 x 5 mm). Meter polarity: + must land on J2 pin 1 (silk +). |
 | Gooseneck 120 mm, 10 mm OD, M10x1 male ends, hollow (6.8 mm bore) | 2 | Amazon UK (PATIKIL 4.7in M10 gooseneck) | search: PATIKIL gooseneck M10 120mm | 8.00 | Backup: PATIKIL 100 mm M10/M8 (8 mm OD; bore unstated - VERIFY). Check bore >= 4.5 mm. |
 | Silicone tube 10 mm ID x 12 mm OD, 150 mm (sleeve for the gooseneck: the plastic-coated finish) | 2 | Amazon UK / eBay (food-grade silicone tube) | 10x12mm silicone tube 1 m | 6.00 | Or 12 mm heat-shrink 2:1 in black/white. |
-| M10x1 brass hex nut, ~14 mm AF, 3 mm thick (moon base) | 2 | Lamp Spares UK / any lamp-parts shop | M10x1 lamp nut | 0.50 | Often supplied with the gooseneck. Measure AF/thickness (VERIFY in cad/parts/_lib/moonlib.py). |
+| M10x1 brass hex nut, ~14 mm AF, 3 mm thick (moon base: one in the cup's socket, one jam nut under the floor) | 4 | Lamp Spares UK / any lamp-parts shop | M10x1 lamp nut | 0.50 | Often supplied with the gooseneck. Measure AF/thickness (VERIFY in cad/parts/_lib/moonlib.py). The moon-end thread must be >= 9 mm long (VERIFY M1). |
+| M10 flat washer, <= 20 mm OD, ~1 mm thick (under the cup floor, above the jam nut) | 2 | Lamp Spares UK / Accu.co.uk | M10 washer (lamp) or M10 form A | 0.20 | Brass or steel; the PETG floor is clamped between it and the socket nut. |
 | Qwiic / STEMMA QT 4-pin JST-SH cable >= 200 mm (cut one end; bare end solders to the LED board) | 2 | RS Components | 288-4665 (SparkFun KIT-15081 Qwiic cable kit, 50-500 mm) | 11.00 | Kit has several lengths: use the 200 or 500 mm one. Farnell alternative: SHR-04V-S-B housings + pre-crimped leads. |
 | M2 x 6 mm self-tapping pan-head screws (PCB to front shell) | 4 | Amazon/Accu.co.uk | M2x6 self tapping pan head A2 | 0.10 | Accu.co.uk sells singles. |
 | M2 x 12 mm self-tapping pan-head screws (clip + back plate to front shell) | 4 | Amazon/Accu.co.uk | M2x12 self tapping pan head A2 | 0.10 |  |
@@ -57,24 +70,26 @@ in handoff 02).
 | Cyanoacrylate (super glue, gel) for the gooseneck ends and the LED-pad strain relief | 1 | any |  | 3.00 | Gooseneck threads only. NOT anaerobic thread-locker: it does not cure against plastic and can craze PETG (round1 m-7). |
 | Neutral-cure silicone (or E6000): strain relief over the LED-board wire joints and the cable at J3 | 1 | any |  | 5.00 | Not acetoxy (vinegar-smell) silicone: it corrodes copper. |
 | PTFE tube 2 mm ID x 3 mm OD (or silicone sleeve), 200 mm: protects the cable inside the gooseneck | 2 | Amazon UK / 3D-printer spares | PTFE tube 2x3mm | 0.50 | Plus 6 mm heat-shrink over each cut gooseneck end (round1 M-7). |
-| Kapton (polyimide) tape 10-20 mm: over the pouch under the PCB, and under U1/D3/Q1-Q3 | 1 | any |  | 3.00 | One roll covers many builds (round1 B-2). |
+| Kapton (polyimide) tape 10-20 mm: over the pouch under the PCB, under U1/D3/Q1-Q3, and a disc over the LED board's LP5012 (faces the gooseneck's metal end) | 1 | any |  | 3.00 | One roll covers many builds (round1 B-2). |
 | USB-C charger >= 1 A at 5 V (if you don't have one) | 1 | any |  | 0.00 | The lamp can draw ~0.5-0.6 A while charging with the light on (round1 M4). |
 
-**Other subtotal ≈ £83.30.**
+**Other subtotal ≈ £84.70.**
 
 ## 3. Tools (once)
 
 | Item | Supplier | Code | GBP | Note |
 |---|---|---|---|---|
 | UPDI programmer: Microchip MPLAB SNAP (PG164100) | Farnell | 2915518 | 15.00 | Or a 3.3 V USB-UART (FTDI TTL-232R-3V3, Farnell 1329311) + 470 R for SerialUPDI. |
-| Stencils (PCBWay/JLCPCB, frameless) for both boards | with the PCB order |  | 10.00 |  |
+| Stencils (PCBWay/JLCPCB, frameless): main top 0.12 mm, LED board top 0.12 mm + bottom 0.10 mm | with the PCB order |  | 12.00 | Skip the LED bottom stencil if the fab assembles that face. |
 
 ## 4. PCBs (handoff 01; route comparison in `bom/assembly_routes.md`)
 
-Recommended route 1: 5 main + 5 LED bare boards with stencils from PCBWay (≈ £40–60 incl. shipping), or
-JLCPCB (≈ £15–35). Upload `fab/<board>/v0.1/<board>-v0.1-gerbers.zip` and copy the specs from each
+Main board: 5 bare boards with a stencil, hand assembly (route 1). LED board: 5 boards with the **bottom
+face (U1 LP5012 WQFN, U2, R1, C1–C4) assembled by JLCPCB (Economic, ≈ £10–25 incl. extended-part fees)**,
+then hand-fit the top; or bare with both stencils if you already do QFNs. Boards with stencils: PCBWay
+≈ £40–60 incl. shipping, JLCPCB ≈ £15–35. Upload `fab/main-board/v0.1/main-board-v0.1-gerbers.zip` and `fab/led-board/v0.2/led-board-v0.2-gerbers.zip`, and copy the specs from each
 `FAB_NOTES.md`.
 
-## 5. Total for this build (route 1)
+## 5. Total for this build (main board by hand, LED board bottom face by JLCPCB)
 
-Farnell ≈ £53 + other ≈ £83 + programmer ≈ £15 (if needed) + PCBs ≈ £15–60 → **≈ £152–212 for 2 lamps.**
+Farnell ≈ £47 + DigiKey ≈ £15 + other ≈ £85 + programmer ≈ £15 (if needed) + PCBs ≈ £15–60 + LED bottom-face assembly ≈ £10–25 → **≈ £160–247 for 2 lamps.** (If the fab sources the LP5012 from LCSC, drop the DigiKey line.)
