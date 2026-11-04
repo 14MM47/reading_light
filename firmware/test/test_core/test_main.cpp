@@ -234,8 +234,9 @@ void test_night_modes_light_only_red_and_warm_on_the_real_board(void) {
         if (!(strstr(MODES[m].name, "night") || strstr(MODES[m].name, "Red"))) continue;
         float d[G_COUNT];
         mode_targets(m, MODES[m].max_level, 1.0f, I_CAP_MA, d);
-        for (int o = 0; o < 16; o++) {
+        for (int o = 0; o < N_OUT; o++) {
             int g = OUT_GROUP[o];
+            if (g < 0) continue;
             if (g == G_G || g == G_B || g == G_CW) TEST_ASSERT_FLOAT_WITHIN(1e-6, 0.0f, d[g]);
         }
     }
@@ -356,6 +357,38 @@ void test_frozen_timer_starts_when_load_starts(void) {
     TEST_ASSERT_FALSE(c.t_trusted);                          // > 5 min under load with no change
 }
 
+void test_first_reading_sets_the_derate_without_slewing(void) {
+    // a warm restart (WDT reset with the head at 55 C): the first reading takes effect within the fade, not 8 s
+    while (c.mode != 2) tap(BTN_MAIN, 100);
+    run(5000, true, false, false);
+    core_init(&c, NULL, now);
+    idle(1000);
+    core_temperature(&c, true, 55.0f, now);
+    TEST_ASSERT_FLOAT_WITHIN(1e-4, thermal_factor(55.0f), c.t_cap);
+    idle(FADE_MS + 10);
+    float d[G_COUNT];
+    mode_targets(c.mode, c.level[c.mode], thermal_factor(55.0f), c.i_cap, d);
+    TEST_ASSERT_FLOAT_WITHIN(0.5f, total_current_ma(d), total_current_ma(c.drive));
+}
+
+void test_quiet_sensor_after_a_rise_stays_trusted(void) {
+    // full 4000 K: the reading climbs 30 -> 40 C over 4 min, then sits on one code for 10 min (equilibrium)
+    while (c.mode != 2) tap(BTN_MAIN, 100);
+    run(5000, true, false, false);
+    for (int s = 0; s < 240; s++) { core_temperature(&c, true, 30.0f + s / 24.0f, now); idle(1000); }
+    for (int s = 0; s < 600; s++) { core_temperature(&c, true, 40.0f, now); idle(1000); }
+    TEST_ASSERT_TRUE(c.t_trusted);
+    TEST_ASSERT_FLOAT_WITHIN(1e-3, I_CAP_MA, c.i_cap);
+}
+
+void test_stuck_sensor_at_load_start_is_not_trusted_even_after_dim_period(void) {
+    // the load starts before the sensor's first answer: the first valid reading is the reference, not 0 C
+    while (c.mode != 2) tap(BTN_MAIN, 100);
+    run(5000, true, false, false);
+    for (int s = 0; s < 360; s++) { core_temperature(&c, true, 25.0f, now); idle(1000); }
+    TEST_ASSERT_FALSE(c.t_trusted);
+}
+
 int main(int, char **) {
     UNITY_BEGIN();
     RUN_TEST(test_levels_monotonic_and_endpoints);
@@ -387,5 +420,8 @@ int main(int, char **) {
     RUN_TEST(test_lp_brightness_hysteresis_and_ends);
     RUN_TEST(test_trust_change_fades_instead_of_stepping);
     RUN_TEST(test_frozen_timer_starts_when_load_starts);
+    RUN_TEST(test_first_reading_sets_the_derate_without_slewing);
+    RUN_TEST(test_quiet_sensor_after_a_rise_stays_trusted);
+    RUN_TEST(test_stuck_sensor_at_load_start_is_not_trusted_even_after_dim_period);
     return UNITY_END();
 }

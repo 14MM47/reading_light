@@ -26,7 +26,9 @@ extern "C" {
 #define T_DERATE_MAX_C    58.0f     // 5 % (faint glow) at/above this; the MCP9800 ALERT pulls the LP5012 EN low at 60 C
 #define T_PLAUSIBLE_MIN_C (-20.0f)
 #define T_PLAUSIBLE_MAX_C 100.0f
-#define T_FROZEN_MS       300000UL  // reading unchanged this long while > 50 mA flows = sensor not trusted
+#define T_FROZEN_MS       300000UL  // reading unchanged this long while > 50 mA flows = sensor not trusted ...
+#define T_PROVEN_RISE_C   1.0f      // ... unless it has risen this much since the load started (round3 R3-F6)
+#define T_UNSET_C         (-999.0f)
 #define T_FAILSAFE_CAP    0.30f     // cap if the temperature sensor stops answering
 #define VBAT_LOW_MV       3450      // under load: cap brightness, periodic blink
 #define VBAT_EMPTY_MV     3300      // under load for EMPTY_HOLD_MS: fade out and sleep
@@ -74,6 +76,7 @@ typedef struct {
     bool save_request;                // main loop writes EEPROM when set
     uint32_t last_slew;               // thermal slew timestamp (per instance, not a function static)
     uint32_t load_since;              // when > 50 mA started flowing (0 = not loaded): the frozen-sensor timer
+    float t_at_load;                  // first valid reading under that load (T_UNSET_C = none yet)
 } core_t;
 
 // LP5012 (LED board v0.2): duty = OUTx_COLOR/255 x LEDx_BRIGHTNESS/255 (linear scale), at the 25 mA RIREF current.

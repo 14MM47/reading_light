@@ -107,6 +107,7 @@ void core_init(core_t *c, const saved_t *saved, uint32_t now) {
     c->t_last_ok = now;
     c->t_changed_at = now;
     c->t_trusted = false;            // until the sensor has answered
+    c->t_at_load = T_UNSET_C;
     c->i_cap = I_CAP_UNTRUSTED_MA;
     c->vbat_mv = 4000;
     c->last_slew = now;
@@ -165,7 +166,9 @@ void core_buttons(core_t *c, const bool pressed[BTN_COUNT], uint32_t now) {
 void core_temperature(core_t *c, bool ok, float temp_c, uint32_t now) {
     float target;
     if (ok && (temp_c < T_PLAUSIBLE_MIN_C || temp_c > T_PLAUSIBLE_MAX_C)) ok = false;
+    bool first = false;
     if (ok) {
+        first = !c->t_valid;
         c->t_valid = true;
         c->t_last_ok = now;
         if (temp_c != c->t_last_value) {
@@ -182,10 +185,19 @@ void core_temperature(core_t *c, bool ok, float temp_c, uint32_t now) {
     // stale reading must not unlock the 200 mA cap). The frozen timer runs from the later of "reading last changed"
     // and "load started", so a reading that sat still while the lamp was dim is not condemned the moment it brightens
     bool loaded = total_current_ma(c->drive) > 50.0f;
-    if (!loaded) c->load_since = 0;
-    else if (!c->load_since) c->load_since = now ? now : 1;
+    if (!loaded) {
+        c->load_since = 0;
+        c->t_at_load = T_UNSET_C;
+    } else {
+        if (!c->load_since) c->load_since = now ? now : 1;
+        if (c->t_at_load <= T_UNSET_C && c->t_valid) c->t_at_load = c->t_last_value;
+    }
     uint32_t still_since = (loaded && (int32_t)(c->load_since - c->t_changed_at) > 0) ? c->load_since : c->t_changed_at;
-    bool frozen = loaded && (uint32_t)(now - still_since) > T_FROZEN_MS;
+    // A reading that has risen T_PROVEN_RISE_C since the load started has shown that it tracks the board, so a quiet
+    // sensor sitting on one 12-bit code at thermal equilibrium is not then condemned (the lamp would "breathe"
+    // between the caps). A sensor stuck from the start never rises and still loses trust after T_FROZEN_MS (T5b).
+    bool proven = loaded && c->t_at_load > T_UNSET_C && c->t_last_value >= c->t_at_load + T_PROVEN_RISE_C;
+    bool frozen = loaded && !proven && (uint32_t)(now - still_since) > T_FROZEN_MS;
     bool fresh = (uint32_t)(now - c->t_last_ok) <= 3000;
     bool trusted = c->t_valid && fresh && !frozen;
     float icap = trusted ? I_CAP_MA : I_CAP_UNTRUSTED_MA;
@@ -194,7 +206,12 @@ void core_temperature(core_t *c, bool ok, float temp_c, uint32_t now) {
         c->i_cap = icap;
         retarget(c, now);              // fade to the new cap, never a step (round2 R2-F2)
     }
-    if (target < c->t_cap_target - 0.01f || target > c->t_cap_target + 0.01f) {
+    if (first) {
+        // first reading after init (e.g. a watchdog reset with a hot head): take its derate at once instead of
+        // slewing down from 100 % at 10 %/s; the change itself still fades (round3 R3-F5)
+        c->t_cap = c->t_cap_target = target;
+        retarget(c, now);
+    } else if (target < c->t_cap_target - 0.01f || target > c->t_cap_target + 0.01f) {
         c->t_cap_target = target;
     }
 }

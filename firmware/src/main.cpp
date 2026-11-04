@@ -44,17 +44,50 @@ static int16_t lp_read(uint8_t reg) {            // -1 on bus error
     return (int16_t)Wire.read();
 }
 
+static bool lp_read_block(uint8_t reg, uint8_t *d, uint8_t n) {   // auto-increment read (Wire buffer 32 bytes)
+    Wire.beginTransmission(ADDR_LP5012);
+    Wire.write(reg);
+    if (Wire.endTransmission(false) != 0) return false;
+    if (Wire.requestFrom((uint8_t)ADDR_LP5012, n) != n) return false;
+    for (uint8_t i = 0; i < n; i++) d[i] = (uint8_t)Wire.read();
+    return true;
+}
+
+static uint32_t ts_valid_after;                  // first 12-bit MCP9800 conversion (600 ms max) after power-up
+
+static void lp_lost() {                          // LED-board POR, NACK or bad read-back: re-init on the next retry
+    lp_ok = false;
+    ts_valid_after = millis() + 700;             // the MCP9800 may have restarted too: it reads 0 C until it has
+}                                                // converted (round3 R3-F4)
+
 static bool lp_init() {
-    // EN high (R2 pull-up, ALERT released) for > 500 us before the first access (tEN_H): led_board_on() waits 10 ms
+    // EN high (R2 pull-up, ALERT released) for > 500 us before the first access (tEN_H): led_board_on() waits 10 ms.
+    // Configure and zero every output while still in STANDBY (registers are writable there), then Chip_EN last, so
+    // no output can light during init whatever the reset state (round3 R3-F1).
     const uint8_t en = LP_CHIP_EN, cfg1 = LP_CONFIG1, bank = 0x00;
-    bool ok = lp_write(LP_DEVICE_CONFIG0, &en, 1);            // STANDBY -> NORMAL
-    ok &= lp_write(LP_DEVICE_CONFIG1, &cfg1, 1);
+    bool ok = lp_write(LP_DEVICE_CONFIG1, &cfg1, 1);
     ok &= lp_write(LP_LED_CONFIG0, &bank, 1);                 // no bank control: every output on its own colour
     memset(last_regs, 0, sizeof(last_regs));
     ok &= lp_write(LP_BRIGHTNESS0, last_regs, sizeof(last_regs));   // all dark
     lp_b = 0;
+    ok &= lp_write(LP_DEVICE_CONFIG0, &en, 1);                // STANDBY -> NORMAL
     ok &= lp_read(LP_DEVICE_CONFIG1) == LP_CONFIG1;           // the device took the configuration
     return ok;                                               // any failure -> caller retries the whole init
+}
+
+// Once a second (round3 R3-F2): CONFIG0/1 as set, and the 16 output registers as last written. I2C has no CRC
+// and the cable runs in a metal neck beside the LED return current; a corrupted burst would otherwise persist
+// until the drive next changed (hours, for a steady night light). Returns false if the device needs a re-init.
+static bool lp_verify() {
+    uint8_t cfg[2], regs[4 + N_OUT];
+    if (!lp_read_block(LP_DEVICE_CONFIG0, cfg, 2)) return false;
+    if (!(cfg[0] & LP_CHIP_EN) || cfg[1] != LP_CONFIG1) return false;   // POR / EN cycle / corrupted config
+    if (!lp_read_block(LP_BRIGHTNESS0, regs, sizeof(regs))) return false;
+    if (memcmp(regs, last_regs, sizeof(regs))) {             // an output register differs: rewrite them all
+        memset(last_regs, 0xFF, sizeof(last_regs));          // (no valid state matches: forces the full write)
+        lp_b = 0;
+    }
+    return true;
 }
 
 // Brightness / colour split lives in lib/core (lp_brightness, lp_colour; host-tested).
@@ -171,8 +204,6 @@ static uint16_t vdd_mv() {
 ISR(RTC_PIT_vect) { RTC.PITINTFLAGS = RTC_PI_bm; }
 
 static void i2c_bus_recover();
-
-static uint32_t ts_valid_after;                  // first 12-bit MCP9800 conversion (600 ms max) after power-up
 
 // bleed = true for a recovery power-cycle: SDA/SCL are driven low so VLED discharges through the 3.3 k pull-ups
 // and the LP5012 really drops below its UVLO (2.0 V) and restarts from a clean POR (round2 R2-E2).
@@ -312,12 +343,16 @@ void loop() {
         core_tick(&core, now);
         if (!lp_ok && now - last_lp_retry >= 500) {
             last_lp_retry = now;
-            ts_setup();                           // same rail: an LP5012 POR means the MCP9800 lost its limits too
+            // same rail: an LP5012 POR means the MCP9800 lost its limits too. Rewrite them only if they changed, so
+            // a thermostat hold is not disturbed by CONFIG writes every 500 ms (round3 R3-F3)
+            if (!ts_config_intact()) ts_setup();
             lp_ok = lp_init();
             // 4 failed inits (2 s) and not a thermostat trip (ALERT holds EN low only while hot, and the LP5012
-            // does not answer in shutdown): power-cycle the LED board through Q4 (m6)
-            lp_fails = lp_ok ? 0 : (uint8_t)(lp_fails + 1);
-            if (lp_fails >= 4 && (!ts_ok || last_temp_c < (float)TSENSE_THYST_C)) {
+            // does not answer in shutdown): power-cycle the LED board through Q4 (m6). While the thermostat holds,
+            // the count stays at 0, so the release is the natural one, not a power-cycle (round3 R3-F3)
+            const bool tstat_hold = ts_ok && last_temp_c >= (float)TSENSE_THYST_C;
+            lp_fails = (lp_ok || tstat_hold) ? 0 : (uint8_t)(lp_fails + 1);
+            if (lp_fails >= 4) {
                 lp_fails = 0;
                 lp_reset();                       // cheap first: an LP5012 that still listens is reset in place
                 led_board_off(true);
@@ -327,11 +362,10 @@ void loop() {
                 lp_ok = lp_init();
             }
         }
-        if (lp_ok && (now & 3) == 0 && !lp_output(core.drive)) lp_ok = false;   // 250 Hz, writes on change
+        if (lp_ok && (now & 3) == 0 && !lp_output(core.drive)) lp_lost();   // 250 Hz, writes on change
         if (lp_ok && now - last_lp_check >= 1000) {   // LED-board POR (cable, VLED dropout) or a thermostat EN
             last_lp_check = now;                       // cycle reset the LP5012 to STANDBY with Chip_EN = 0
-            int16_t c0 = lp_read(LP_DEVICE_CONFIG0);
-            if (c0 < 0 || !(c0 & LP_CHIP_EN)) lp_ok = false;   // not our configuration -> re-init
+            if (!lp_verify()) lp_lost();               // not our configuration -> re-init
         }
         if (core.save_request) {
             core.save_request = false;
