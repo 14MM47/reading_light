@@ -7,7 +7,7 @@
    ```bash
    cd firmware && pio test -e native && pio run
    ```
-   The host tests must pass (29 tests), and the ATtiny3216 build must succeed.
+   The host tests must pass (32 tests), and the ATtiny3216 build must succeed.
 2. **Programmer on J4.** Pins: 1 = VREF (VSYS through 1 kΩ, *sense only*), 2 = UPDI, 3 = TX, 4 = GND. The square
    pad is pin 1. J4 is not fitted on the board: hold a 4-pin 2.54 mm header in the holes, or solder one temporarily.
    * **Power the board from its own battery (slide switch ON).** USB-C also works, but the battery is better with a

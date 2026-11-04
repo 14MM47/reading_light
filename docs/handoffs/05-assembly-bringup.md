@@ -68,21 +68,26 @@ on its bottom silk.
 1. Deburr the inside of both gooseneck ends with a needle file. Self-tap the gooseneck's lower end into
    `pack_front`'s 9.3 mm socket by hand, before any cable is fitted, so nothing twists. A drop of CA gel on the
    thread is optional. **No anaerobic thread-locker**: it crazes PETG (round1 m-7).
-2. Cut the Qwiic cable to about 200 mm, keeping the JST-SH end. Slide the PTFE sleeve over the 4 wires. Feed the bare
-   end up through the gooseneck from the pack side. Put 15 mm of heat-shrink over the wires where they leave each
-   threaded end.
-3. Push the gooseneck's top end up through the `moon_base` floor. **The thread must not stand more than 0.5 mm above
-   the nut top**: file it flush if it does (VERIFY M12). Thread the wires through the M10×1 nut, then spin the
-   **nut** (not the gooseneck) down into the hex socket. The wires leave the bore above the nut, into the 4.5 mm
+2. **Moon end, before any cable** (round3 R3-M4/M5): run the jam nut, then the washer, onto the gooseneck's top
+   thread. Drop the second nut into the cup's hex socket and screw the cup (with that nut) onto the thread, turning the
+   cup, until the thread end is flush with the socket nut's top (≤ 0.5 mm above it, VERIFY M12; the thread needs ≥ 9 mm,
+   M1). Then a drop of CA gel on the thread and run the jam nut up against the washer and the floor, holding the cup:
+   the floor is now clamped between the two nuts. If the thread stands proud, cut or file it now and blow out the
+   filings, not after the cable is in.
+3. Cut the Qwiic cable to about 200 mm, keeping the JST-SH end. Slide the PTFE sleeve over the 4 wires. Feed the bare
+   end up through the gooseneck from the pack side and out through the socket nut. Put 15 mm of heat-shrink over the
+   wires where they leave the pack end; at the moon end the heat-shrink (or the PTFE sleeve) stays inside the bore,
+   flush with the thread end (there are only 4 mm above it). The wires leave the bore above the nut, into the 4.5 mm
    space under the board.
 4. Solder G / V / D / C on the LED board (the 2 × 2 pads on its bottom). Cover the joints and 5 mm of wire with
    neutral-cure silicone, and keep the blob **inside r ≈ 8 mm** (the pads end at r 7.7; the cup's ledge starts at
    r 8.35): silicone on the ledge would tilt the board. Let it cure. This is the strain relief.
-5. Lay the LED board in the cup's pocket (Ø18.4, LEDs up; its top stands 0.1 mm proud of the rim land), then put the
+5. Lay the LED board in the cup's pocket (Ø18.4, LEDs up; its top stands 0.4 mm proud of the rim land), then put the
    PETG `moon_ring` on its edge band, chamfer up. Fit the moon: slide its skirt down over the cup with the three
-   entry slots on the cup's lugs, then turn 30° until it stops (the grooves run one way only). The cam pulls the moon
-   down onto the ring; the board must not rattle (VERIFY M5). To remove the moon, **hold the base cup**, so the turn
-   doesn't unscrew the base from the neck.
+   entry slots on the cup's lugs, then turn it **clockwise seen from the top, like a jar lid**, 30° until it stops
+   (the grooves run one way only). The cam pulls the moon down and the ring flexes into the gap above the land: that
+   is the clamp's spring. The board must not rattle (VERIFY M5). **Whenever you turn the moon, hold the cup band
+   below the skirt**, so the twist never reaches the neck thread or the cable.
 
 ## 4. Pack
 1. Put Kapton tape over the top face of the pouch, and a patch on the PCB back under U1, D3 and Q1–Q3.

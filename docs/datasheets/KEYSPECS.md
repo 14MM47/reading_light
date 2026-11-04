@@ -58,6 +58,9 @@ Legend: **OK** means the footprint matches the datasheet. **MISMATCH** or **NOTE
   - The curve is dashed above 30 mA.
   - **G/B cannot be regulated at 20–30 mA from a ~3.4 V rail through a current sink.** They need VF plus the driver knee (see TLC59116).
 
+- Derating (datasheet p4): I_F 30 mA flat to 50 °C ambient, then linear to 10 mA at 85 °C: 25.0 mA at 58.8 °C,
+  24.3 mA at 60 °C (round3 R3-E6). V_F (p2) G/B 3.2 typ / 3.6 max at 20 mA; the p3 curve adds ~+0.09 V at 25 mA.
+
 ## 3. Bridgelux Thrive SMD 2835 0.5 W 3 V: BXEN-27S-11M-3C-00-0-3 and BXEN-50S-11M-3C-00-0-3
 - File: `bridgelux_thrive_2835_0w5_ds312.pdf`. DS312 Rev. E (07/2024), 22 pages.
 - Source: https://www.bridgelux.com/sites/default/files/DS312.pdf
@@ -411,6 +414,10 @@ Legend: **OK** means the footprint matches the datasheet. **MISMATCH** or **NOTE
   02h LED_CONFIG0 (bank enables); 03h–06h bank; **07h–0Ah LED0–LED3_BRIGHTNESS (reset FFh)**;
   **0Bh–16h OUT0–OUT11_COLOR (reset 00h)**; 17h RESET (write FFh = reset all registers). Each LEDx_BRIGHTNESS
   covers three consecutive outputs (LED0 = OUT0–2 … LED3 = OUT9–11).
+- **Colour polarity contradiction (round3 R3-F1):** the OUTx_COLOR field tables (Tables 8-17…8-28, p29–33) say
+  FFh = 0 %, 00h = 100 %; the BANK_x_COLOR tables (p27), the 00h reset default and the power-save text (§8.3.4)
+  imply FFh = 100 %. The design takes FFh = 100 % and zeroes every output in STANDBY before Chip_EN, so either
+  reading is safe; VERIFY E8 checks it. Registers are readable/writable in STANDBY (§8.4, p18).
 - Required parts: 1 µF VCAP → GND and 1 µF VCC → GND, both close to the device; RIREF close to the device.
 - Thermal: RθJA 53.7 °C/W (RUK, JEDEC board), RθJB 27.4 °C/W. Thermal shutdown 160 °C (hysteresis 15 °C).
 

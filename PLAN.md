@@ -57,18 +57,19 @@ Statuses follow the 3dprint convention: **GIVEN** (Matt said it), **ASSUMED** (C
 * **Optics**: a Lambertian source on the wall of a sphere lights its inside uniformly (integrating-sphere geometry).
   The opening in the moon's bottom is the aperture, so the LED depth below it sets the evenness of the low wall.
   Model `docs/design/optics/head_v02.py` (output `head_v02.txt`): v0.2 head, opening r 9.0 (23.7°), emitters 1.2 mm
-  below it: max/min **1.011** one white, **1.002** both whites, **1.037** RGB on the visible wall (v0.1 head:
-  1.068 / 1.063 / 1.054). The round-1 model `sphere_illum.py` is kept for the record. Raising the board above the
+  below it: max/min **1.028** one white, **1.021** both whites, **1.037** RGB on the visible wall, with the RGB package
+  shading the whites (round 3; v0.1 head: 1.068 / 1.063 / 1.054). The round-1 model `sphere_illum.py` is kept for the record. Raising the board above the
   opening gives ≥ 2:1.
-* **Light output**: 4000 K full ≈ 39 lm out of the moon (61 lm of LED flux × ~0.64), **20–30 lux on a page at 25–30 cm**. That is a moon lamp /
+* **Light output**: 4000 K full ≈ 37 lm out of the moon (61 lm of LED flux × ~0.61), **20–30 lux on a page at 25–30 cm**. That is a moon lamp /
   night-reading level, not a full reading light (round1 F6; next-revision option in docs/verification/round1.md §5).
 * **Firmware**: `firmware/` — portable core (`lib/core`) + hardware glue (`src/main.cpp`); modes from
   `tools/gen_modes.py` (CIE 1931 mixing to the Planckian locus).
 * **Mechanics**: lithophane moon (PLA, NASA LROC albedo + LOLA relief → 0.9–2.6 mm wall, relief inside). v0.2 head:
   the moon ends in a Ø25.3 mm skirt that slides over a Ø20.8 mm PETG cup (a slim stem, ~7 % of the sphere given up
-  instead of ~13 %) and locks with an inside-out bayonet (3 lugs on the cup, grooves with a cam in the skirt, 30°
-  twist). A 0.8 mm PETG ring clamps the LED board, so the PLA never touches it. The cup screws onto the gooseneck's
-  M10×1 end. Pack = front shell + back plate + slip-on cantilever clip (PETG).
+  instead of ~13 %) and locks with an inside-out bayonet (3 lugs on the cup, grooves with a cam in the skirt, a 30°
+  clockwise twist). A 0.8 mm PETG ring clamps the LED board, so the PLA never touches it; it rolls into a 0.4 mm gap
+  above the cup's land, which makes the clamp a spring with a set preload (`LOCK_OFFSET`). The cup is jammed between
+  two M10×1 nuts on the gooseneck's end. Pack = front shell + back plate + slip-on cantilever clip (PETG).
 * **Thermal**: three layers. Firmware derating 45/52/58 °C; a 200 mA cap only with a trusted sensor (else 110 mA);
   the MCP9800 hardware thermostat on the LP5012's EN. Detail: docs/design/electronics.md §2.
 
@@ -166,6 +167,28 @@ full duty instead of two at half current) and dim gracefully below ~3.7 V of bat
     effective (v0.1 ~9 µF), so Q4's soft turn-on sees less inrush.
   - Green/Blue can no longer run at a 12.5 mA step (the LP5012 has none): they run at 25 mA peak and fall out of
     regulation below ~3.7 V of battery. Accepted; option R1 3.65 kΩ (20 mA on all channels). VERIFY E9.
+
+- 2026-11-04 — Verification round 3 (3 reviewers on LED board v0.2, its firmware and the slim head;
+  docs/verification/round3.md). Changes adopted:
+  - Clamp: the locked bayonet was line-to-line, so the fit depended on print effects. The cup's land now sits 0.4 mm
+    under the board top (the ring rolls into the gap: a spring), and the locked groove floor stands `LOCK_OFFSET`
+    0.15 mm above the lug: 0.05–0.25 mm preload inside 0.23–0.39 mm of travel for a 0.9–1.1 mm board, checked by claims.
+    `GAP_45` 0.35.
+  - The moon locks clockwise seen from the top (it tightened nothing before and loosened the thread); the cup is jammed
+    between two nuts (the gooseneck end has no shoulder); BOM 2 nuts + a washer per lamp.
+  - Bayonet coupon split into a PETG cup half and a PLA skirt half (the moon's material and process), discs
+    0.9 / 1.0 / 1.1 mm. Ring ID 16.4, printed at 0.12 mm. 0.3 mm skirt lead-in.
+  - CAD pipeline: per-facet wall samples added; area weighting alone had passed a 0.03 mm lip at the moon's groove
+    roofs and a fold at its north pole. Both fixed in the geometry (roofs below the cone line; pole relief faded
+    to the ring mean), with a unit test for the check.
+  - Optics model: RGB package as an occluder and slant-corrected wall area: 1.028 / 1.021 / 1.037, escape 0.61.
+  - LED board: IREF as fixed copper from the pad centres (a 0.106 mm copper neck at the routed joint) and a
+    `connection_width` DRC rule. Accepted for this revision: VCAP/RIREF ground returns of ~22–26 mm round the I²C
+    bundle (DC error ~0.2 %; VERIFY E18 scopes VCAP; EP vias + a GND jumper next revision).
+  - Firmware: outputs zeroed in standby before Chip_EN; CONFIG and output registers read back every second; the
+    thermostat hold no longer counts towards a power-cycle; the first reading after init sets the derate at once;
+    a sensor that has risen 1 °C under load keeps its trust at equilibrium (no "breathing"); 32 host tests.
+  - Green/blue headroom stated for the worst die (~4.05–4.15 V needed); VERIFY E9 measures the received dies first.
 
 ## 5. Open questions / VERIFY
 

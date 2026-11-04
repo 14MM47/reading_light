@@ -41,7 +41,7 @@ REV = max(BREV.values())          # the lamp build is named after its newest boa
 BUILD = f"v{REV} (main board v{BREV['main-board']}, LED board v{BREV['led-board']})"
 PRINT_GROUPS = [   # (folder, title, parts) in print order
     ("1-coupons-print-first", "Coupons: print and check these first (fits, bayonet, lithophane contrast)",
-     ["coupon_fit", "coupon_bayonet", "coupon_litho_wedge"]),
+     ["coupon_fit", "coupon_bayonet_cup", "coupon_bayonet_skirt", "coupon_litho_wedge"]),
     ("2-moon-head", "Moon head: lithophane moon, LED base cup, PETG clamp ring",
      ["moon_shell", "moon_base", "moon_ring"]),
     ("3-pack", "Pack: front shell, back plate, book clip, button caps",
@@ -199,6 +199,8 @@ def main():
     B.pdf(Path("docs/verification/round1.md"), Path("00-overview/open-decisions-and-round1-summary.pdf"),
           "Verification round 1")
     B.pdf(Path("docs/design/led-board-v0.2.md"), Path("00-overview/what-changed-in-v0.2.pdf"), "What changed in v0.2")
+    B.pdf(Path("docs/verification/round3.md"), Path("00-overview/verification-round3-and-open-decisions.pdf"),
+          "Verification round 3")
 
     # ---------------------------------------------------------------- 01 PCB manufacture
     B.pdf(Path("docs/handoffs/01-pcb-order.md"), Path("01-pcb-manufacture/handoff-01-pcb-order.pdf"), "Handoff 01")
@@ -377,15 +379,17 @@ overhangs. Every printed part passes the 3dprint-contract checks ({len(prows)} p
 pass, and all five builds compile.
 
 ## Decisions still open for Matt
-See `00-overview/open-decisions-and-round1-summary.pdf` §5. In short:
-1. Reading brightness is 20–30 lux on the page, which suits a moon lamp, not a full reading light. v0.2 option: a
-   downward reading LED.
-2. No cell-temperature sensing on the charger, so charge at room temperature. v0.2 option: an NTC charger.
-3. Soft-orange night mode includes some warm white (recommended: keep it).
-4. Green/blue drift at low battery: worse with the LP5012 (no per-channel current step), accepted; option R1
-   3.65 kΩ (20 mA on every channel, −20 % white).
-5. LED board assembly: the LP5012 is a 0.4 mm-pitch WQFN. Hand assembly needs a stencil and a hot plate; the
+See `00-overview/verification-round3-and-open-decisions.pdf`, last section. In short:
+1. LED board assembly: the LP5012 is a 0.4 mm-pitch WQFN. Hand assembly needs a stencil and a hot plate; the
    recommendation is fab assembly of that board's bottom face (`02-parts-order/assembly-routes-cost-comparison.pdf`).
+2. Green/blue headroom: keep R1 2.94 kΩ (recommended; decide after VERIFY E9 measures the received dies) or 3.65 kΩ
+   (20 mA on every channel, −20 % white).
+3. LP5012 VCAP/RIREF ground returns run ~22–26 mm: order as is and scope it (VERIFY E18, recommended) or re-lay the
+   board centre first.
+4. The LED board is not keyed and may turn ±30° with the moon (recommended: accept).
+5. Carried over: reading brightness 20–30 lux (a downward reading LED in the next revision); no cell-temperature
+   sensing on the charger, so charge at room temperature (an NTC charger in the next revision); soft-orange night
+   mode includes some warm white (recommended: keep it).
 
 ## Safety rules that apply to every step
 - Meter the battery lead before plugging it in: + goes to J2 pin 1 (silk "+").
@@ -489,7 +493,7 @@ Built from commit `{commit}`. Instructions: `handoff-04-firmware.pdf`.
 3. Power the board from its own battery (slide switch ON). **Never from the programmer.** J4 pins: 1 VREF (sense
    only), 2 UPDI, 3 TX, 4 GND.
 
-`source/firmware-source-*.zip` is the complete PlatformIO project: the portable core, 29 host tests and the mode
+`source/firmware-source-*.zip` is the complete PlatformIO project: the portable core, 32 host tests and the mode
 generator. Rebuild and test it with `pio test -e native && pio run`.
 """
 
@@ -519,8 +523,9 @@ Things that are easy to get wrong (all covered in the handoff):
     the fab assemble that face).
 - **SW1 (slide switch) by iron only.** It is rated 255 °C max.
 - **Battery:** meter the polarity, then pass the plug up through the 6.4 × 5.0 mm slot beside J2.
-- **Moon base:** file the gooseneck thread flush with the nut, and put a Kapton disc over U1 on the LED board's
-  underside. The moon's skirt slides over the cup and turns 30° to lock; hold the cup when you turn it.
+- **Moon base:** jam the cup between the socket nut and a washer + second nut, with the thread cut flush with the
+  socket nut before the cable goes in; put a Kapton disc over U1 on the LED board's underside. The moon's skirt slides
+  over the cup and turns **clockwise** (seen from the top) 30° to lock; hold the cup band when you turn it.
 - **Cable colours:** black GND, red VLED, blue SDA, yellow SCL. They go to the LED-board pads G / V / D / C.
 """
 

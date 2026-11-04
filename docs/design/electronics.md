@@ -65,13 +65,20 @@ Design note for the redesign: `docs/design/led-board-v0.2.md`. Datasheet extract
   brightness that still shows the strongest group (colours keep 7–8 bits for the mix ratios) with hysteresis, and
   writes are ordered so the in-between state is never brighter than either end (host-tested in `lib/core`). Level 0
   (0.4 % of full) is brightness 2 × colour 130: the minor channels of mixed modes quantise only near the bottom.
-* Headroom: V_LED − V_f ≥ V_SAT (0.25 V typ, 0.35 V max at 20 mA) for full current. White (~2.75 V at 25 mA) and red
-  (~2.1 V): regulated over the whole battery range. **Green/blue (Würth, 3.2–3.6 V at 20–25 mA)**: regulated above
-  V_LED ≈ 3.65 V typical. The LP5012 has no per-channel current step (the TLC59116 design ran G/B at a 12.5 mA step),
+* Headroom: V_LED − V_f ≥ V_SAT (0.25 V typ, 0.35 V max at 20 mA; unspecified at 25 mA, likely ~0.3–0.45 V) for
+  full current. White (~2.75 V, max ~2.92 V at 25 mA) and red (~2.1 V): regulated down to the 3.45 V low-battery
+  threshold. **Green/blue (Würth, 3.2–3.6 V at 20 mA, ~+0.09 V at 25 mA)**: a typical die is regulated above
+  V_LED ≈ 3.65 V; a maximum-V_F die needs ~4.05–4.15 V, above VLED on USB and on a full cell after the path drop, so
+  it is never fully regulated (round3 R3-E3). The LP5012 has no per-channel current step (the TLC59116 design ran G/B at a 12.5 mA step),
   and PWM cannot lower the 25 mA peak, so the Green and Blue modes now run at full duty: below ~3.7 V of battery
-  they dim gracefully, and the small G/B share of the mixed whites drifts slightly warm/magenta in the last ~30 % of
-  the battery. Accepted (next-revision option: RIREF 3.65 kΩ = 20 mA for every channel). Bench check: VERIFY E9.
-* Supply current: ~4–6 mA while any LED is on, ≤ 10 µA in power-save (all outputs 0 for 30 ms) and standby; the
+  (typical dies) they dim gracefully, and the small G/B share of the mixed whites drifts slightly warm/magenta in
+  the last ~30 % of the battery, or over most of it with a high-V_F die. Accepted; measure the received dies' V_F
+  first (VERIFY E9). Remedy if they sit high: RIREF 3.65 kΩ (20 mA for every channel, −20 % white) or a known V_F bin.
+* Würth RGB derating (datasheet p4): 30 mA flat to 50 °C ambient, then linear to 10 mA at 85 °C (25.0 mA at 58.8 °C,
+  24.3 mA at 60 °C). The firmware derating (×0.3 at 52 °C) keeps the average far inside it; only a hung MCU holding
+  G or B at 100 % between 58 and 60 °C would exceed it by 3–8 % (a double fault).
+* Supply current: 4 mA typ / 6 mA max with 10 mA per output (SLVSEH2B §7.5); §8.4 says NORMAL is 10 mA typical, so
+  budget 4–10 mA while any LED is on (VERIFY E7). ≤ 10 µA in power-save (all outputs 0 for 30 ms) and standby; the
   TLC59116 drew up to 29 mA. That multiplies the night-light runtime (§3).
 * **One RGB LED** at the board centre (v0.1 had two): colour and night modes are about half as bright (red night
   1.1 lm, candle 2.4 lm, 6500 K 30 lm instead of 40 lm, because blue now sets the limit there); the whites are
@@ -88,7 +95,9 @@ Design note for the redesign: `docs/design/led-board-v0.2.md`. Datasheet extract
      (it reads Chip_EN every second). EN has a 2.4 kΩ pull-up (round2 R2-E5), an 0402 on the board's TOP face in the
      gap between D1 and D2 (no room left on the bottom). MCP9800 POR defaults (80/75 °C) are a looser backstop until
      the firmware programs it.
-* Recovery: 2 s watchdog; DEVICE_CONFIG0 read-back every 1 s (Chip_EN = 0 → re-init). After 4 failed inits the
+* Recovery: 2 s watchdog; every 1 s the firmware reads back DEVICE_CONFIG0/1 (Chip_EN = 0 or a changed CONFIG1 →
+  re-init, which zeroes every output in standby before Chip_EN) and the 16 output registers (any difference → full
+  rewrite: a corrupted I²C burst no longer persists; round3 R3-F1/F2). After 4 failed inits the
   firmware writes the LP5012 RESET register (17h = FFh), then power-cycles the LED board through Q4, unless the
   thermostat is what holds it off. During the off time it drives SDA/SCL low, so VLED bleeds through the 3.3 k
   pull-ups (200 ms off) to well below the LP5012's 2.0 V UVLO (round2 R2-E2).
@@ -96,13 +105,13 @@ Design note for the redesign: `docs/design/led-board-v0.2.md`. Datasheet extract
 ## 3. Runtime estimates (1200 mAh, ~4.4 Wh usable to 3.3 V)
 
 LED current comes straight from the cell (linear sinks); the electronics (MCU idle-sleeping between 1 ms ticks,
-LP5012 4–6 mA, MCP9800 0.2 mA) add about 7 mA while the light is on.
+LP5012 4–10 mA, MCP9800 0.2 mA) add about 7–12 mA while the light is on.
 
 | Use | Battery current (approx.) | Runtime |
 |---|---|---|
 | 4000 K at full (177.5 mA LEDs at 25.0 mA/ch; derating may trim it once warm) | ~185 mA | ~6.5 h |
 | Soft white at level 10 (16 % of full: ~19 mA LEDs) | ~26 mA | ~45 h |
-| Red night light, level 4 (~0.4 mA LED) | ~8 mA (electronics-dominated) | ~150 h |
+| Red night light, level 4 (~0.4 mA LED) | ~8–12 mA (electronics-dominated) | ~100–150 h (VERIFY E7) |
 | Empty-battery sleep (LED board off via Q4, MCU power-down + PIT) | ≤ ~30 µA (VERIFY F4) | months before the PCM cut-off |
 | Switched off | ≤ ~10 µA incl. cell PCM | years (self-discharge dominates) |
 

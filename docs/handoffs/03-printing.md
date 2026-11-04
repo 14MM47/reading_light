@@ -6,16 +6,17 @@
 The print-ready files are `print/<part>.stl` and `print/<part>.3mf`. The geometry is already in print orientation,
 so don't let the slicer re-orient it. Settings, sizes and check results: [`print/README.md`](../../print/README.md)
 (generated). Every part builds PASS through the 3dprint-contract checks. The moon head is the v0.2 design
-(2026-11-03, `docs/design/led-board-v0.2.md` §6): the moon's Ø25.3 mm skirt slides over a slim Ø20.8 mm cup and
-locks with an inside-out bayonet (lugs on the cup, grooves in the skirt).
+(2026-11-03, `docs/design/led-board-v0.2.md` §6; round 3: clamp spring, clockwise lock, jam nut): the moon's Ø25.3 mm
+skirt slides over a slim Ø20.8 mm cup and locks with an inside-out bayonet (lugs on the cup, grooves in the skirt).
 
 | Order | Part | Material | Process | Notes |
 |---|---|---|---|---|
 | 1 | `coupon_fit` | PETG | 0.20 mm | Gooseneck self-tap socket trials (9.1–9.5 mm) and button-cap holes (7.2–7.6 mm); dots index the sizes |
-| 2 | `coupon_bayonet` | PETG | 0.16 mm | Two pieces: the cup's top and the moon's real skirt and clamp cone. Put an 18 mm × 1.0 mm disc (or a bare LED board) and a `moon_ring` in the cup, slide the skirt over, lugs into the slots, turn 30°: it should pull down onto the ring without forcing and hold the disc without rattle (VERIFY M4, M5) |
+| 2a | `coupon_bayonet_cup` | PETG | 0.16 mm | The cup's top (pocket, land, lugs), cut on one of the real cup's layer boundaries |
+| 2b | `coupon_bayonet_skirt` | **white PLA** (the moon's spool) | 0.12 mm, 6 walls, 100 % infill, 3 mm brim | The moon's real skirt, grooves, clamp cone and bore, in the moon's own material so the fit is the real one. Test: an 18 mm disc (or a bare LED board) and a `moon_ring` in the cup, slide the skirt over, lugs into the slots, turn **clockwise** (seen from the top) 30° until it stops. It must lock by hand without forcing, show no whitening at the groove ends, and hold the disc without rattle. Repeat with 0.9, 1.0 and 1.1 mm discs (the board's ±10 %). Tune `LOCK_OFFSET` (VERIFY M4, M5) |
 | 3 | `coupon_litho_wedge` | **white PLA** (the moon's spool) | 0.12 mm | 0.6–3.0 mm steps. Backlight it with the LED board for VERIFY O1 |
 | 4 | `moon_base` | PETG | 0.16 mm | Upright, no supports. The lugs' 45° faces print without support |
-| 5 | `moon_ring` | PETG | 0.20 mm | 0.8 mm clamp ring (4 layers) with a 45° chamfer on the top outer edge (chamfer up). Keeps the PLA moon off the warm LED board (round1 F5). **Do not print it in PLA**. Print two: one for the coupon |
+| 5 | `moon_ring` | PETG | **0.12 mm** | 0.8 mm clamp ring (0.2 + 5 × 0.12 mm layers), ID 16.4, 45° chamfer on the top outer edge (chamfer up). It is the clamp's spring: it rolls over the board edge into the 0.4 mm gap above the cup's land. Keeps the PLA moon off the warm LED board (round1 F5). **Do not print it in PLA**. Print three: one for the coupon, one spare |
 | 6 | `pack_front` | PETG | 0.20 mm | Face down |
 | 7 | `pack_back` | PETG | 0.20 mm | Outer face down |
 | 8 | `pack_clip` | PETG | 0.20 mm | Flat, layers along the arm |
