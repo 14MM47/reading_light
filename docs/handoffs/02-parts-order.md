@@ -6,12 +6,13 @@
    spares). Read `bom/ORDER.md` first: it is the human summary, with indicative totals.
 2. Farnell UK (uk.farnell.com, or CPC for personal accounts): use **Quick Paste / BOM upload** with
    `bom/farnell_quickpaste.txt` (order code or MPN, quantity). Lines marked "(search MPN)" need their Farnell code
-   picked on the site — choose the exact MPN; if out of stock, any 0603 1 % thick-film resistor of the same value,
-   or an X5R/X7R ceramic of the same value, voltage ≥ listed and the same case size, is fine.
+   picked on the site — choose the exact MPN; if out of stock, any 1 % thick-film resistor of the same value **and
+   the same case size** (0603 on the main board, **0402** for R1/R2 on the LED board), or an X5R/X7R ceramic of the
+   same value, voltage ≥ listed and the same case size, is fine.
 3. Check stock on: Bridgelux BXEN 2700 K (3498849 — only a few hundred were listed) and MCP9800A0T-M/OT (1439485).
    If BXEN 2700 K is out, use BXEN-27S-11M-3C at any flux bin. The MCP9800 must be the **A0** address variant in
-   **SOT-23-5** (the MCP9801–03 are 8-pin, a different footprint); there is no drop-in from another maker on this
-   footprint, so if it is out, wait or buy from DigiKey/Mouser.
+   **SOT-23-5**. If it is out, the **MCP9802A0T-M/OT** is a drop-in (same SOT-23-5 pinout, address and registers; it
+   adds a 35 ms bus time-out, which is harmless here). The MCP9801/03 are 8-pin parts and do not fit.
 4. DigiKey UK (digikey.co.uk): the **TI LP5012RUKR** (WQFN-20, cut tape), which Farnell and RS do not stock;
    `bom/digikey_order.csv` / ORDER.md §1b. Make sure the suffix is **RUK** (WQFN): the LP5012PWR is the TSSOP-24
    and does not fit. If you choose fab assembly for the LED board (handoff 01), let the fab source it (LCSC) or

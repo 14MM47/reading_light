@@ -52,7 +52,8 @@ PRINT_GROUPS = [   # (folder, title, parts) in print order
 FW_ENVS = [("release", "attiny3216", "Flash this into the lamp."),
            ("debug", "attiny3216_debug", "Same, plus a 115200-baud log on J4 pin 3 (bring-up, VERIFY F-items)."),
            ("bench-only/fault-sensor-nack", "bench_t_nack", "VERIFY T5a only: pretends the temperature sensor is dead."),
-           ("bench-only/fault-sensor-stuck", "bench_t_stuck", "VERIFY T5b only: pretends the sensor reads 25 C forever.")]
+           ("bench-only/fault-sensor-stuck", "bench_t_stuck", "VERIFY T5b only: pretends the sensor reads 25 C forever."),
+           ("bench-only/thermostat-30C", "bench_tstat_low", "VERIFY E17 only: hardware thermostat trips at 30 C, releases at 28 C.")]
 
 CSS = """
 body { font-family: "DejaVu Sans", Arial, sans-serif; font-size: 10.5pt; line-height: 1.42; color: #1b1b1b;
@@ -150,7 +151,7 @@ def print_rows():
 
 
 def firmware_hex():
-    """Build the four envs with PlatformIO if it is available; otherwise use existing builds if they are current."""
+    """Build every FW_ENVS env with PlatformIO if it is available; otherwise use existing builds if they are current."""
     fw = ROOT / "firmware"
     pio = os.environ.get("PIO") or shutil.which("pio") or shutil.which("platformio")
     if pio:     # PlatformIO's incremental build leaves each hex current with its inputs
@@ -371,7 +372,7 @@ with the TI LP5012 driver, one RGB LED, the slim moon head, and a corrected opti
 
 The main board's 2 DRC warnings are intended: the slide-switch outline crosses the board edge where its knob
 overhangs. Every printed part passes the 3dprint-contract checks ({len(prows)} parts). The firmware's host tests
-pass, and all four builds compile.
+pass, and all five builds compile.
 
 ## Decisions still open for Matt
 See `00-overview/open-decisions-and-round1-summary.pdf` §5. In short:

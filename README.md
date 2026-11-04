@@ -2,7 +2,7 @@
 
 A clip-on book light: a slim pack clips to the back cover of a book, a ~12 cm plastic-sleeved metal gooseneck rises
 from its top, and a 50 mm 3D-printed lithophane moon at the end glows from LEDs in its base. One slide switch turns
-it on and off; a main button cycles ten light modes (tunable CRI-97 whites from 1900 K candle to 6500 K, red/orange
+it on and off; a main button cycles ten light modes (CRI-97 tunable whites from 2700 K to 5000 K, 6500 K and a 1900 K candle mixed with the RGB LED, red/orange
 night lights, green, blue); up/down buttons set brightness; holding the main button for 2 s saves the current
 colour and brightness as the power-on default. USB-C charging, 1200 mAh LiPo.
 

@@ -71,7 +71,9 @@ OTHER = [
 TOOLS = [
     dict(item="UPDI programmer: Microchip MPLAB SNAP (PG164100)", supplier="Farnell", code="2915518", gbp=15.0,
          note="Or a 3.3 V USB-UART (FTDI TTL-232R-3V3, Farnell 1329311) + 470 R for SerialUPDI."),
-    dict(item="Stencils (PCBWay/JLCPCB, frameless) for both boards", supplier="with the PCB order", code="", gbp=10.0, note=""),
+    dict(item="Stencils (PCBWay/JLCPCB, frameless): main top 0.12 mm, LED board top 0.12 mm + bottom 0.10 mm",
+         supplier="with the PCB order", code="", gbp=12.0,
+         note="Skip the LED bottom stencil if the fab assembles that face."),
 ]
 
 
@@ -189,14 +191,18 @@ def main():
     for t in TOOLS:
         md.append(f"| {t['item']} | {t['supplier']} | {t['code']} | {t['gbp']:.2f} | {t['note']} |")
     md += ["", "## 4. PCBs (handoff 01; route comparison in `bom/assembly_routes.md`)", "",
-           "Recommended route 1: 5 main + 5 LED bare boards with stencils from PCBWay (≈ £40–60 incl. shipping), or",
-           f"JLCPCB (≈ £15–35). Upload `fab/main-board/v{revs['main-board']}/main-board-v{revs['main-board']}-gerbers.zip` and "
+           "Main board: 5 bare boards with a stencil, hand assembly (route 1). LED board: 5 boards with the **bottom",
+           "face (U1 LP5012 WQFN, U2, R1, C1–C4) assembled by JLCPCB (Economic, ≈ £10–25 incl. extended-part fees)**,",
+           "then hand-fit the top; or bare with both stencils if you already do QFNs. Boards with stencils: PCBWay",
+           f"≈ £40–60 incl. shipping, JLCPCB ≈ £15–35. Upload `fab/main-board/v{revs['main-board']}/main-board-v{revs['main-board']}-gerbers.zip` and "
            f"`fab/led-board/v{revs['led-board']}/led-board-v{revs['led-board']}-gerbers.zip`, and copy the specs from each",
            "`FAB_NOTES.md`.", "",
-           "## 5. Total for this build (route 1)", "",
+           "## 5. Total for this build (main board by hand, LED board bottom face by JLCPCB)", "",
            f"Farnell ≈ £{total * 1.2:.0f} + DigiKey ≈ £{dk_total * 1.2 + 12:.0f} + other ≈ £{other:.0f} + programmer ≈ "
-           f"£{tools:.0f} (if needed) + PCBs ≈ £15–60 → **≈ £{total * 1.2 + dk_total * 1.2 + other + 15:.0f}–"
-           f"{total * 1.2 + dk_total * 1.2 + 12 + other + tools + 60:.0f} for {n} lamps.**", ""]
+           f"£{tools:.0f} (if needed) + PCBs ≈ £15–60 + LED bottom-face assembly ≈ £10–25 → "
+           f"**≈ £{total * 1.2 + dk_total * 1.2 + other + 15 + 10:.0f}–"
+           f"{total * 1.2 + dk_total * 1.2 + 12 + other + tools + 60 + 25:.0f} for {n} lamps.** "
+           "(If the fab sources the LP5012 from LCSC, drop the DigiKey line.)", ""]
     (ROOT / "bom" / "ORDER.md").write_text("\n".join(md))
     print(f"{len(rows)} Farnell lines, indicative GBP {total:.2f} ex VAT for {n} lamps (+ spares); {len(others)} non-Farnell "
           f"lines GBP {dk_total:.2f}; other purchases ~GBP {other:.2f}")

@@ -79,14 +79,16 @@ Order these from the supplier named (`bom/digikey_order.csv`): DigiKey UK ships 
 | Item | Supplier | Code | GBP | Note |
 |---|---|---|---|---|
 | UPDI programmer: Microchip MPLAB SNAP (PG164100) | Farnell | 2915518 | 15.00 | Or a 3.3 V USB-UART (FTDI TTL-232R-3V3, Farnell 1329311) + 470 R for SerialUPDI. |
-| Stencils (PCBWay/JLCPCB, frameless) for both boards | with the PCB order |  | 10.00 |  |
+| Stencils (PCBWay/JLCPCB, frameless): main top 0.12 mm, LED board top 0.12 mm + bottom 0.10 mm | with the PCB order |  | 12.00 | Skip the LED bottom stencil if the fab assembles that face. |
 
 ## 4. PCBs (handoff 01; route comparison in `bom/assembly_routes.md`)
 
-Recommended route 1: 5 main + 5 LED bare boards with stencils from PCBWay (≈ £40–60 incl. shipping), or
-JLCPCB (≈ £15–35). Upload `fab/main-board/v0.1/main-board-v0.1-gerbers.zip` and `fab/led-board/v0.2/led-board-v0.2-gerbers.zip`, and copy the specs from each
+Main board: 5 bare boards with a stencil, hand assembly (route 1). LED board: 5 boards with the **bottom
+face (U1 LP5012 WQFN, U2, R1, C1–C4) assembled by JLCPCB (Economic, ≈ £10–25 incl. extended-part fees)**,
+then hand-fit the top; or bare with both stencils if you already do QFNs. Boards with stencils: PCBWay
+≈ £40–60 incl. shipping, JLCPCB ≈ £15–35. Upload `fab/main-board/v0.1/main-board-v0.1-gerbers.zip` and `fab/led-board/v0.2/led-board-v0.2-gerbers.zip`, and copy the specs from each
 `FAB_NOTES.md`.
 
-## 5. Total for this build (route 1)
+## 5. Total for this build (main board by hand, LED board bottom face by JLCPCB)
 
-Farnell ≈ £47 + DigiKey ≈ £15 + other ≈ £83 + programmer ≈ £15 (if needed) + PCBs ≈ £15–60 → **≈ £149–221 for 2 lamps.**
+Farnell ≈ £47 + DigiKey ≈ £15 + other ≈ £83 + programmer ≈ £15 (if needed) + PCBs ≈ £15–60 + LED bottom-face assembly ≈ £10–25 → **≈ £159–246 for 2 lamps.** (If the fab sources the LP5012 from LCSC, drop the DigiKey line.)

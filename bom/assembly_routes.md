@@ -27,7 +27,8 @@ TSSOP/0603):
 - *Route 1, if you are set up for QFN work*: 0.10 mm bottom stencil, paste, place U1/U2/R1/C1–C4, hot plate (or hot air
   with preheat); inspect U1's corner pins with a loupe and check for EP bridging by continuity (handoff 05). Then the top:
   0.12 mm stencil or paste dots, D1–D9 and R2, hot air at low flow (the bottom parts stay put on surface tension).
-  Order 5 boards and enough parts for 3–4 attempts (the BOM spares cover this).
+  Order 5 boards; the BOM buys one spare LP5012 (3 for 2 lamps), so add 2–3 more (~£1 each) if this is your
+  first WQFN.
 - *Route 2 at JLCPCB for the LED board only, bottom side Economic* (U1, U2, R1, C1–C4; ~£10 + extended-part fees),
   then hand-fit the top: eight 2835s, one PLCC-4 and the 0402 R2 (easy with an iron and fine tweezers). Fill the
   LCSC column of `fab/led-board/v0.2/bom_jlcpcb.csv` from their part search. If LCSC has no LP5012RUKR, consign the

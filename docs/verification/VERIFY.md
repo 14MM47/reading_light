@@ -23,14 +23,14 @@ Tick an item by noting the measured value and the date here.
 | F2 | Silicon revision (FW-12) | Debug build prints `SYSCFG.REVID` (add one line), or read it with the programmer | Any revision: the RTC is enabled for the PIT anyway | — |
 | F3 | VDD reading (m-9, FW-08) | Debug serial `V=` vs a meter on VSYS at 3.5, 3.8, 4.1 V (bench supply on J2) | Within ±50 mV | Add a calibration factor (measured / read) to `config.h` and scale `vdd_mv()` |
 | F4 | Empty sleep and resume | Bench supply on J2 down to 3.25 V for 6 s → fades out and sleeps. Then measure the sleep current. Raise it to 3.8 V or plug in USB | Sleep ≤ 30 µA (LED board unpowered); wakes in 3–5 s | Check PB2/Q4; check the PIT wake (F2) |
-| F5 | LED-board recovery (m6) | Unplug and replug J3 with the lamp on | Light returns within ~3 s | Debug log: `lp_ok` / LP5012 DEVICE_CONFIG0 (Chip_EN) |
+| F5 | LED-board recovery (m6) | Unplug and replug J3 with the lamp on | Light returns within ~3 s | Debug log: `lp=` must return to `1C` and `ts=` to 1 |
 | F6 | Button feel | Press, hold 2 s, auto-repeat | Matches R5–R8 | Tune `DEBOUNCE_MS`, `REPEAT_*` in `lightcore.h` |
 
 ## 3. Electrical characterisation
 
 | # | Item | How | Pass | If not |
 |---|---|---|---|---|
-| E7 | LP5012 + MCP9800 supply current (LED board v0.2) | VLED 4.20 V, current into J3 pin 2: (a) all outputs at 0 for > 30 ms (power save), (b) one output on | (a) ≤ 0.3 mA (LP5012 ≤ 10 µA + MCP9800 ≤ 0.2 mA + the 3.3 k pull-ups), (b) ≤ 6 mA + the LED current | Recompute the runtimes with the measured value |
+| E7 | LP5012 + MCP9800 supply current (LED board v0.2) | VLED 4.20 V, current into J3 pin 2: (a) all outputs at 0 for > 30 ms (power save), (b) one output on | (a) ≤ 0.45 mA (LP5012 ≤ 10 µA + MCP9800 ≤ 0.4 mA max, 0.2 mA typ; the idle bus draws nothing through the 3.3 k pull-ups), (b) ≤ 6 mA + the LED current | Recompute the runtimes with the measured value |
 | E8 | Channel current (RIREF 2.94 kΩ) | 1 Ω in series with one white LED, colour 255 × brightness 255 (100 %) | 25.0 mA ± 5 % | Check R1 (0402 on the LED board's bottom); update `I_CHANNEL_MA` *and* the tests |
 | E9 | G/B regulation (M1, F10; v0.2) | Green mode at max, VLED swept 4.2 → 3.4 V. Scope across 1 Ω in series with the G die: read the **peak**, not the average (PWM). The LP5012 has no per-channel current step, so G/B always run at the 25 mA peak | Peak 25 mA, held down to VLED ≈ 3.65 V (VF 3.3 V + VSAT 0.35 V) | Accept (G/B dim gracefully below that), or RIREF 3.65 kΩ (20 mA for every channel) |
 | E10 | Charge current | USB in, cell at ~3.7 V: current into J2 | 256 mA ± 10 % | Check R3 3.9 k |
@@ -40,7 +40,7 @@ Tick an item by noting the measured value and the date here.
 | E14 | F1 PTC when warm (round2 R2-E3) | USB in, charging, 4000 K full for 30 min, pack closed; contact thermometer on F1 | No trip; F1 ≤ 60 °C | Move F1 away from U1/D3 in v0.2 |
 | E15 | VSYS on USB (round2 note) | USB in, 4000 K full: meter TP3; then let the lamp reach empty sleep on a weak USB source | VSYS ≥ 3.9 V; wakes from empty sleep on USB | Lower `VBAT_RESUME_MV` to 3600 in `lightcore.h` |
 | E16 | LP5012 WQFN-20 joints (LED board v0.2) | After both reflows: diode-test every LED from the exposed end of its cathode pad (handoff 05 §2.3; the vias are tented); then power up and read DEVICE_CONFIG1 (debug log) | Every LED glows at the diode test and lights in its mode at first light; the read-back is 0x1C (`lp=1C`) | Dark at the diode test = LED reversed or open on top. Dark only at first light = an open OUTx joint under U1: reflow with flux. No I2C answer at all (`lp=--`) = EP (GND), VCC or SDA/SCL joint |
-| E17 | Thermostat path (v0.2) | Debug build: write TSET 30 °C to the MCP9800 at room temperature (or warm U2 with a finger) | ALERT pulls EN low, all LEDs off; the firmware re-initialises the LP5012 once ALERT releases | Check R2 (0402 on the TOP face, NE gap) and U2 pin 3 |
+| E17 | Thermostat path (v0.2) | Flash `bench_tstat_low` (TSET 30 °C / THYST 28 °C, debug log on; **bench only**). At room temperature the lamp lights; warm U2 with a fingertip or a hair dryer until `T=` passes 30 °C | ALERT pulls EN low within ~0.5 s: all LEDs off, `lp=--`. Below 28 °C the firmware re-initialises the LP5012 and the light returns. **Reflash the release build afterwards** | Check R2 (0402 on the TOP face, NE gap) and U2 pin 3 |
 
 ## 4. Thermal (thermal review §7; thermocouples TC1 board top, TC2 LP5012, TC3 PLA skirt, TC4 PLA dome, TC7 cup)
 

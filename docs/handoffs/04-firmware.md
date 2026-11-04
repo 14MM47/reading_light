@@ -39,8 +39,9 @@
 6. **VDD calibration check (VERIFY F3).** With the debug build, compare `V=` against a meter on TP3 (VSYS) at about
    3.5, 3.8 and 4.1 V. Use a bench supply on J2, or a cell at those states. If the error is more than ±50 mV, ask
    Claude to add a calibration factor to `config.h` (`vdd_mv()` scales by it).
-7. **Bench fault builds (thermal tests T5a/T5b only):** `-e bench_t_nack` fakes a dead sensor, and `-e bench_t_stuck`
-   fakes a frozen 25 °C reading. **Reflash the release build afterwards.**
+7. **Bench fault builds (VERIFY T5a/T5b/E17 only):** `-e bench_t_nack` fakes a dead sensor, `-e bench_t_stuck`
+   fakes a frozen 25 °C reading, and `-e bench_tstat_low` sets the hardware thermostat to 30/28 °C so a warm finger
+   on U2 trips it. **Reflash the release build afterwards.**
 8. **Mode tuning:** after the LEDs are fitted, measure the whites with a spectrometer, or roughly with a phone colour
    meter (VERIFY O6/O7). Put the measured xy and lumens into `LED` in `firmware/tools/gen_modes.py`, then run
    `python3 firmware/tools/gen_modes.py` and rebuild. Never edit `include/modes_table.h` or `include/board_map.h`

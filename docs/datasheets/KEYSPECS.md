@@ -1,6 +1,7 @@
 # KEYSPECS: datasheet facts for schematic/footprint review
 
-Folder: `/tmp/claude-0/-home-user/7ba8e87c-d4ee-5a66-9891-51bde4e0a9a7/scratchpad/ds/` (each PDF has a `pdftotext -layout` `.txt` beside it).
+Datasheets were downloaded from the URL given in each section and read with `pdftotext -layout` (the PDFs are not
+committed; re-download from those URLs).
 KiCad libs checked: `/usr/share/kicad/footprints` (pad numbers, positions and sizes read from the `.kicad_mod` files).
 Convention: KiCad `Device:LED` and `Device:D*` symbols use pin 1 = K and pin 2 = A.
 Legend: **OK** means the footprint matches the datasheet. **MISMATCH** or **NOTE** means a reviewer must check it.
@@ -401,8 +402,9 @@ Legend: **OK** means the footprint matches the datasheet. **MISMATCH** or **NOTE
   Duty = OUTx_COLOR (8-bit) × LEDx_BRIGHTNESS (8-bit), linear or log (Log_Scale_EN).
 - Supply current: normal ~4 mA typ / 6 mA max at 10 mA per output (modes text: 10 mA typ); power-save
   (all LEDs off > 30 ms) 6–10 µA; standby (Chip_EN = 0) 6–10 µA; shutdown (EN low) 0.2 / 1 µA.
-- EN: EN low → SHUTDOWN from any state; EN high → INITIALIZATION, **all registers reset**. First I2C access
-  ≤ 500 µs after the EN rising edge (tEN_H). The thermostat (MCP9800 ALERT, open drain) pulls EN low.
+- EN: EN low → SHUTDOWN from any state; EN high → INITIALIZATION, **all registers reset**. tEN_H (EN rising
+  edge until first I2C access) is listed as 500 µs max: the device is ready by then, so the host waits ≥ 500 µs
+  (the firmware waits 10 ms). The thermostat (MCP9800 ALERT, open drain) pulls EN low.
 - I2C: up to 400 kHz. Address 0010 1 A1 A0 → **0x14** with ADDR1 = ADDR0 = GND. Broadcast 0x0C.
 - Registers: 00h DEVICE_CONFIG0 (bit 6 Chip_EN, reset 0); 01h DEVICE_CONFIG1 (reset 3Ch: b5 Log_Scale_EN,
   b4 Power_Save_EN, b3 Auto_Incr_EN, b2 PWM_Dithering_EN, b1 Max_Current_Option, b0 LED_Global_Off);

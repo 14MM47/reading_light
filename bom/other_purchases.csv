@@ -13,4 +13,4 @@ Neutral-cure silicone (or E6000): strain relief over the LED-board wire joints a
 "Kapton (polyimide) tape 10-20 mm: over the pouch under the PCB, under U1/D3/Q1-Q3, and a disc over the LED board's LP5012 (faces the gooseneck's metal end)",1,any,,,3.00,One roll covers many builds (round1 B-2).
 USB-C charger >= 1 A at 5 V (if you don't have one),1,any,,,0.00,The lamp can draw ~0.5-0.6 A while charging with the light on (round1 M4).
 UPDI programmer: Microchip MPLAB SNAP (PG164100),1,Farnell,2915518,,15.00,"Or a 3.3 V USB-UART (FTDI TTL-232R-3V3, Farnell 1329311) + 470 R for SerialUPDI."
-"Stencils (PCBWay/JLCPCB, frameless) for both boards",1,with the PCB order,,,10.00,
+"Stencils (PCBWay/JLCPCB, frameless): main top 0.12 mm, LED board top 0.12 mm + bottom 0.10 mm",1,with the PCB order,,,12.00,Skip the LED bottom stencil if the fab assembles that face.

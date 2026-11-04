@@ -13,7 +13,7 @@ Source of truth: `hardware/led-board/design.py` (board), `cad/parts/_lib/moonlib
 | | v0.1 | v0.2 |
 |---|---|---|
 | LED board | Ø26 mm, TLC59116 (TSSOP-28) + LM75BDP (TSSOP-8), 0603 | **Ø18 mm**, LP5012 (WQFN-20, 3 × 3 mm) + MCP9800A0 (SOT-23-5), 0402 |
-| LEDs | 4 + 4 white 2835 on a ring, 2 Würth RGB | 4 + 4 white 2835 radial on a **5.8 mm** ring, **1** Würth RGB at the centre |
+| LEDs | 4 + 4 white 2835 on a ring, 2 Würth RGB | 4 + 4 white 2835 radial on a ring of **radius 5.8 mm**, **1** Würth RGB at the centre |
 | Driver channels | 14 of 16 used, 25 mA, 97 kHz 8-bit | 11 of 12 used, 25 mA, 29 kHz 12-bit (9 + 3 dither) |
 | Driver supply current while lit | up to 29 mA | 4–6 mA (≤ 10 µA in power-save) |
 | Hardware thermostat | LM75B OS → TLC RESET | MCP9800 ALERT → LP5012 EN (60/52 °C) |
@@ -29,7 +29,7 @@ cable and its pinout are the same.
 ## 2. Driver: TI LP5012
 
 Why it, against the others looked at (docs/research/sourcing-farnell-rs.md): 12 channels in 3 × 3 mm, runs from
-2.7 V (the TLC59116 and PCA9955B need 3.0 V), 4–6 mA supply current instead of 25–37 mA, one resistor sets the
+2.7 V (the TLC59116 and PCA9955B need 3.0 V), 4–6 mA supply current instead of up to ~29 mA (with v0.1's 750 Ω REXT), one resistor sets the
 current, and its EN pin gives the thermostat a hard shutdown. Against it: WQFN-20 at 0.4 mm pitch with an exposed pad
 (no iron soldering, R21 revised), and neither Farnell nor RS stocks it, so it comes from DigiKey UK
 (`bom/digikey_order.csv`).
@@ -62,8 +62,8 @@ between D1 and D2 (one more part to hand-fit on top).
 
 ## 4. Layout
 
-- **LED ring.** 2835s point radially with the cathode pad inward at r 5.8 mm; their bodies reach r 7.68, inside the
-  r 7.8 limit set by the clamp band (r 8–9 mm carries no copper: the PETG ring and the cup's ledge clamp it). With
+- **LED ring.** 2835s point radially with the cathode pad inward at r 5.8 mm; their bodies reach r 7.68 (pad corners
+  r 7.88), inside the r 7.8 body limit set by the clamp band (r 8–9 mm carries no copper: the PETG ring and the cup's ledge clamp it). With
   KiCad's standard 2835 courtyard, eight of them overlapped on a ring this small, so the project footprint
   `LED_PLCC_2835_Dense` keeps KiCad's land pattern with an IPC level-C (0.1 mm) courtyard. WW and CW alternate at
   22.5° + 45°·k; the RGB sits at the centre, inside the ring of cathode pads.
@@ -131,15 +131,15 @@ as the board (r 9.0) with a 0.6 mm vertical bore under it, so no LED ray that ca
 - **Low battery**: below ~3.7 V the green and blue channels fall out of regulation (the LP5012 has no per-channel
   current step to run them at 12.5 mA as v0.1 did). Green and Blue modes dim gracefully; the small G/B share of the
   mixed whites drifts slightly warm in the last ~30 % of the charge. Option if it shows: R1 3.65 kΩ (20 mA on every
-  channel, −20 % white). VERIFY E9.
+  channel, −20 % white) in the next revision. VERIFY E9.
 - **Runtime improves** with the driver's lower supply current: ~6.5 h at 4000 K full (was ~5.5 h), ~45 h soft white at
   level 10, ~150 h red night light (was ~40 h). (v0.1's table put level 10 at 25 % of full; the level table gives 16 %.)
 - **Thermal**: the same three layers (firmware derating, current caps, hardware thermostat). The board is smaller, so
-  it runs warmer per watt; derating and the 110 mA cap are unchanged and VERIFY T1/T6 cover the bench check.
+  it runs warmer per watt; derating and the 110 mA cap are unchanged and VERIFY T2–T4 and T6 cover the bench check.
 
 ## 8. Cost and build
 
-- Parts for two lamps: Farnell £39.28 ex VAT (was £44.03) + DigiKey UK LP5012 £2.70, which adds ~£12 shipping unless
+- Parts for two lamps: Farnell £39.28 ex VAT (was £44.53) + DigiKey UK LP5012 £2.70, which adds ~£12 shipping unless
   the basket reaches DigiKey's free-delivery threshold. Net about the same, or ~£7 more.
 - Assembly: the WQFN and 0402s need a stencil and a hot plate (or hot air) on the LED board's bottom face. The
   recommendation is now JLCPCB Economic assembly of that face only (~£10–25 for five boards) and hand-fitting the top
@@ -148,8 +148,8 @@ as the board (r 9.0) with a 0.6 mm vertical bore under it, so no LED ray that ca
 ## 9. New or changed VERIFY items
 
 E7 (LP5012 + MCP9800 supply current), E8 (channel current with R1 2.94 kΩ), E9 (G/B regulation as the battery
-falls), E16 (WQFN joints: every LED from its cathode via, then the DEVICE_CONFIG1 read-back), E17 (thermostat path
-with TSET lowered to 30 °C), T1 (mode currents, 4000 K full ≈ 178 mA), T6 (hot-air thermostat trip and re-init),
+falls), E16 (joints: diode test from each LED's exposed cathode pad end, then first light and the DEVICE_CONFIG1
+read-back), E17 (thermostat path at room temperature with the `bench_tstat_low` build), T1 (mode currents, 4000 K full ≈ 178 mA), T6 (hot-air thermostat trip and re-init),
 O2 (total flux ≈ 39 lm), O4 (uniformity photos against 1.011 / 1.002 / 1.037), O5 (flicker: 29 kHz PWM, dither and
 brightness-register steps), M4 (inside-out bayonet on the coupon), M5 (ring preload). Details:
 `docs/verification/VERIFY.md`.

@@ -55,9 +55,10 @@ Board specs (also in each `FAB_NOTES.md`):
 
 * **Main board: bare boards + stencils, hand assembly with Farnell parts.** **LED board v0.2: decide** between hand
   assembly (stencil + hot plate; only if you already do QFNs) and JLCPCB Economic assembly of its bottom face (U1, U2,
-  R1, C1–C4), then hand-fit the top (`bom/assembly_routes.md`, recommended). If Matt prefers assembly instead: upload `bom_pcbway.csv` + `cpl_pcbway.csv`
-  (PCBWay) or `bom_jlcpcb.csv` + `cpl_jlcpcb.csv` (JLCPCB; fill the LCSC column from their search), and check every
-  part's rotation in the fab's placement preview (KiCad zero-orientation ≠ reel orientation). Small boards may need
+  R1, C1–C4), then hand-fit the top (`bom/assembly_routes.md`, recommended).
+* For any fab assembly: upload that board's `bom_pcbway.csv` + `cpl_pcbway.csv` (PCBWay) or `bom_jlcpcb.csv` +
+  `cpl_jlcpcb.csv` (JLCPCB; fill the LCSC column from their search), limit it to the side you want assembled, and
+  check every part's rotation in the fab's placement preview (KiCad zero-orientation ≠ reel orientation). Small boards may need
   panelising for assembly at PCBWay (main 35 × 62 mm, LED Ø18 mm).
 * After ordering: commit with the order reference in the message, tag `main-board-v0.1` / `led-board-v0.2`.
 

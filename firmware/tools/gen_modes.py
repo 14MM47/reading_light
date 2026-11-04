@@ -6,7 +6,7 @@ luminance mix that lands exactly on the Planckian locus at the target CCT (CIE 1
 little G (or B) to correct Duv. Night modes follow docs/research/light-modes.md: red, or red + a little 2700K,
 never green. Drive ratios are PWM duty, normalised so the strongest group = 1.0 (= the LP5012's full 25 mA, set by
 RIREF). The LP5012 has no per-channel current step, so green and blue always run at a 25 mA peak (supply headroom:
-docs/verification/VERIFY.md M1).
+docs/verification/VERIFY.md E9).
 
 LED data below is nominal datasheet data (VERIFY against the received bins; see docs/design/electronics.md).
 Usage: python3 firmware/tools/gen_modes.py  [writes include/modes_table.h and prints a summary]
@@ -84,7 +84,8 @@ def build():
             if s is not None and (best is None or s.get("G", 0) + s.get("R", 0) + s.get("B", 0) < best[1]):
                 best = (grp, s.get("G", 0) + s.get("R", 0) + s.get("B", 0), s)
         d = drive_from_lum(best[2])
-        out.append((f"WHITE_{cct}", lab, d, dflt, 15, f"{'+'.join(best[0])}, Duv 0 by construction"))
+        used = [g for g in best[0] if best[2].get(g, 0) > 1e-9]       # e.g. 5000 K is the CW LEDs alone
+        out.append((f"WHITE_{cct}", lab, d, dflt, 15, f"{'+'.join(used)}, Duv 0 by construction"))
     d6500, _ = white(6500, ["CW", "B", "G"])
     out.append(("COOL_6500", "Blue-white 6500K", d6500, 12, 15, "CW + B + G"))
     d1900, _ = white(1900, ["WW", "R", "G"])
@@ -98,7 +99,7 @@ def build():
                 "R only (max 15: optical review F9, still < 1 lux at 30 cm)"))
     # Green and blue at full duty: PWM cannot lower the 25 mA peak, so a half-duty limit (the TLC59116 design ran
     # them at a 12.4 mA current step) would buy no headroom. Below ~3.7 V of battery the LP5012 drops out of
-    # regulation on these two channels and they dim gracefully (VERIFY M1)
+    # regulation on these two channels and they dim gracefully (VERIFY E9)
     out.append(("GREEN", "Green", {"WW": 0, "CW": 0, "R": 0, "G": 1.0, "B": 0}, 8, 15, "G only"))
     out.append(("BLUE", "Blue", {"WW": 0, "CW": 0, "R": 0, "G": 0, "B": 1.0}, 8, 15, "B only"))
     return out

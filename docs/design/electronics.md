@@ -21,11 +21,12 @@ Datasheet extracts with page references: `docs/datasheets/KEYSPECS.md`. Review f
   **This is not over-voltage protection** (round2 R2-E4). A 6.4–7.5 V source sits below the TVS's conduction and
   trips nothing, which puts VSYS at 5.6–6.6 V, above the ATtiny's and the LED board's 6 V absolute maximum. A hard
   over-voltage fault destroys the TVS before or as the PTC trips. Accepted for a USB-C 5 V-only sink, with real OVP
-  (e.g. a TPS2595-class eFuse) on the v0.2 list.
+  (e.g. a TPS2595-class eFuse) on the next-revision list.
 * **Q4 LED-board switch** (DMG2305UX, gate Q4_G driven from PB2 through R13 10 k, with C8 100 nF gate–drain and R12
   100 k pull-up to VSYS): off in reset and in the empty-battery sleep, so a flat cell is not drained by the LED board.
   VLED = VSYS − I·R_DS(on) (≈ 10–20 mV at 180 mA). **Soft turn-on** (round2 R2-E1): R13 into C8 holds the Miller
-  plateau, so VLED ramps at about 2.5 V/ms. Charging the LED board's ~9 µF then takes about 25 mA, where the
+  plateau, so VLED ramps at about 2.5 V/ms. Charging the LED board's ~6 µF effective (v0.2; v0.1 ~9 µF) then takes
+  about 15–25 mA, where the
   unslowed gate gave multi-amp peaks that sagged VSYS, the MCU's supply, below its BOD level. Bench check: VERIFY E13.
   The I²C pull-ups (R8/R9 3.3 k) sit on VLED, so an unpowered LED board is never back-fed through SDA/SCL.
 * **J4 pin 1 is VREF** (VSYS through R11 1 k) for the programmer's level sense only: never power the board from a
@@ -42,7 +43,7 @@ Datasheet extracts with page references: `docs/datasheets/KEYSPECS.md`. Review f
   Q4), then J3 and 2 × 200 mm of 28 AWG: about 4 × 0.075 Ω + 0.15 Ω ≈ 0.45 Ω, so ~80 mV at 180 mA. V_GS max ±8 V
   (worst case here 5.0 V).
 * Q2 soft start: R7 10 kΩ into C5 100 nF (gate–source) → τ ≈ 1 ms. Q2 now charges only the main board's ~8 µF; the
-  LED board's 9 µF comes later, through Q4's soft turn-on. Round 1 simulated 0.7–1.3 A peak for ~0.1 ms into 14–21 µF
+  LED board's ~6 µF comes later, through Q4's soft turn-on. Round 1 simulated 0.7–1.3 A peak for ~0.1 ms into 14–21 µF
   (C5 is G–S, so there is no Miller dv/dt control), which is inside the FET and connector ratings.
 * Q1 gate pull-down R5 **10 kΩ** (was 100 k): after USB unplug VBUS decays with τ ≈ 70 ms, so the load spends < 0.1 s
   on Q1's body diode (round1 m1). Costs 0.5 mA from VBUS only while USB is present.
@@ -69,7 +70,7 @@ Design note for the redesign: `docs/design/led-board-v0.2.md`. Datasheet extract
   V_LED ≈ 3.65 V typical. The LP5012 has no per-channel current step (the TLC59116 design ran G/B at a 12.5 mA step),
   and PWM cannot lower the 25 mA peak, so the Green and Blue modes now run at full duty: below ~3.7 V of battery
   they dim gracefully, and the small G/B share of the mixed whites drifts slightly warm/magenta in the last ~30 % of
-  the battery. Accepted (v0.2 option: RIREF 3.65 kΩ = 20 mA for every channel). Bench check: VERIFY E9.
+  the battery. Accepted (next-revision option: RIREF 3.65 kΩ = 20 mA for every channel). Bench check: VERIFY E9.
 * Supply current: ~4–6 mA while any LED is on, ≤ 10 µA in power-save (all outputs 0 for 30 ms) and standby; the
   TLC59116 drew up to 29 mA. That multiplies the night-light runtime (§3).
 * **One RGB LED** at the board centre (v0.1 had two): colour and night modes are about half as bright (red night

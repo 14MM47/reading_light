@@ -37,8 +37,8 @@ against `docs/verification/VERIFY.md` and records them there. Allow about 3 h fo
    shows `T=-99` and then the 30 % fail-safe cap, which is expected.
 
 ## 2. LED board v0.2 (18 mm; bottom first, then top)
-1. **Bottom side** (0.10 mm stencil): U1 LP5012 (WQFN-20, 3 × 3 mm, pin-1 dot to the silk dot; the exposed pad is
-   GND), U2 MCP9800A0 (SOT-23-5), R1 2.94 kΩ, C1 and C4 1 µF, C3 100 nF (all 0402), C2 10 µF (0603). Reflow on the
+1. **Bottom side** (0.10 mm stencil): U1 LP5012 (WQFN-20, 3 × 3 mm, the package's pin-1 dot to the silk pin-1
+   triangle; the exposed pad is GND), U2 MCP9800A0 (SOT-23-5), R1 2.94 kΩ, C1 and C4 1 µF, C3 100 nF (all 0402), C2 10 µF (0603). Reflow on the
    hot plate. A WQFN's joints are hidden: look at its sides under the loupe for paste balls or bridges, then meter
    V–G, D–G, C–G and D–C on the cable pads: none may be a short. Put a **Kapton disc over U1** afterwards: it faces
    the gooseneck's metal tube end (round2 R2-D3).

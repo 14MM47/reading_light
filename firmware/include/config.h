@@ -17,8 +17,13 @@
 #define PIN_LED_EN_N  PIN_PB2
 // MCP9800 thermostat: ALERT (open drain, active low, comparator mode) holds the LP5012 EN low (shutdown) above
 // TSET and releases it below THYST; the LP5012 then restarts with its registers reset (re-initialised by firmware)
+// (bench_tstat_low overrides both to trip at room temperature: VERIFY E17, bench only)
+#ifndef TSENSE_TSET_C
 #define TSENSE_TSET_C  60
+#endif
+#ifndef TSENSE_THYST_C
 #define TSENSE_THYST_C 52
+#endif
 // MCP9800 CONFIG: 12-bit (0.0625 C, 240 ms per conversion, bits 6:5 = 11) so the frozen-sensor check sees the
 // reading move; fault queue 2 (bits 4:3 = 01), active low, comparator mode, continuous (= LM75B layout for bits 4:0)
 #define TSENSE_CONFIG  0x68

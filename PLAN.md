@@ -32,7 +32,7 @@ Statuses follow the 3dprint convention: **GIVEN** (Matt said it), **ASSUMED** (C
 | R16 | GIVEN | Multiple verification runs against datasheets, with adversarial/specialist reviewers |
 | R17 | RULE | Slide switch off = battery isolated from everything except the charger: standby drain < 10 µA |
 | R18 | RULE | LiPo charged CC/CV 4.20 V at ≤ 0.5 C; reverse-battery protected; load sharing so charging terminates with the light on |
-| R19 | RULE | Flicker-free (PWM ≥ 20 kHz) and no PLA moon softening: LED-board temperature limited in firmware with a sensor |
+| R19 | RULE | Flicker-free (PWM ≥ 20 kHz) and no PLA moon softening: LED-board temperature limited in firmware with a sensor. LP5012: 29 kHz PWM; its 3-bit dither repeats at ~3.6 kHz with a 1/4096 step, well below visibility (VERIFY O5) |
 | R20 | RULE | Night modes contain no green or blue light (melanopic research); whites on the Planckian locus |
 | R21 | ASSUMED | Hand-assembly friendly parts (0603+, SOIC/TSSOP, no QFN/BGA) so all three assembly routes work. **Revised 2026-11-03 for the LED board v0.2** (Matt chose the LP5012): WQFN-20 + 0402 on its bottom face, fab assembly of that face recommended (`bom/assembly_routes.md`); the main board still meets R21 |
 | R22 | ASSUMED | Pack ≤ ~45 × 80 × 20 mm, total mass ≤ ~100 g |
@@ -47,7 +47,7 @@ Statuses follow the 3dprint convention: **GIVEN** (Matt said it), **ASSUMED** (C
  VSYS ─[Q4 P-FET, MCU-switched]─> VLED (+ I2C pull-ups) ─ JST-SH 4-wire cable up the gooseneck ─┐
                                                                                                  v
    LED board v0.2 in the moon base (Ø18 mm, 1.0 mm): TI LP5012 12-ch constant-current sink, 25 mA/channel, 29 kHz
-   ├─ 4 × 2700 K + 4 × 5000 K Bridgelux Thrive 2835 (CRI 97), radial on a 5.8 mm ring   ├─ 1 × Würth RGB at the centre
+   ├─ 4 × 2700 K + 4 × 5000 K Bridgelux Thrive 2835 (CRI 97), radial, ring r 5.8 mm     ├─ 1 × Würth RGB at the centre
    └─ MCP9800A0: firmware derating + ALERT thermostat → LP5012 EN (60/52 °C)             all anodes on VLED
 ```
 
@@ -61,7 +61,7 @@ Statuses follow the 3dprint convention: **GIVEN** (Matt said it), **ASSUMED** (C
   1.068 / 1.063 / 1.054). The round-1 model `sphere_illum.py` is kept for the record. Raising the board above the
   opening gives ≥ 2:1.
 * **Light output**: 4000 K full ≈ 39 lm out of the moon (61 lm of LED flux × ~0.64), **20–30 lux on a page at 25–30 cm**. That is a moon lamp /
-  night-reading level, not a full reading light (round1 F6; v0.2 option in docs/verification/round1.md §5).
+  night-reading level, not a full reading light (round1 F6; next-revision option in docs/verification/round1.md §5).
 * **Firmware**: `firmware/` — portable core (`lib/core`) + hardware glue (`src/main.cpp`); modes from
   `tools/gen_modes.py` (CIE 1931 mixing to the Planckian locus).
 * **Mechanics**: lithophane moon (PLA, NASA LROC albedo + LOLA relief → 0.9–2.6 mm wall, relief inside). v0.2 head:
@@ -78,8 +78,8 @@ Ten modes in button order (`firmware/include/modes_table.h`, generated): Warm 27
 Neutral reading 4000 K · Daylight 5000 K · Blue-white 6500 K · Candle 1900 K · Soft orange night · Red night ·
 Green · Blue. Evidence and targets: `docs/research/light-modes.md` (melanopic EDI limits from Brown et al. 2022,
 red for dark adaptation, Planckian chromaticities). 16 brightness steps, geometric 0.4 %–100 %. Power-on default:
-Soft white 3000 K at level 10 until the user saves another. With one RGB LED (v0.2) the colour and night modes give
-about half the v0.1 flux (red night 1.1 lm, candle 2.4 lm, 6500 K 30 lm); Green and Blue are unchanged (one LED at
+Soft white 3000 K at level 10 until the user saves another. With one RGB LED (v0.2) the red-based modes give about
+half the v0.1 flux (red night 1.1 lm, soft orange 1.5 lm, candle 2.4 lm) and 6500 K gives 30 lm instead of 40; Green and Blue are unchanged (one LED at
 full duty instead of two at half current) and dim gracefully below ~3.7 V of battery. Night modes go to level 15
 (still < 1 lux at 30 cm).
 
@@ -145,7 +145,7 @@ full duty instead of two at half current) and dim gracefully below ~3.7 V of bat
     4–6 mA supply instead of up to 29 mA. R21 revised for this board (fab assembly of its bottom face recommended).
   - MCP9800A0 (SOT-23-5, Farnell) replaces the LM75BDP: the TSSOP-8 did not fit and the TMP1075's pin order forces a
     crossing; ALERT holds the LP5012's EN low (60/52 °C). The 2.4 kΩ EN pull-up moves to the board's top face.
-  - 8 whites radial on a 5.8 mm ring (dense 2835 courtyard footprint), one RGB at the centre (night/colour modes about
+  - 8 whites radial on a ring of radius 5.8 mm (dense 2835 courtyard footprint), one RGB at the centre (night/colour modes about
     half as bright; whites unchanged). Board Ø26 → Ø18 mm, 0402 passives.
   - 0.15 / 0.15 mm rules on the LED board (below the pcb repo's 0.2 mm working minimum, inside the fabs' standard
     rules): the WQFN's middle pins cannot escape at 0.2 mm.
@@ -161,6 +161,9 @@ full duty instead of two at half current) and dim gracefully below ~3.7 V of bat
     and moon_shell B14 now checks that nothing solid sits in the emitter-to-opening cone.
   - CAD pipeline: wall-thickness sampling skipped zero-area faces wrongly and crashed; fixed with a unit test
     (`cad/tests/test_pipeline_checks.py`). No check or threshold was relaxed.
+  - LED board C2 is 10 µF 0603 10 V (an exception to the 0805 16 V rule above: no room on the 18 mm board). At
+    VLED ≤ 4.2 V it keeps roughly half its value, which is enough as local bulk; the LED board now totals ~6 µF
+    effective (v0.1 ~9 µF), so Q4's soft turn-on sees less inrush.
   - Green/Blue can no longer run at a 12.5 mA step (the LP5012 has none): they run at 25 mA peak and fall out of
     regulation below ~3.7 V of battery. Accepted; option R1 3.65 kΩ (20 mA on all channels). VERIFY E9.
 
