@@ -1,9 +1,10 @@
 # sim/: SPICE simulations of the moon reading light
 
 `python3 sim/run_sims.py` runs every case, checks the results against their limits and writes
-`docs/verification/spice-report.md` with its figures in `docs/verification/spice/`. It takes about 30 s.
+`docs/verification/spice-report_main-v<rev>_led-v<rev>.md` and `.pdf` (board revisions read from
+`hardware/*/design.py`; PDF via WeasyPrint) with its figures in `docs/verification/spice/`. It takes about 30 s.
 
-Needs ngspice (42 tested; XSPICE not required), numpy, matplotlib, schemdraw, markdown. kicad-cli and pdftoppm
+Needs ngspice (42 tested; XSPICE not required), numpy, matplotlib, schemdraw, markdown, weasyprint (PDF; skipped if missing). kicad-cli and pdftoppm
 are optional (they add the board schematics to the report's appendix).
 
 | File | What it is |

@@ -4,7 +4,7 @@ Every value below was taken from a datasheet, a seller listing or a model. Nobod
 says how to check it and what to change if it is off. Work top to bottom: the first two sections gate the rest.
 Tick an item by noting the measured value and the date here.
 
-SPICE predictions (`docs/verification/spice-report.md`, 2026-11-08) for several items: E12 is predicted to fail its
+SPICE predictions (`docs/verification/spice-report_main-v0.1_led-v0.2.md` and `.pdf`, 2026-11-08) for several items: E12 is predicted to fail its
 0.3 V limit (0.64 V dip for ~21 ms; R5 4.7k shortens it, does not reduce it); E13's hot-plug step is predicted to
 reset the MCU at 3.5 V (VSYS ~2.3 V), the power-on and empty-sleep steps to pass (VLED 10-90 % in ~1.0 ms, VSYS dip
 ~12 mV); E15 passes on a 5.0 V source (4.00 V) but not at 4.75 V through a 0.2 Ω cable with F1 at its 0.2 Ω maximum (3.71 V). Record the measured value

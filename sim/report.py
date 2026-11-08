@@ -14,6 +14,22 @@ OUT = Path(__file__).resolve().parent / "out"
 BADGE = {"PASS": "pass", "MARGINAL": "marg", "FAIL": "fail", "INFO": "info"}
 
 
+def board_revs() -> dict[str, str]:
+    """REV from each board's design.py (the source of truth; also in the KiCad title block and fab/<board>/v<rev>)."""
+    out = {}
+    for b in ("main-board", "led-board"):
+        mo = re.search(r'^REV = "([^"]+)"', (ROOT / "hardware" / b / "design.py").read_text(), re.M)
+        if not mo:
+            raise SystemExit(f"no REV in hardware/{b}/design.py")
+        out[b] = mo.group(1)
+    return out
+
+
+def report_stem() -> str:
+    r = board_revs()
+    return f"spice-report_main-v{r['main-board']}_led-v{r['led-board']}"
+
+
 def kicad_refs() -> dict[str, str]:
     """Export the real board schematics (reference appendix). Optional: needs kicad-cli + pdftoppm."""
     out: dict[str, str] = {}
@@ -52,9 +68,14 @@ def write(R, checks, figs, sch, model_points, cases, ngspice_ver):
 
     L = []
     a = L.append
-    a("# SPICE simulation report: moon reading light")
+    revs = board_revs()
+    vtag = f"main board v{revs['main-board']} · LED board v{revs['led-board']}"
+    a(f"# SPICE simulation report: moon reading light ({vtag})")
     a("")
-    a(f"Main board v0.1 + LED board v0.2, as in `hardware/*/design.py`. Generated {today} by `python3 sim/run_sims.py` "
+    a(f"**Board versions:** main board **v{revs['main-board']}**, LED board **v{revs['led-board']}** (`REV` in "
+      f"`hardware/*/design.py`, the KiCad title blocks and `fab/<board>/v<rev>/`). Report file: `{report_stem()}`.")
+    a("")
+    a(f"Generated {today} by `python3 sim/run_sims.py` "
       f"({ngspice_ver}, {nruns} runs over {len(cases) - 1} circuits plus a model check). **These are predictions, not "
       "evidence**: every value nobody has measured is listed under *Assumptions* with the VERIFY item that replaces it.")
     a("")
@@ -102,6 +123,10 @@ def write(R, checks, figs, sch, model_points, cases, ngspice_ver):
       f"(max-VF dies with the worst VSAT), below the 3.45 V low-battery cap. Green/blue need {hg['vledb_g95']:.2f} V "
       f"(typical) and {hgm['vledb_g95']:.2f} V (max die) at the board, matching the round-3 figures.")
     a("")
+    decisions(a, dict(h10=h10, h47=h47, h1=h1, dur=dur, dip=dip, j3l=j3l, j3f=j3f, j3b=j3b, po=po, pob=pob,
+                      ch=ch, chw=chw, hw=hw, hwm=hwm, tr=tr, q4max=max(m("q4_softstart", v)["ipk"] for v in
+                                                                       ("low", "full", "low_vth05", "low_vth09"))),
+              revs)
     a("## All checks")
     a("")
     a("| ID | Area | Check | Simulated | Limit | Verdict |")
@@ -299,12 +324,16 @@ def write(R, checks, figs, sch, model_points, cases, ngspice_ver):
             a(f"![{b} schematic]({p})")
             a("")
     md = "\n".join(L)
-    (DOCS / "spice-report.md").write_text(md)
-    _html(md)
+    stem = report_stem()
+    for old in DOCS.glob("spice-report*.md"):
+        if old.name != f"{stem}.md":
+            old.unlink()
+    (DOCS / f"{stem}.md").write_text(md)
+    _html(md, vtag, today, stem)
     return md
 
 
-def _html(md: str):
+def _html(md: str, vtag: str, today: str, stem: str):
     import markdown
 
     body = markdown.markdown(md, extensions=["tables", "fenced_code"])
@@ -321,6 +350,23 @@ def _html(md: str):
                   body, flags=re.S)
     body = re.sub(r"<p>(<img [^>]+>)</p>", r"<figure>\1</figure>", body)
     (OUT / "report.html").write_text(TEMPLATE.replace("{{BODY}}", body))
+    _pdf(body, vtag, today, stem)
+
+
+def _pdf(body: str, vtag: str, today: str, stem: str):
+    """A4 PDF of the same body (WeasyPrint), light theme, versions and page numbers in the footer."""
+    try:
+        import weasyprint
+    except ImportError:
+        print("weasyprint not installed: PDF skipped")
+        return
+    for old in DOCS.glob("spice-report*.pdf"):
+        if old.name != f"{stem}.pdf":
+            old.unlink()
+    css = PRINT_CSS.replace("{{FOOT}}", f"Moon reading light · SPICE report · {vtag} · {today}")
+    html = f"<!doctype html><html><head><meta charset='utf-8'><title>SPICE report ({vtag})</title>" \
+           f"<style>{css}</style></head><body>{body}</body></html>"
+    weasyprint.HTML(string=html, base_url=str(DOCS)).write_pdf(DOCS / f"{stem}.pdf")
 
 
 TEMPLATE = """<title>Reading Light SPICE Report</title>
@@ -376,3 +422,147 @@ a { color: var(--accent); }
 {{BODY}}
 </main>
 """
+
+
+PRINT_CSS = """
+@page { size: A4; margin: 16mm 14mm 18mm 14mm;
+  @bottom-left { content: "{{FOOT}}"; font: 7.5pt "DejaVu Sans", sans-serif; color: #666; }
+  @bottom-right { content: "page " counter(page) " / " counter(pages); font: 7.5pt "DejaVu Sans", sans-serif;
+    color: #666; } }
+body { font: 9.5pt/1.45 "DejaVu Sans", "Liberation Sans", sans-serif; color: #17181a; }
+h1 { font-size: 18pt; line-height: 1.2; margin: 0 0 8pt; }
+h2 { font-size: 13pt; margin: 18pt 0 6pt; padding-top: 6pt; border-top: 0.6pt solid #ccc; break-after: avoid; }
+h3 { font-size: 11pt; margin: 12pt 0 4pt; break-after: avoid; }
+p, li { orphans: 3; widows: 3; }
+code { font: 8.5pt "DejaVu Sans Mono", monospace; background: #f1f1ee; padding: 0 2pt; }
+pre { background: #f1f1ee; padding: 6pt; font-size: 8pt; }
+figure { margin: 8pt 0 12pt; break-inside: avoid; }
+figure img, p img { width: 100%; border: 0.5pt solid #ddd; }
+figcaption { font-size: 8.5pt; color: #555; margin-top: 3pt; }
+.tw { margin: 6pt 0 10pt; }
+table { border-collapse: collapse; width: 100%; font-size: 7.6pt; }
+th, td { border-bottom: 0.4pt solid #ccc; padding: 3pt 4pt; text-align: left; vertical-align: top; }
+th { background: #f1f1ee; font-size: 7pt; text-transform: uppercase; letter-spacing: 0.03em; }
+tr { break-inside: avoid; }
+.v { font: bold 7pt "DejaVu Sans Mono", monospace; padding: 1.5pt 3pt; border-radius: 2pt; }
+.v.pass { color: #0a6d0a; background: #e3f3e3; } .v.marg { color: #8a5a00; background: #fbefd6; }
+.v.fail { color: #a62929; background: #f9e1e1; } .v.info { color: #4f5b6b; background: #e8ecf1; }
+"""
+
+
+def decisions(a, d, revs):
+    """Findings mapped to the decisions they need: evidence, options with their simulated effect, recommendation."""
+    h10, h47, h1, dur = d["h10"], d["h47"], d["h1"], d["dur"]
+    j3l, j3f, j3b, po, pob = d["j3l"], d["j3f"], d["j3b"], d["po"], d["pob"]
+    ch, chw, hw, hwm, tr = d["ch"], d["chw"], d["hw"], d["hwm"], d["tr"]
+    a("## Findings and decisions to make")
+    a("")
+    a(f"Each finding below is for main board v{revs['main-board']} / LED board v{revs['led-board']}. The options give "
+      "the simulated effect where it was simulated; \"not simulated\" marks an engineering estimate. Nothing has been "
+      "changed in the design: every option is Matt's call. *If no decision* says what happens by default.")
+    a("")
+    a("| # | Finding | Severity | Decision needed | Recommendation |")
+    a("|---|---|---|---|---|")
+    a(f"| D1 | USB unplug: VSYS dips {d['dip']:.2f} V for {dur(h10):.0f} ms | **FAIL** (E12) | accept, change R5, or "
+      "redesign the handover | accept for v0.1, re-word E12; R5 1k if the blink is visible |")
+    a(f"| D2 | J3 hot-plug at 3.5 V: VSYS {j3l['vsys_min']:.2f} V, below BOD | **FAIL** (E13 step) | change the test "
+      "or add bulk capacitance | change the test (plug J3 with SW1 off) |")
+    a(f"| D3 | VSYS {chw['vsys_min']:.2f} V on a weak USB source | **MARGINAL** (E15) | define the E15 source | "
+      "E15 on a 5.0 V source; no hardware change |")
+    a(f"| D4 | Max-VF white dies lose regulation at VSYS {hwm['vsys_w95']:.2f} V | **MARGINAL** | RIREF / LED bin "
+      "(already open as VERIFY E9) | decide after E9 |")
+    a(f"| D5 | I²C {tr['c150']:.0f} ns at 150 pF | **MARGINAL** for fast mode only | bus speed | keep 100 kHz (no change) |")
+    a(f"| D6 | Q4 charging current {d['q4max'] * 1e3:.0f} mA vs the 15-25 mA in the design note | INFO | documentation "
+      "| correct the note in `electronics.md` §1 |")
+    a("")
+
+    a("### D1. USB unplug handover (VERIFY E12)")
+    a("")
+    a(f"**Finding.** Pulling USB with the lamp at 4000 K full drops VSYS from {h10['vsys_usb']:.2f} V to "
+      f"{h10['vsys_min']:.2f} V, {d['dip']:.2f} V below the {h10['vsys_bat']:.2f} V it settles at on the battery, for "
+      f"{dur(h10):.0f} ms. The LED-board current falls from {h10['iled_usb'] * 1e3:.0f} mA to about 130 mA for that "
+      "time. The MCU stays above its 2.6 V BOD. Figure: section 5.")
+    a("")
+    a("**Cause.** Q1's gate sits on VBUS. After the unplug the lamp runs through Q1's body diode (about 0.65 V) until "
+      "R5 has discharged VBUS below VSYS_RAW − |VGS(th)|. R5 sets how long that takes, not how deep the dip is.")
+    a("")
+    a("| Option | Simulated effect | Cost / risk |")
+    a("|---|---|---|")
+    a(f"| A. Accept; re-word E12 to \"no reset, dip ≤ 0.7 V for ≤ 25 ms\" | as built: {dur(h10):.0f} ms dip | a "
+      "possible visible dim at unplug |")
+    a(f"| B. R5 4.7k (E12's listed remedy) | {dur(h47):.0f} ms, same depth | +0.6 mA from USB while plugged |")
+    a(f"| C. R5 1k | {dur(h1):.1f} ms, same depth | +4.5 mA from USB while plugged (25 mW in R5); a value "
+      "change only |")
+    a("| D. Next revision: drive Q1's gate actively (e.g. a comparator or ideal-diode controller) | not simulated; "
+      "removes the body-diode phase | new part, layout change, standby-drain review (R17) |")
+    a("")
+    a("**Recommendation.** A for v0.1, and look for the dim during the E12 bench check. If it is visible, C is a "
+      "one-resistor change that cuts it to a couple of milliseconds. Consider D in the next revision.")
+    a("")
+    a("**If no decision.** E12 will be marked failed at the bench against its current 0.3 V limit.")
+    a("")
+
+    a("### D2. Hot-plugging the LED-board cable (VERIFY E13)")
+    a("")
+    a(f"**Finding.** Plugging J3 while VLED is live sags VSYS to {j3l['vsys_min']:.2f} V at a 3.49 V cell (below the "
+      f"2.6 V BOD: expect a reset) and to {j3f['vsys_min']:.2f} V on a full cell. The cable carries a "
+      f"{j3f['ipk']:.0f} A pulse about 1.5 µs wide. Figure: section 3.")
+    a("")
+    a("**Cause.** The main board has no bulk capacitance on VLED, so the LED board's empty MLCCs (about 11 µF "
+      "unbiased) take their charge from C4 on VSYS faster than the cell can supply it through its resistance and lead.")
+    a("")
+    a("| Option | Simulated effect | Cost / risk |")
+    a("|---|---|---|")
+    a("| A. Remove the hot-plug step from E13; plug J3 only with SW1 off | the case does not occur in use (the cable is "
+      "inside the gooseneck) | none |")
+    a(f"| B. 47 µF on VSYS (E13's listed remedy) | VSYS min {j3b['vsys_min']:.2f} V (0.12 V above BOD; depends on the "
+      f"assumed 0.1 Ω ESR) | power-on inrush {po['ipk']:.2f} → {pob['ipk']:.2f} A; board space and a new part |")
+    a("| C. Firmware: keep Q4 off until the cable is known to be connected | not simulated | only helps if the cable is "
+      "plugged before power-up |")
+    a("")
+    a("**Recommendation.** A. B buys little margin and costs inrush.")
+    a("")
+    a("**If no decision.** The E13 hot-plug step will likely show a reset at a low battery.")
+    a("")
+
+    a("### D3. VSYS on a weak USB source (VERIFY E15)")
+    a("")
+    a(f"**Finding.** At 4.75 V USB (the bottom of the 5 V ±5 % band) through a 0.2 Ω cable with F1 at its 0.2 Ω "
+      f"maximum, VSYS is {chw['vsys_min']:.2f} V while charging with the lamp on; on 5.0 V it is "
+      f"{ch['vsys_min']:.2f} V. Q1's body diode then leaks {chw['idq1_max'] * 1e3:.2f} mA from the cell, which does "
+      "not stop the charge from terminating. Figure: section 6.")
+    a("")
+    a("| Option | Effect | Cost / risk |")
+    a("|---|---|---|")
+    a(f"| A. Specify E15 on a 5.0 V source | E15 passes ({ch['vsys_min']:.2f} V) | none |")
+    a(f"| B. Accept lower VSYS on weak sources | the whites stay regulated down to VSYS {hw['vsys_w95']:.2f} V "
+      f"(typical dies), so the lamp is unaffected | none |")
+    a("")
+    a("**Recommendation.** A and B together: re-word E15. No hardware change.")
+    a("")
+
+    a("### D4. White-LED headroom with maximum-VF dies (VERIFY E9)")
+    a("")
+    a(f"**Finding.** With the highest-VF white dies and the worst LP5012 saturation voltage, the whites start to dim at "
+      f"VSYS {hwm['vsys_w95']:.2f} V, just under the firmware's 3.45 V brightness cap (typical dies: "
+      f"{hw['vsys_w95']:.2f} V). Figure: section 8.")
+    a("")
+    a("**Decision.** Already open as VERIFY E9 (measure the received dies; option RIREF 3.65 kΩ for 20 mA). This "
+      "adds the white channels to what E9 should measure. No action before E9.")
+    a("")
+
+    a("### D5. I²C speed")
+    a("")
+    a(f"**Finding.** Rise times {tr['c60']:.0f} / {tr['c100']:.0f} / {tr['c150']:.0f} ns for 60 / 100 / 150 pF: "
+      "inside standard mode (1000 ns) at every value, inside fast mode (300 ns) only at 60-100 pF.")
+    a("")
+    a("**Decision.** None needed while the firmware stays at 100 kHz. Moving to 400 kHz would need a measured bus "
+      "capacitance below about 100 pF or stronger pull-ups.")
+    a("")
+
+    a("### D6. Documentation correction")
+    a("")
+    a(f"`docs/design/electronics.md` §1 says Q4's soft turn-on charges the LED board with 15-25 mA. The simulation "
+      f"gives up to {d['q4max'] * 1e3:.0f} mA, because the MLCCs start near their unbiased value. Harmless "
+      "(VSYS moves by about 12 mV). Decide whether to correct the note.")
+    a("")

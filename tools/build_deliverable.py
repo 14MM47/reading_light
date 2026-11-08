@@ -201,8 +201,8 @@ def main():
     B.pdf(Path("docs/design/led-board-v0.2.md"), Path("00-overview/what-changed-in-v0.2.pdf"), "What changed in v0.2")
     B.pdf(Path("docs/verification/round3.md"), Path("00-overview/verification-round3-and-open-decisions.pdf"),
           "Verification round 3")
-    B.pdf(Path("docs/verification/spice-report.md"), Path("00-overview/spice-simulation-report.pdf"),
-          "SPICE simulation report")
+    for f in sorted((ROOT / "docs/verification").glob("spice-report_*.pdf")):    # sim/run_sims.py, versioned
+        B.copy(f.relative_to(ROOT), Path("00-overview") / f.name)
 
     # ---------------------------------------------------------------- 01 PCB manufacture
     B.pdf(Path("docs/handoffs/01-pcb-order.md"), Path("01-pcb-manufacture/handoff-01-pcb-order.pdf"), "Handoff 01")

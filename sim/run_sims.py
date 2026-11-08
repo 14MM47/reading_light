@@ -3,7 +3,8 @@
 
     python3 sim/run_sims.py            # needs ngspice (42 tested), numpy, matplotlib, schemdraw
 
-Outputs: docs/verification/spice-report.md + docs/verification/spice/*.png (committed), sim/out/ (netlists as run,
+Outputs: docs/verification/spice-report_main-v<rev>_led-v<rev>.md + .pdf (board revisions from
+hardware/*/design.py) + docs/verification/spice/*.png (committed), sim/out/ (netlists as run,
 ngspice logs, raw data, results.json, report.html; not committed). Predictions, not evidence: every PROVISIONAL
 model value is listed in the report, and the bench measurements in docs/verification/VERIFY.md replace them.
 """
