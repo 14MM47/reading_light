@@ -1,0 +1,37 @@
+* CASE runtime: battery discharge at a fixed mode until the firmware's empty cut (VSYS < 3.30 V under load,
+* lightcore.h VBAT_EMPTY_MV; the 5 s hold is not modelled). Below 3.45 V (VBAT_LOW_MV) the firmware caps the
+* brightness to 35 % (LOW_CAP): modelled as a latch. LED drive = average duty on the LP5012 sinks (PWM averaged).
+* Electronics: MCU 2.5 mA + LP5012 iq + MCP9800 0.2 mA. Thermal derating (45-58 C) is not modelled.
+* Modes (electronics.md 3): 4000 K full dw 0.8875 (177.5 mA); soft white L10 dw 0.095 (~19 mA); red night L4
+* dr 0.016 (0.4 mA).
+.param soc0=1.0 dwv=0.8875 drv=0 iqv=6.8m tstop=30000 tmax=20
+.include models.inc
+.include boards.inc
+Xcell batraw 0 LIPO soc0={soc0}
+Rnousb vbusin 0 1Meg
+Vsw swon 0 1
+Vled ledon 0 1
+Xmb vbusin batraw vsys vled swon ledon vbus vsysraw bat MAINPWR
+Xcab vled 0 vledb gb CABLE
+* LOW latch: charges while VSYS < 3.45 V; once past 0.5 V (~1 s below) the brightness cap applies and stays
+Blow 0 low I = (time > 0 && V(vsys) < 3.45) ? 0.5 : 0
+Clow low 0 1
+Rlow low 0 1e12
+Bdw dw 0 V = {dwv} * (V(low) > 0.5 ? 0.35 : 1)
+Bdr dr 0 V = {drv} * (V(low) > 0.5 ? 0.35 : 1)
+Vz dz 0 0
+Xlb vledb gb dw dr dz dz LEDBOARD iq={iqv}
+.tran {tmax} {tstop} 0 {tmax}
+.control
+run
+let ibat = i(v.xcell.vsense)
+let soc = v(xcell.soc)
+meas tran ibat0 find ibat at=100
+meas tran t_low when v(vsys)=3.45 fall=1
+meas tran t_empty when v(vsys)=3.30 fall=1
+meas tran soc_empty find soc when v(vsys)=3.30 fall=1
+let pbat = v(batraw)*ibat
+meas tran wh integ pbat from=0 to=t_empty
+wrdata @DAT@ v(vsys) v(batraw) ibat soc v(vledb)
+.endc
+.end

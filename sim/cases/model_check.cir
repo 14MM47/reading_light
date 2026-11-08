@@ -1,0 +1,57 @@
+* CASE model_check: each device model against the datasheet points it was fitted to (operating point).
+.include models.inc
+.include boards.inc
+Vgs1 g1 0 -4.5
+X1 0 g1 s1 DMG2305
+I1 s1 0 -0.1
+Vgs2 g2 0 -2.5
+X2 0 g2 s2 DMG2305
+I2 s2 0 -0.1
+X3 d3 d3x d3x DMG2305
+I3 0 d3 0.1
+Vd3 d3x 0 0
+Iw 0 w 25m
+Dw w 0 DWHITE
+Iwm 0 wm 25m
+Dwm wm 0 DWHITE_MAX
+Iw1 0 w1 10m
+Dw1 w1 0 DWHITE
+Iw5 0 w5 50m
+Dw5 w5 0 DWHITE
+Ir 0 r 20m
+Dr r 0 DRED
+Irm 0 rm 20m
+Drm rm 0 DRED_MAX
+Ig 0 gg 20m
+Dg gg 0 DGB
+Igm 0 gm 20m
+Dgm gm 0 DGB_MAX
+Ig25 0 g25 25m
+Dg25 g25 0 DGB
+Is1 0 sj 0.2
+Dsj sj 0 DS1J
+Is2 0 sj2 1
+Dsj2 sj2 0 DS1J
+Vo o 0 0.30
+Vdu du 0 1
+Xs o 0 du LPSINK
+.control
+op
+let rds45 = v(s1)/0.1
+let rds25 = v(s2)/0.1
+let vsd = v(d3)
+let vw25 = v(w)
+let vwm25 = v(wm)
+let vw10 = v(w1)
+let vw50 = v(w5)
+let vr20 = v(r)
+let vrm20 = v(rm)
+let vg20 = v(gg)
+let vgm20 = v(gm)
+let vg25d = v(g25)-v(gg)
+let vs1j02 = v(sj)
+let vs1j1 = v(sj2)
+let isat = -i(vo)/25m
+print rds45 rds25 vsd vw25 vwm25 vw10 vw50 vr20 vrm20 vg20 vgm20 vg25d vs1j02 vs1j1 isat
+.endc
+.end

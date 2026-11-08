@@ -1,0 +1,17 @@
+* CASE i2c_rise: SDA/SCL rise with the 3.3 k pull-ups (R8/R9 on VLED) and the bus capacitance (MCU pin + 200 mm
+* cable + LP5012 + MCP9800: 60-100 pF estimated, 150 pF as a margin case). I2C standard mode: tr(30-70 %) <= 1000 ns;
+* fast mode 300 ns for reference. An open-drain pin releases the line at 10 us.
+.param cbus=100p vled=4.2
+* rise times (30-70 % of vled) are computed in run_sims.py from the waveform
+Vled vl 0 {vled}
+R8 vl sda 3.3k
+Cb sda 0 {cbus}
+Sdrv sda 0 drv 0 SOD
+.model SOD SW(VT=0.5 VH=0.01 RON=30 ROFF=1e9)
+Vdrv drv 0 PWL(0 1 10u 1 10.001u 0)
+.tran 1n 14u 0 1n
+.control
+run
+wrdata @DAT@ v(sda)
+.endc
+.end

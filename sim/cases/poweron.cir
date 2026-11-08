@@ -1,0 +1,25 @@
+* CASE poweron: slide switch SW1 turned ON, battery only, LED board off (Q4 held off by R12 until firmware runs).
+* Checks the Q2 soft start (R7 10k into C5 100n gate-source): inrush into VSYS (C4, C6, C7) and the VSYS rise.
+.param soc0=1.0 cbulk=1p
+.include models.inc
+.include boards.inc
+Xcell batraw 0 LIPO soc0={soc0}
+* no USB: VBUS_IN floats
+Rnousb vbusin 0 1Meg
+Vsw swon 0 PWL(0 0 1m 0 1.001m 1)
+Vled ledon 0 0
+Xmb vbusin batraw vsys vled swon ledon vbus vsysraw bat MAINPWR cbulk={cbulk}
+* VLED: nothing plugged on the main board side for this case; LED board not powered (Q4 off)
+Rvled vled 0 1Meg
+.tran 0.2u 5m 0 0.2u
+.control
+run
+let ibat = i(v.xcell.vsense)
+meas tran ipk max ibat from=1m to=5m
+meas tran ipk_t when ibat=ipk
+meas tran vsys_end find v(vsys) at=4.9m
+meas tran vsysraw_min min v(vsysraw) from=1m to=5m
+meas tran vsys_max max v(vsys) from=1m to=5m
+wrdata @DAT@ ibat v(vsys) v(vsysraw) v(Xmb.swgate)
+.endc
+.end

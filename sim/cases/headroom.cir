@@ -1,0 +1,35 @@
+* CASE headroom: LP5012 channel current vs cell open-circuit voltage (DC sweep, cell R 0.2 Ohm included).
+* mode=white: all 8 whites at 100 % (the instantaneous PWM peak of 4000 K full: 200 mA through the path).
+* mode=green: the Green mode, one G channel at 100 %. Run with typical dies + VSAT 0.30 V and with maximum-VF dies
+* + VSAT 0.45 V (runner sets the models). The 95 % point (23.75 mA) is the regulation edge.
+.param dwv=1 dgv=0 vsat=0.30
+.include models.inc
+.include boards.inc
+Vocv ocv 0 4.2
+Rcell ocv batraw 0.2
+Rnousb vbusin 0 1Meg
+Vsw swon 0 1
+Vled ledon 0 1
+Xmb vbusin batraw vsys vled swon ledon vbus vsysraw bat MAINPWR
+Xcab vled 0 vledb gb CABLE
+Vw dw 0 {dwv}
+Vg dg 0 {dgv}
+Vz dz 0 0
+Xlb vledb gb dw dz dg dz LEDBOARD vsat={vsat}
+.save all @d.xlb.d1[id] @d.xlb.d9g[id]
+.dc Vocv 3.0 4.3 0.005
+.control
+run
+let iw = @d.xlb.d1[id]
+let ig = @d.xlb.d9g[id]
+meas dc ocv_w95 when iw=23.75m rise=1
+meas dc ocv_g95 when ig=23.75m rise=1
+meas dc vledb_w95 find v(vledb) when iw=23.75m rise=1
+meas dc vledb_g95 find v(vledb) when ig=23.75m rise=1
+meas dc vsys_w95 find v(vsys) when iw=23.75m rise=1
+meas dc iw_345 find iw at=3.45
+meas dc ig_37 find ig at=3.7
+meas dc ig_42 find ig at=4.2
+wrdata @DAT@ iw ig v(vsys) v(vledb)
+.endc
+.end

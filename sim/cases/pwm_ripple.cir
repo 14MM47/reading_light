@@ -1,0 +1,29 @@
+* CASE pwm_ripple: the LP5012's 29 kHz PWM on all 8 whites, all channels switching in phase (worst case: the
+* datasheet extract does not say whether the LP5012 staggers its outputs). duty 0.5 (largest ripple) or 0.8875
+* (4000 K full). Checks ripple on VLED at the LP5012 (VCC 2.7-5.5 V) and on VSYS (the MCU; BOD 2.6 V).
+.param soc0=0.30 duty=0.5
+.include models.inc
+.include boards.inc
+Xcell batraw 0 LIPO soc0={soc0}
+Rnousb vbusin 0 1Meg
+Vsw swon 0 1
+Vled ledon 0 1
+Xmb vbusin batraw vsys vled swon ledon vbus vsysraw bat MAINPWR
+Xcab vled 0 vledb gb CABLE
+Vw dw 0 PULSE(0 1 0 50n 50n {duty/29k-50n} {1/29k})
+Vz dz 0 0
+Xlb vledb gb dw dz dz dz LEDBOARD
+.tran 20n 3m 0 20n
+.control
+run
+let ib = v(vledb)-v(gb)
+meas tran vledb_max max ib from=2m to=3m
+meas tran vledb_min min ib from=2m to=3m
+meas tran vsys_max max v(vsys) from=2m to=3m
+meas tran vsys_min min v(vsys) from=2m to=3m
+let icab = i(l.xcab.lv)
+meas tran icab_avg avg icab from=2m to=3m
+meas tran icab_max max icab from=2m to=3m
+wrdata @DAT@ ib v(vsys) icab
+.endc
+.end

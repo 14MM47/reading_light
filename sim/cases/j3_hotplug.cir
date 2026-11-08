@@ -1,0 +1,30 @@
+* CASE j3_hotplug: the LED-board cable is plugged into J3 while VLED is live (Q4 on). Not a user action (the
+* cable is inside the gooseneck) but VERIFY E13 tests it. The main board has no bulk capacitance on VLED, so the
+* LED board's ~4-5 uF charges from C4 (VSYS) through Q4 and the cable. Checks: peak current, VSYS dip vs the
+* ATtiny BOD (2.6 V), overshoot at the LED board vs the LP5012 abs max (6 V).
+.param soc0=1.0 cbulk=1p
+.include models.inc
+.include boards.inc
+Xcell batraw 0 LIPO soc0={soc0}
+Rnousb vbusin 0 1Meg
+Vsw swon 0 1
+Vled ledon 0 1
+Xmb vbusin batraw vsys vled swon ledon vbus vsysraw bat MAINPWR cbulk={cbulk}
+Splug vled vledp plug 0 SPLUG
+.model SPLUG SW(VT=0.5 VH=0.01 RON=10m ROFF=1e9)
+Vplug plug 0 PWL(0 0 100u 0 100.01u 1)
+Xcab vledp 0 vledb gb CABLE
+Vz dw 0 0
+Xlb vledb gb dw dw dw dw LEDBOARD iq=0
+.tran 2n 300u 0 2n
+.control
+run
+let icab = i(l.xcab.lv)
+meas tran vsys0 find v(vsys) at=99u
+meas tran ipk max icab from=100u to=300u
+meas tran vsys_min min v(vsys) from=100u to=300u
+meas tran vledb_max max v(vledb) from=100u to=300u
+meas tran t_below when v(vsys)=2.6 fall=1
+wrdata @DAT@ icab v(vsys) v(vledb) v(vled)
+.endc
+.end

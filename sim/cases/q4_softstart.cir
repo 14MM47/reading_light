@@ -1,0 +1,29 @@
+* CASE q4_softstart: firmware drives PB2 low (Q4 on) and powers the LED board through the neck cable.
+* Q4 soft turn-on = R13 10k into C8 100n gate-drain (Miller integrator). VERIFY E13: VLED ramps over ~1-2 ms,
+* VSYS dips <= 0.2 V, no reset (BOD 2.6 V). LEDs dark (LP5012 in standby until Chip_EN), so only the board's
+* capacitance and standby current load VLED.
+.param soc0=0.055 vto=-0.7
+.include models.inc
+.include boards.inc
+Xcell batraw 0 LIPO soc0={soc0}
+Rnousb vbusin 0 1Meg
+Vsw swon 0 1
+Vled ledon 0 PWL(0 0 1m 0 1.001m 1)
+Xmb vbusin batraw vsys vled swon ledon vbus vsysraw bat MAINPWR vto={vto}
+Xcab vled 0 vledb gb CABLE
+Vz dw 0 0
+Xlb vledb gb dw dw dw dw LEDBOARD iq=0
+.tran 0.5u 6m 0 0.5u
+.control
+run
+let ivled = i(v.xcell.vsense)
+let iq4 = (v(vled)-v(vledb))/0.063
+meas tran vsys0 find v(vsys) at=0.99m
+meas tran vsys_min min v(vsys) from=1m to=6m
+meas tran ipk max iq4 from=1m to=6m
+meas tran vled_end find v(vledb) at=5.9m
+let dvdt = deriv(v(vledb))
+meas tran dvdt_max max dvdt from=1m to=6m
+wrdata @DAT@ v(vsys) v(vledb) iq4 v(Xmb.q4g)
+.endc
+.end

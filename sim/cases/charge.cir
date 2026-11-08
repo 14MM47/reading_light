@@ -1,0 +1,38 @@
+* CASE charge: a full charge on USB from an empty cell (OCV 3.0 V) with the lamp at 4000 K full the whole time
+* (lamp=1) or off (lamp=0). R18: load sharing, so the charger sees only the cell and terminates (7.5 % = 31 mA)
+* with the light on. Also: USB draw (VERIFY E11), VSYS on USB (E15 >= 3.9 V), charger dissipation, Q1 current.
+.param soc0=0.0 lamp=1 vusb=5.0 rptc=0.12
+.include models.inc
+.include boards.inc
+Xcell batraw 0 LIPO soc0={soc0}
+Vusb usb 0 {vusb}
+Rusb usb vbusin 0.2
+Vsw swon 0 1
+Vled ledon 0 1
+Xmb vbusin batraw vsys vled swon ledon vbus vsysraw bat MAINPWR rptc={rptc}
+Xcab vled 0 vledb gb CABLE
+Vw dw 0 {0.8875*lamp}
+Vz dz 0 0
+Xlb vledb gb dw dz dz dz LEDBOARD iq={6.8m*lamp}
+.save all @d.xmb.xq1.dbody[id]
+.tran 10 25200 0 20
+.control
+run
+let ichg = -i(v.xcell.vsense)
+let iusb = -i(vusb)
+let pchg = (v(vbus)-v(bat))*ichg
+let iq1 = (v(bat)-v(vsysraw))
+let soc = v(xcell.soc)
+meas tran ichg_cc find ichg at=1800
+meas tran t_term when ichg=0.031 fall=last
+meas tran soc_term find soc when ichg=0.031 fall=last
+meas tran iusb_max max iusb
+meas tran vsys_min min v(vsys) from=20
+meas tran pchg_max max pchg
+meas tran vbat_max max v(batraw)
+meas tran vq1_max max iq1
+let idq1 = @d.xmb.xq1.dbody[id]
+meas tran idq1_max max idq1 from=20
+wrdata @DAT@ ichg v(batraw) v(vsys) iusb pchg soc
+.endc
+.end
