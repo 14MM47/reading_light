@@ -1,4 +1,5 @@
-"""Write the SPICE report: docs/verification/spice-report.md (committed) and sim/out/report.html (self-contained)."""
+"""Write the SPICE report: docs/verification/spice-report_main-v<rev>_led-v<rev>_rev<N>.md + .pdf (committed) and
+sim/out/report.html (self-contained, for the published page)."""
 from __future__ import annotations
 
 import base64
@@ -27,9 +28,20 @@ def board_revs() -> dict[str, str]:
     return out
 
 
+REPORT_REV = 2
+REV_HISTORY = [  # (rev, date, what changed)
+    (1, "2026-11-08", "First issue (commit 19607f7): 33 runs, 35 checks, findings D1-D6; then the first "
+     "discussion of D1-D4 with the handover options and source sweep (commit ca6c974). Kept unchanged as "
+     "`spice-report_main-v0.1_led-v0.2_rev1.md` / `.pdf`, figures in `spice_rev1/`."),
+    (2, "2026-11-08", "Matt's decisions on D1-D6 recorded; D1 handover redesign study (ideal-diode options, "
+     "parts survey); D3 source-voltage sweep; D4 tail analysis; document rework for D2, D3, D4, D6; "
+     "simulation rework and checks since rev 1 (section *Rev 2: rework and checks*)."),
+]
+
+
 def report_stem() -> str:
     r = board_revs()
-    return f"spice-report_main-v{r['main-board']}_led-v{r['led-board']}"
+    return f"spice-report_main-v{r['main-board']}_led-v{r['led-board']}_rev{REPORT_REV}"
 
 
 def kicad_refs() -> dict[str, str]:
@@ -72,10 +84,16 @@ def write(R, checks, figs, sch, model_points, cases, ngspice_ver):
     a = L.append
     revs = board_revs()
     vtag = f"main board v{revs['main-board']} · LED board v{revs['led-board']}"
+    vtag = f"{vtag} · report rev {REPORT_REV}"
     a(f"# SPICE simulation report: moon reading light ({vtag})")
     a("")
     a(f"**Board versions:** main board **v{revs['main-board']}**, LED board **v{revs['led-board']}** (`REV` in "
       f"`hardware/*/design.py`, the KiCad title blocks and `fab/<board>/v<rev>/`). Report file: `{report_stem()}`.")
+    a("")
+    a("| Report rev | Date | Changes |")
+    a("|---|---|---|")
+    for rv, dte, what in REV_HISTORY:
+        a(f"| {rv} | {dte} | {what} |")
     a("")
     a(f"Generated {today} by `python3 sim/run_sims.py` "
       f"({ngspice_ver}, {nruns} runs over {len(cases) - 1} circuits plus a model check). **These are predictions, not "
@@ -88,24 +106,20 @@ def write(R, checks, figs, sch, model_points, cases, ngspice_ver):
       "The FAIL rows are two issues: the USB-unplug dip (as built, plus the two R5 values tried as remedies) and "
       "the J3 hot-plug at a low battery.")
     a("")
-    a("What needs a decision:")
+    a("Decisions (details in *Findings and decisions*; what changed since rev 1 in *Rev 2: rework and checks*):")
     a("")
-    a(f"1. **USB unplug dips VSYS by {dip:.2f} V for about {dur(h10):.0f} ms** (VERIFY E12 allows 0.3 V). Q1's body "
-      f"diode carries the lamp until R5 has pulled VBUS down far enough to turn Q1's channel on. The MCU stays up "
-      f"(minimum {h10['vsys_min']:.2f} V against the 2.6 V BOD), but the LED-board current drops from "
-      f"{h10['iled_usb'] * 1e3:.0f} mA to about 130 mA for that time, which may show as a blink. E12's own remedy "
-      f"(R5 4.7k) only shortens it ({dur(h47):.0f} ms; {dur(h1):.1f} ms with 1k): the depth is the body diode's "
-      "drop and no R5 value changes it. See D1 below: accept for v0.1 (R5 1k if the dim shows); a reverse-blocking "
-      "ideal diode in place of Q1 removes it in the next revision.")
-    a(f"2. **Hot-plugging the LED-board cable resets the MCU at a low battery** (VSYS falls to {j3l['vsys_min']:.2f} V "
-      f"at 3.49 V; {j3f['vsys_min']:.2f} V on a full cell, just above the 2.6 V BOD). The cable is inside the gooseneck, "
-      f"so this is a bench situation, but VERIFY E13 asks for it. E13's remedy (47 µF on VSYS) brings the low-battery "
-      f"case to {j3b['vsys_min']:.2f} V and raises the power-on inrush from {po['ipk']:.2f} A to {pob['ipk']:.2f} A. "
-      "Simplest: drop the hot-plug step from E13 (plug J3 with the switch off).")
-    a(f"3. **On a weak USB source VSYS falls below E15's 3.9 V**: {chw['vsys_min']:.2f} V at 4.75 V USB through a "
-      f"0.2 Ω cable with F1 at its 0.2 Ω maximum (about 3.80 V without the cable). Q1's body diode then sees {chw['vq1_max']:.2f} V forward and leaks "
-      f"{chw['idq1_max'] * 1e3:.1f} mA from the cell, too little to upset the charge termination. At 5.0 V "
-      f"VSYS is {ch['vsys_min']:.2f} V. E15 should name the source voltage (5.0 V nominal).")
+    a(f"1. **D1, USB unplug dip** ({dip:.2f} V for ~{dur(h10):.0f} ms; E12 allows 0.3 V). The MCU stays up (minimum "
+      f"{h10['vsys_min']:.2f} V); the lamp dims ~30 % for that time. R5 can only shorten it ({dur(h47):.0f} ms with "
+      f"4.7k, {dur(h1):.1f} ms with 1k). **Next revision:** an LM66100 ideal diode in place of Q1 (CE on VBUS) with "
+      "R5 1k, which cuts it to under 1 ms. **v0.1 handling still to confirm** (recommended: re-word E12, R5 1k if "
+      "the dim shows).")
+    a(f"2. **D2, J3 hot-plug** resets the MCU at a low battery (VSYS {j3l['vsys_min']:.2f} V). **Accepted** with "
+      "conditions: J3 is mated once at assembly with SW1 off and strain-relieved; E13 and handoff 05 updated.")
+    a(f"3. **D3, weak USB sources**: VSYS {chw['vsys_min']:.2f} V at 4.75 V and a false low-battery indication at "
+      f"4.4 V; {ch['vsys_min']:.2f} V on 5.0 V. **Accepted**: 5 V ≥ 1 A charger specified, E15 on 5.0 V; VBUS sense "
+      "for the next revision.")
+    a("4. **D4, white headroom with max-VF dies**: **accepted**; whites added to E9.")
+    a("5. **D5, I²C**: keep 100 kHz. 6. **D6**: Q4 note corrected in `electronics.md`.")
     a("")
     a("What the simulation confirms:")
     a("")
@@ -130,6 +144,7 @@ def write(R, checks, figs, sch, model_points, cases, ngspice_ver):
                                                                        ("low", "full", "low_vth05", "low_vth09")),
                       m=m, figs=figs, hw_max_run=R[("headroom", "white_max")][1],
                       rt4000_run=R[("runtime", "4000k")][1]), revs)
+    rev2_section(a, m, revs, report_stem())
     a("## All checks")
     a("")
     a("| ID | Area | Check | Simulated | Limit | Verdict |")
@@ -328,8 +343,8 @@ def write(R, checks, figs, sch, model_points, cases, ngspice_ver):
             a("")
     md = "\n".join(L)
     stem = report_stem()
-    for old in DOCS.glob("spice-report*.md"):
-        if old.name != f"{stem}.md":
+    for old in DOCS.glob("spice-report*.md"):      # earlier revisions are kept (rev1 links its own spice_rev1/)
+        if "_rev" not in old.name:
             old.unlink()
     (DOCS / f"{stem}.md").write_text(md)
     _html(md, vtag, today, stem)
@@ -363,8 +378,8 @@ def _pdf(body: str, vtag: str, today: str, stem: str):
     except ImportError:
         print("weasyprint not installed: PDF skipped")
         return
-    for old in DOCS.glob("spice-report*.pdf"):
-        if old.name != f"{stem}.pdf":
+    for old in DOCS.glob("spice-report*.pdf"):     # earlier revisions' PDFs are kept as the record
+        if "_rev" not in old.name:
             old.unlink()
     css = PRINT_CSS.replace("{{FOOT}}", f"Moon reading light · SPICE report · {vtag} · {today}")
     html = f"<!doctype html><html><head><meta charset='utf-8'><title>SPICE report ({vtag})</title>" \
@@ -453,15 +468,27 @@ tr { break-inside: avoid; }
 """
 
 
+def terminates(x) -> bool:
+    v = x.get("t_term", float("nan"))
+    return v == v
+
+
+def term(x) -> str:
+    """Charge time to the MCP73831's own termination (31 mA at its output), or a plain statement if it never comes."""
+    v = x.get("t_term", float("nan"))
+    return f"{v / 3600:.1f} h" if v == v else "**does not terminate** (7 h run)"
+
+
 def decisions(a, d, revs):
     """Findings mapped to the decisions they need: evidence, options with their simulated effect, recommendation."""
     m, figs = d["m"], d["figs"]
     h10 = d["h10"]
     j3l, j3f, j3b, po, pob = d["j3l"], d["j3f"], d["j3b"], d["po"], d["pob"]
     chw, hw, hwm, tr = d["chw"], d["hw"], d["hwm"], d["tr"]
-    u = {v: m("usb_unplug", v) for v in ("r5_10k", "r5_4k7", "r5_1k", "gd", "sch", "det43", "idd")}
+    u = {v: m("usb_unplug", v) for v in ("r5_10k", "r5_4k7", "r5_1k", "gd", "sch", "det43", "idd", "dual", "lm",
+                                          "lm_r5_4k7", "lm_r5_1k")}
     c = {v: m("charge", v) for v in ("lamp", "lamp_weak", "v45", "v44", "v44_dark", "weak_sch", "weak_det43",
-                                     "weak_idd", "v44_idd", "v44_idd435")}
+                                     "weak_idd", "v44_idd", "v44_idd435", "lm_weak", "lm_44", "dual_5", "dual_44")}
     a("## Findings and decisions to make")
     a("")
     a(f"For main board v{revs['main-board']} / LED board v{revs['led-board']}. Options give the simulated effect "
@@ -471,14 +498,15 @@ def decisions(a, d, revs):
     a("| # | Finding | Severity | Status | Recommendation |")
     a("|---|---|---|---|---|")
     a(f"| D1 | USB unplug: VSYS dips {u['r5_10k']['dip']:.2f} V for {u['r5_10k']['t_deep_ms']:.0f} ms | **FAIL** (E12) | "
-      "open | v0.1: accept, re-word E12 (R5 1k if the dim shows). Next revision: reverse-blocking ideal diode |")
-    a(f"| D2 | J3 hot-plug at 3.5 V: VSYS {j3l['vsys_min']:.2f} V, below BOD | **FAIL** (E13 step) | open: Matt "
-      "confirms J3 is mated once at assembly | acceptable; mate J3 with SW1 off and drop the step from E13 |")
+      "next-revision chip discussed; v0.1 handling still to confirm | v0.1: accept, re-word E12 (R5 1k if the dim "
+      "shows). Next revision: battery-side ideal diode |")
+    a(f"| D2 | J3 hot-plug at 3.5 V: VSYS {j3l['vsys_min']:.2f} V, below BOD | **FAIL** (E13 step) | **decided "
+      "2026-11-08**: accepted with conditions; E13 and handoff 05 updated | mate J3 once, SW1 off, strain-relieved |")
     a(f"| D3 | VSYS falls with the USB source voltage ({chw['vsys_min']:.2f} V at 4.75 V, "
-      f"{c['v44']['vsys_min']:.2f} V at 4.4 V) | **MARGINAL** (E15) | open | specify a 5 V / ≥ 1 A charger; "
-      "E15 on 5.0 V; optional firmware tweak |")
-    a(f"| D4 | Max-VF white dies dim slightly below VSYS {hwm['vsys_w95']:.2f} V | **MARGINAL** | open (VERIFY E9) "
-      "| accept; decide after E9 |")
+      f"{c['v44']['vsys_min']:.2f} V at 4.4 V) | **MARGINAL** (E15) | **decided 2026-11-08**: A applied, B "
+      "conditional, C next revision | 5 V ≥ 1 A charger; E15 on 5.0 V |")
+    a(f"| D4 | Max-VF white dies dim slightly below VSYS {hwm['vsys_w95']:.2f} V | **MARGINAL** | **decided "
+      "2026-11-08**: accepted; whites added to E9 | raise VBAT_LOW_MV only if E9 finds high-VF whites |")
     a(f"| D5 | I²C {tr['c150']:.0f} ns at 150 pF | MARGINAL for fast mode only | **decided 2026-11-08**: keep "
       "100 kHz | none |")
     a(f"| D6 | Q4 charging current {d['q4max'] * 1e3:.0f} mA vs 15-25 mA in the design note | INFO | **done "
@@ -520,7 +548,9 @@ def decisions(a, d, revs):
 
     def row(v, name, cost, weak=None):
         x = u[v]
-        w = f"terminates at {c[weak]['t_term'] / 3600:.1f} h" if weak else "as built (5.1 h)"
+        w = f"charger terminates at {term(c[weak])}" if weak else "as built (5.1 h)"
+        if weak and not terminates(c[weak]):
+            w = "**charger does not terminate**: the cell shares the lamp, so R18 load sharing is lost"
         if weak == "weak_det43":
             w = (f"**unsafe**: latches with Q1 on at plug-in; USB charges the cell through D3 + Q1 at up to "
                  f"{c[weak]['iusb_max']:.1f} A, past the charger")
@@ -528,13 +558,18 @@ def decisions(a, d, revs):
 
     row("r5_10k", "As built (R5 10k)", "-")
     row("r5_4k7", "R5 4.7k (E12's remedy)", "value change; +0.6 mA from USB while plugged")
-    row("r5_1k", "R5 1k", "value change; +4.5 mA (25 mW) from USB while plugged")
+    i_r5 = u["r5_1k"]["vbus_usb"] / 1e3
+    row("r5_1k", "R5 1k", f"value change; +{i_r5 * 1e3:.1f} mA ({i_r5 ** 2 * 1e3 * 1e3:.0f} mW) from USB while "
+        "plugged")
     row("gd", "Gate via a small Schottky, own 100k pull-down", "2 parts; **does not help**: VBUS itself stays up")
     row("sch", "1 A Schottky across Q1 (BAT → VSYS_RAW)", "1 part (SOD-123); the battery shares the lamp whenever "
         "VSYS_RAW < BAT − 0.3 V", "weak_sch")
     row("det43", "4.3 V detector drives Q1's gate", "detector IC + resistor", "weak_det43")
-    row("idd", "Reverse-blocking ideal diode replaces Q1, enabled below ~3.9 V VBUS", "ideal-diode IC "
-        "(LM66100-class, SC-70-6) + VBUS detection on its enable pin; layout change", "weak_idd")
+    row("lm", "TI LM66100 in place of Q1, CE on VBUS (TI's OR-ing circuit), R5 10k", "SC-70-6; see the chip "
+        "discussion below", "lm_weak")
+    row("lm_r5_1k", "Same, R5 1k", f"as above, +{i_r5 * 1e3:.1f} mA from USB while plugged", "lm_weak")
+    row("idd", "Idealised reverse-blocking switch, fixed 3.9 V switch-over (stands in for a TPS2116-class power "
+        "mux)", "see the chip discussion below", "weak_idd")
     a("")
     a(f"![Detector hazard]({figs['handover_hazard']})")
     a("")
@@ -544,33 +579,109 @@ def decisions(a, d, revs):
       "until the cell voltage rises). The current design avoids this only because Q1 waits for VBUS to collapse. A "
       "raised threshold therefore needs a switch that blocks reverse current.*")
     a("")
-    a("**Discussion.**")
+    a("**Discussion of the options.**")
     a("")
     a("- *R5* (B, C) is the only change possible on the v0.1 board without new parts. It cannot reduce the depth. "
       f"With 1k the dim lasts {u['r5_1k']['t_dim_ms']:.1f} ms, probably too short to notice.")
     a(f"- *Schottky across Q1* brings the dip to {u['sch']['dip']:.2f} V, just inside E12. Its cost is the D3 "
       "interaction: on a weak source the cell feeds part of the lamp through the Schottky "
-      f"(charge ends at {c['weak_sch']['t_term'] / 3600:.1f} h instead of 5.1 h). Its reverse leakage into the "
-      "cell while on USB is µA-level at 25 °C and rises with temperature (not simulated). Note that the 2026-11-02 "
-      "decision rejected a Schottky for D3 because of leakage with the switch off; across Q1 there is no bias with "
-      "the switch off, so that concern does not apply here.")
-    a("- *A detector on Q1's gate* removes the dip but is unsafe as shown above: rejected.")
-    a(f"- *An ideal-diode IC* (e.g. TI LM66100: ~80 mΩ, reverse-current blocking, active-low enable, SC-70-6; check "
-      "the datasheet and stock before choosing it) removes the dip completely "
-      f"(LED dim {u['idd']['t_dim_ms']:.2f} ms) and keeps the weak-source charge unchanged "
-      f"({c['weak_idd']['t_term'] / 3600:.1f} h). **The enable threshold matters**: VBUS falls to ~3.7 V within "
-      "~50 µs of an unplug, so a ~3.9 V threshold still catches it at once, while a higher one (4.35 V was tried) "
-      "enables the ideal diode on a 4.4 V charger and hands the whole lamp to the cell: it then gains only "
-      f"~{c['v44_idd435']['ichg_4h'] * 1e3:.0f} mA net after 4 h and does not finish charging. It needs VBUS detection on its enable pin (a divider, or a voltage "
-      "detector), a re-check of the standby drain (R17: its shutdown current adds to the ≤ 10 µA budget) and of the "
-      "reversed-battery case, and a layout change. It is also a part that the hand-assembly rule R21 has to "
-      "allow (SC-70 is fine by hand).")
-    a("- *A charger with built-in power path* (MCP73871, BQ2407x) is the other next-revision route; those are QFN "
-      "parts (R21) and were not simulated.")
+      f"(on 4.75 V the charger {'terminates at ' + term(c['weak_sch']) if terminates(c['weak_sch']) else 'never terminates while the lamp is on: R18 load sharing is lost'}). Its reverse leakage into the "
+      "cell while on USB is µA-level at 25 °C and rises with temperature (not simulated). The 2026-11-02 decision "
+      "rejected a Schottky for D3 because of leakage with the switch off; across Q1 there is no bias with the switch "
+      "off, so that concern does not apply here.")
+    a("- *A detector on Q1's gate* removes the dip but is unsafe as shown above: rejected. The same applies to any "
+      "bidirectional switch enabled at a raised VBUS threshold, including an LM66100 with a divider on CE (its "
+      "reverse-current trip needs 0.5-1 A).")
     a("")
-    a("**Recommendation.** For v0.1, leave the hardware alone and re-word E12 to \"no reset; note the dim\". If the "
-      "dim is visible at the bench, fit R5 = 1k. For the next main-board revision, replace Q1 with a reverse-blocking "
-      "ideal diode enabled from VBUS.")
+    a("#### D1 next revision: the ideal-diode chip")
+    a("")
+    a("Requirements for the part that replaces Q1: 3.0-4.2 V in; ≥ 0.3 A continuous with ~0.6 A start-up peaks; "
+      "it must never let USB charge the cell past the MCP73831; it sits ahead of the slide switch, so its own "
+      "battery current counts against the ≤ 10 µA standby budget (R17: ≤ ~3 µA used today plus the cell's PCM); "
+      "and it must be hand-solderable (R21: no QFN).")
+    a("")
+    a("Parts surveyed (TI datasheets read: LM66100 SLVSEZ8A, LM66200 SLVSG04, TPS2116 SLVSFG1A; MAX40200 from an "
+      "unofficial mirror only, so unverified):")
+    a("")
+    a("| Part | Type | RON | Battery current | Switch-over | Package | Stock (DigiKey UK, Nov 2026) |")
+    a("|---|---|---|---|---|---|---|")
+    a("| **LM66100** | single ideal diode, CE comparator against VIN | 91 mΩ typ / 110 max (3.6 V) | 0.15 µA "
+      "typ / 0.3 max | on when CE < VIN − 150 mV (40 µs), off when CE > VIN + 35 mV (2 µs) | SC-70-6, 0.65 mm "
+      "pitch | 296-53541-1-ND, ~£0.27; **0 in stock**, due 21 Dec 2026 |")
+    a("| TPS2116 | 2-input power mux, priority mode | 40 / 48 mΩ (3.3 V) | 1.35 µA typ, 3.7 max at 85 °C | fixed "
+      "threshold from a VBUS divider into a 1.0 V ±8 % reference; break-before-make ~8 µs | SOT-583, 0.5 mm pitch "
+      "| 296-TPS2116DRLRCT-ND, ~£0.85, in stock |")
+    a("| LM66200 | dual ideal diode, highest input wins | 40 / 48 mΩ | 1.35 µA typ, 3.7 max | 6-8 µs | SOT-583 | "
+      "not checked |")
+    a("| MAX40200 | single ideal diode | ~85 mV at 1 A (unverified) | a few µA (unverified) | 65 µs enable "
+      "(unverified) | SOT-23-5 | not checked |")
+    a("")
+    a("No charger with built-in power path in a non-QFN package was found (MCP73871 and BQ2407x are QFN). Farnell UK "
+      "pages could not be checked; re-check stock and the latest datasheet revisions before committing to a part.")
+    a("")
+    a("**Simulated: LM66100 in TI's OR-ing circuit** (VIN = BAT, VOUT = VSYS_RAW, CE straight to VBUS; S1J kept on "
+      "the USB side). Behavioural model from the datasheet figures above, body diode ~0.5 V typ:")
+    a("")
+    a("| R5 | Dip | Time beyond 0.3 V | LED dims for |")
+    a("|---|---|---|---|")
+    for v, r5 in (("lm", "10k"), ("lm_r5_4k7", "4.7k"), ("lm_r5_1k", "1k")):
+        x = u[v]
+        a(f"| {r5} | {x['dip']:.2f} V | {x['t_deep_ms']:.1f} ms | {x['t_dim_ms']:.1f} ms |")
+    a("")
+    a(f"Charging on a 4.75 V source with the LM66100 (R5 10k run): the charger terminates at {term(c['lm_weak'])}, "
+      "as on the as-built board.")
+    a("")
+    a("What this shows:")
+    a("")
+    a(f"- The LM66100 does **not** remove the dip outright. Until VBUS falls 150 mV below the cell, its own body "
+      f"diode carries the lamp, so the depth ({u['lm']['dip']:.2f} V) is close to Q1's. What changes is the "
+      f"switch-over point: VBUS only has to fall to ~VBAT − 0.15 V instead of ~2.2 V, so the dip lasts "
+      f"{u['lm']['t_deep_ms']:.1f} ms instead of {u['r5_10k']['t_deep_ms']:.0f} ms, and "
+      f"{u['lm_r5_1k']['t_deep_ms']:.1f} ms with R5 1k: invisible.")
+    hp = m("usb_hotplug", "lm_r01")
+    a("- It is safe in steady state: with CE on VBUS it can only be on while VBUS is below the cell, so D3 cannot "
+      "feed the cell through it. Its reverse leakage when off is 0.2 µA typ / 0.5 max at 25 °C. **One transient "
+      "exception, simulated:** if USB is plugged back in while it is on, it needs its ~2 µs turn-off, and for that "
+      f"time USB reaches the cell through D3 and the LM66100: {hp['icell_in_max']:.1f} A for about "
+      f"{hp['t_icell_hi_us']:.0f} µs (a few µC). That is far too short to matter to the cell or its protection "
+      "circuit, but it means the part blocks reverse current in steady state, not instantaneously.")
+    a(f"- USB plug-in puts up to {hp['vbus_max']:.2f} V on CE (VBUS); confirm it against the LM66100's absolute "
+      "maximum ratings (not extracted in this survey).")
+    a("- Battery current 0.15-0.3 µA: the standby budget is essentially unchanged.")
+    a("- On a 4.4 V source (outside the D3 spec) the switch never turns on (VBUS stays above the cell), but its body "
+      "diode carries part of the lamp from the cell throughout the charge, as Q1's does today, and the charger "
+      f"{'terminates at ' + term(c['lm_44']) if terminates(c['lm_44']) else 'never terminates while the lamp is on'}. "
+      "How much it carries depends on the body-diode drop, which the datasheet gives only as 0.1-1.1 V.")
+    a(f"- At switch-on VSYS steps back up by ~0.5 V and the LED board's capacitors recharge: the cable current "
+      f"peaks at {u['lm']['iled_max_after'] * 1e3:.0f} mA for a few microseconds (the model ramps the switch in 8 "
+      "steps over the turn-on; the real part's slew is not specified). Harmless.")
+    a("")
+    a("**The TPS2116 route** (simulated as the idealised 3.9 V switch above, and as \"ideal diodes for Q1 and D3\" "
+      "because the mux replaces both): no dip apart from its ~8 µs break-before-make gap (~0.2 V on VSYS for 8 µs by "
+      "estimate, not simulated), and one part instead of Q1 + D3. But it puts VBUS almost straight onto VSYS:")
+    a("")
+    p_lp = lambda v: (v - 0.04 - 2.78) * 0.1775  # noqa: E731  (LP5012 sink power at 4000 K full, estimate)
+    a(f"- VSYS on a 5.0 V charger rises from {c['lamp']['vsys_min']:.2f} V to {c['dual_5']['vsys_min']:.2f} V. "
+      f"The LP5012 then drops the difference in its sinks: about {p_lp(c['dual_5']['vsys_min']):.2f} W instead of "
+      f"{p_lp(c['lamp']['vsys_min']):.2f} W at 4000 K full (estimate from the simulated VSYS), in the moon head "
+      "whose thermal design and firmware derating were fitted to the lower figure (T-series tests).")
+    a(f"- A USB plug-in transient reaches {m('usb_hotplug', 'dual_r01')['vledb_max']:.2f} V at the LED board "
+      f"(as built: {m('usb_hotplug', 'r01')['vledb_max']:.2f} V), close to the LP5012's 5.5 V recommended maximum.")
+    a(f"- It does fix D3: VSYS on a 4.4 V source is {c['dual_44']['vsys_min']:.2f} V, so no false low battery.")
+    a("- Battery current 1.35 µA typ, 3.7 µA max when hot: a large share of the 10 µA standby budget. The switch-over "
+      "threshold spreads ±8 % (3.6-4.2 V for a 3.9 V setting) and has no specified hysteresis.")
+    a("")
+    a("**Recommendation for the next revision.** Replace Q1 with an **LM66100, CE straight to VBUS**, keep the S1J "
+      f"for USB, and lower R5 to 1k (dip under 1 ms, invisible; +{i_r5 * 1e3:.1f} mA from USB while plugged in). It is the "
+      "smallest change: one SC-70 part in Q1's place and a resistor value. It keeps VSYS and the LED-board thermal "
+      "design as they are, adds ~0.3 µA at most to the standby drain, and cannot charge the cell past the charger "
+      "except for the microseconds of its turn-off at a USB re-plug. "
+      "Add the VBUS sense to an MCU pin at the same time (D3, option C). Check LM66100 stock first (none at DigiKey "
+      "UK until 21 Dec 2026). The TPS2116 is the alternative if a single part for both inputs is wanted; it "
+      "needs the thermal and 5.5 V questions above answered first.")
+    a("")
+    a("**For v0.1** (not yet confirmed): leave the hardware alone and re-word E12 to \"no reset; note the dim\"; fit "
+      "R5 = 1k if the dim is visible at the bench.")
     a("")
     a("**If no decision.** E12 fails at the bench against its 0.3 V limit; the lamp works.")
     a("")
@@ -599,8 +710,9 @@ def decisions(a, d, revs):
       f"the power-on inrush from {po['ipk']:.2f} A to {pob['ipk']:.2f} A, so it is not worth adding for a "
       "connector that is mated once.")
     a("")
-    a("**Recommendation.** Accept. Remove the hot-plug step from E13, and add \"mate J3 with SW1 off\" and a "
-      "strain-relief note to the assembly handoff (05).")
+    a("**Decision (Matt, 2026-11-08): accepted with these conditions.** Done: VERIFY E13 no longer hot-plugs J3, "
+      "and handoff 05 §4.3 now says to check SW1 is OFF before plugging J3. Strain relief was already specified there "
+      "(a 10-15 mm service loop and silicone at the gooseneck bore entrance, because the JST-SH has no latch).")
     a("")
 
     # ------------------------------------------------------------------ D3
@@ -618,7 +730,7 @@ def decisions(a, d, revs):
         x = c[v]
         fw = ("normal" if x["vsys_min"] >= 3.45 else
               f"**low battery** for {x['h_below_345']:.1f} h (35 % cap, warning blinks)")
-        a(f"| {src} | {x['vsys_min']:.2f} V | {fw} | {x['idq1_max'] * 1e3:.1f} mA | {x['t_term'] / 3600:.1f} h |")
+        a(f"| {src} | {x['vsys_min']:.2f} V | {fw} | {x['idq1_max'] * 1e3:.1f} mA | {term(x)} |")
 
     srow("lamp", "5.0 V")
     srow("lamp_weak", "4.75 V (USB minimum at the port)")
@@ -631,9 +743,13 @@ def decisions(a, d, revs):
     a("")
     a("**Discussion.**")
     a("")
-    a("- Nothing is unsafe at any of these voltages. The charger still regulates the cell, and when VSYS_RAW falls "
-      "more than ~0.6 V below the cell, Q1's body diode lets the cell help carry the lamp (up to "
-      f"{c['v44']['idq1_max'] * 1e3:.0f} mA at 4.4 V), which only stretches the charge.")
+    a("- Charge termination is judged on the MCP73831's own output current (rev 2 correction: rev 1 used the cell "
+      "current). When VSYS_RAW falls more than ~0.6 V below the cell, Q1's body diode lets the cell carry part of "
+      f"the lamp (up to {c['v44']['idq1_max'] * 1e3:.0f} mA at 4.4 V). The charger then supplies that as well, its "
+      "output never falls to the 31 mA termination level, and **with the lamp on from a ≤ 4.5 V source the charge "
+      "never terminates**: the cell is held at 4.20 V (CV) and the charge LED stays on until the lamp is switched "
+      "off or a better charger is used. Nothing exceeds a rating (the charger still limits the cell to 4.20 V), but "
+      "holding a LiPo at 4.20 V for long periods ages it faster. This strengthens recommendation A (a 5 V charger).")
     a("- The user-visible effects are firmware ones: a false low-battery warning and a 35 % brightness cap on very "
       "weak sources, and a late wake from empty-sleep.")
     a("- A good USB-C charger delivers 5.0-5.2 V, and handoff 02 already asks for a ≥ 1 A charger. Weak sources are "
@@ -643,14 +759,16 @@ def decisions(a, d, revs):
       "from VSYS rising above the cell's possible range, which is not reliable.")
     a(f"- The D1 ideal-diode redesign (threshold ~3.9 V) does not raise VSYS on a weak source, since the lamp "
       f"still runs through D3, but it stops the cell from feeding the lamp through Q1's body diode, so the charge "
-      f"at 4.4 V ends at {c['v44_idd']['t_term'] / 3600:.1f} h instead of {c['v44']['t_term'] / 3600:.1f} h.")
+      f"at 4.4 V terminates at {term(c['v44_idd'])} instead of never.")
     a("")
     a("**Options.** (A) Specify the source: run E15 on a 5.0 V charger and state \"5 V ≥ 1 A USB-C charger\" in the "
       "user notes (no cost). (B) Lower VBAT_RESUME_MV to 3600 mV (E15's own remedy; firmware constant, costs a little "
       "hysteresis against bouncing out of empty-sleep). (C) Next revision: VBUS sense to an MCU pin, so the firmware "
       "can tell USB from a low battery.")
     a("")
-    a("**Recommendation.** A now; B if E15 shows the late wake on the chargers Matt uses; C with the D1 redesign.")
+    a("**Decision (Matt, 2026-11-08): recommendations accepted.** A done: E15 is run on a 5.0 V, ≥ 1 A charger and "
+      "handoff 05's user notes ask for one. B stays as E15's remedy, applied only if the bench shows the late wake. C "
+      "is on the next-revision list with D1.")
     a("")
 
     # ------------------------------------------------------------------ D4
@@ -684,12 +802,12 @@ def decisions(a, d, revs):
       "channel, −20 % light), already listed under E9 for the green/blue dies. (D) Order a known low-VF bin "
       "(Bridgelux VF bins B-E); the stocked part is the full-distribution code, so this depends on availability.")
     a("")
-    a("**Recommendation.** A, and add the whites to E9: measure the received white dies' VF at 25 mA alongside G/B. "
-      "If they sit near the top of the range, B is a one-line firmware change.")
+    a("**Decision (Matt, 2026-11-08): accept (A).** Done: E9 now also measures one 2700 K and one 5000 K white at "
+      "25 mA; if either reads above ~2.85 V, raise VBAT_LOW_MV to 3500 (B).")
     a("")
 
     # ------------------------------------------------------------------ D5, D6
-    a("### D5. I²C speed: decided")
+    a("### D5. I²C speed: decided (keep 100 kHz)")
     a("")
     a(f"Rise times {tr['c60']:.0f} / {tr['c100']:.0f} / {tr['c150']:.0f} ns for 60 / 100 / 150 pF are inside "
       "standard mode (1000 ns). **Decision (Matt, 2026-11-08): keep 100 kHz.** Moving to 400 kHz would need a "
@@ -700,4 +818,123 @@ def decisions(a, d, revs):
     a(f"`docs/design/electronics.md` §1 said Q4's soft turn-on charges the LED board with 15-25 mA. The simulation "
       f"gives up to {d['q4max'] * 1e3:.0f} mA, because the MLCCs start near their unbiased value. **Done "
       "(2026-11-08):** the note now gives the simulated 25-36 mA and the reason.")
+    a("")
+
+
+def rev2_section(a, m, revs, stem):
+    """Rev 2: decisions recorded, document rework, simulation additions, model/tooling rework and verification."""
+    u = lambda v: m("usb_unplug", v)  # noqa: E731
+    c = lambda v: m("charge", v)  # noqa: E731
+    a("## Rev 2: rework and checks")
+    a("")
+    a("Everything done between report rev 1 and rev 2: the decisions Matt made on D1-D6, the documents changed as a "
+      "result, the simulations added, the corrections to the simulation itself, and how rev 2 was checked.")
+    a("")
+    a("### Decisions recorded (Matt, 2026-11-08)")
+    a("")
+    a("| # | Decision | Action taken | Files |")
+    a("|---|---|---|---|")
+    a("| D1 | Discuss the next-revision ideal-diode chip | Redesign study and parts survey (D1 above); the v0.1 "
+      "handling (re-word E12, R5 1k fallback) is still to confirm | this report |")
+    a("| D2 | Accepted with conditions: J3 mated once at assembly, SW1 off, strain-relieved | Assembly step and "
+      "VERIFY E13 updated | `docs/handoffs/05-assembly-bringup.md` §4.3, `docs/verification/VERIFY.md` E13 |")
+    a("| D3 | Recommendations accepted: (A) specify a 5 V ≥ 1 A charger and run E15 on 5.0 V; (B) lower "
+      "VBAT_RESUME_MV only if E15 shows a late wake; (C) VBUS sense in the next revision | (A) applied; (B) left as "
+      "E15's remedy; (C) on the next-revision list | VERIFY E15, handoff 05 §6, `PLAN.md` |")
+    a("| D4 | Accepted | Whites added to the VF measurement in E9, with the trigger for raising VBAT_LOW_MV | "
+      "VERIFY E9 |")
+    a("| D5 | Keep I²C at 100 kHz | none needed (firmware already at 100 kHz) | `PLAN.md` |")
+    a("| D6 | Correct the Q4 note | Done | `docs/design/electronics.md` §1 |")
+    a("")
+    a("### Simulations added in rev 2")
+    a("")
+    a("All in `sim/run_sims.py` (CASES) and re-run with the rest; redesign elements are in marked blocks of "
+      "`sim/boards.inc` that the runner removes for the as-built board (an assertion checks Q1 and D3 are present).")
+    a("")
+    a("| Case / variant | Purpose | Key result |")
+    a("|---|---|---|")
+    a(f"| usb_unplug / gd | gate fed through a small Schottky | no improvement (dip {u('gd')['dip']:.2f} V): VBUS "
+      "itself stays up |")
+    a(f"| usb_unplug / sch | Schottky across Q1 | dip {u('sch')['dip']:.2f} V |")
+    a("| usb_unplug / det43, charge / weak_det43 | VBUS detector on Q1's gate | dip removed, but a latched state "
+      f"charges the cell from USB at {c('weak_det43')['iusb_max']:.1f} A: rejected |")
+    a(f"| usb_unplug / idd, charge / weak_idd, v44_idd | ideal diode in place of Q1, enabled below 3.9 V | no dip; "
+      f"charge {term(c('weak_idd'))} at 4.75 V and {term(c('v44_idd'))} at 4.4 V |")
+    a(f"| charge / v44_idd435 | same, enabled below 4.35 V | stalls charging on a 4.4 V source "
+      f"({c('v44_idd435')['ichg_4h'] * 1e3:.0f} mA net after 4 h): threshold must stay below the weakest charger |")
+    a(f"| usb_unplug / dual, usb_hotplug / dual_r01, charge / dual_5, dual_44 | ideal diodes for both Q1 and D3 | "
+      f"no dip; VSYS {c('dual_5')['vsys_min']:.2f} V on 5.0 V and {c('dual_44')['vsys_min']:.2f} V on 4.4 V; "
+      f"plug-in peak {m('usb_hotplug', 'dual_r01')['vledb_max']:.2f} V at the LED board |")
+    a(f"| usb_unplug / lm, lm_r5_4k7, lm_r5_1k, charge / lm_weak, lm_44 | TI LM66100 in place of Q1, CE on VBUS | "
+      f"dip {u('lm')['dip']:.2f} V for {u('lm')['t_deep_ms']:.1f} ms (R5 10k), {u('lm_r5_1k')['t_deep_ms']:.1f} ms "
+      f"(R5 1k); charge unchanged at 4.75 V |")
+    a(f"| usb_hotplug / lm_r01 | USB re-plug while the LM66100 is on | {m('usb_hotplug', 'lm_r01')['icell_in_max']:.1f} A "
+      f"into the cell for ~{m('usb_hotplug', 'lm_r01')['t_icell_hi_us']:.0f} µs during its turn-off |")
+    a(f"| charge / v45, v44, v44_dark | source-voltage sweep (D3) | VSYS {c('v45')['vsys_min']:.2f} / "
+      f"{c('v44')['vsys_min']:.2f} V with the lamp on; {c('v44_dark')['vsys_min']:.2f} V lamp off at 4.4 V |")
+    a("")
+    a("### Corrections to the simulation since rev 1")
+    a("")
+    a("Found by the two independent reviews (of the rev 1 diff and of the rev 2 diff) or while adding the rev 2 cases. "
+      "Each is fixed in the code, and every number in this report is the corrected one.")
+    a("")
+    a("1. **I²C rise times were ~8× too fast** (review 1). A `.meas … when v(sda)={0.3*vled}` inside `.control` "
+      "does not evaluate the `{}` expression, so the thresholds were 0.3 V and 0.7 V absolute. Rise times are now "
+      "computed in Python from the waveform, with an assertion against the analytic 0.847·RC. Corrected 21/36/54 ns "
+      "→ 168/280/419 ns; I1-c150 changed from PASS to MARGINAL.")
+    a("2. **Q4 and power-on 10-90 % times** had the same cause (hard-coded or unevaluated levels). Now taken from "
+      "each run's final value: Q4 1.02 → 1.06 ms at 3.49 V; power-on VSYS rise 53 → 76 µs. No verdict changed.")
+    a("3. **J3 hot-plug timing in the text** (review 1): the current pulse is ~1.5 µs wide (was \"well under a "
+      "microsecond\") and VSYS recovers over ~50 µs (was ~10 µs). Conclusions unchanged.")
+    a("4. **Weak-USB case description** (review 1): it includes a 0.2 Ω USB cable, and 0.2 Ω is the PTC's maximum "
+      "*cold* resistance, not a warm value. Check C2 is judged on the body-diode current (0.46 mA, against the "
+      "31 mA termination) instead of a voltage threshold.")
+    a("5. **Charge termination was measured on the cell current** (review 2). The MCP73831 terminates on its own "
+      "output current, which also includes whatever leaves BAT through Q1's body diode (or the Schottky, or the "
+      "LM66100's body diode) into the lamp. A 0 V sense source on the charger output now gives that current. "
+      "Effect: with the lamp on, the as-built board **does not terminate** on 4.5 V and 4.4 V sources (rev 1's "
+      "first discussion said 5.3 h and 5.8 h), and the Schottky-across-Q1 option does not terminate even at 4.75 V "
+      "(was 6.1 h). The 5.0 V and 4.75 V as-built results are unchanged (5.1 h).")
+    a("6. **Redesign elements leaked into the as-built netlist.** Adding the D1 options to the shared board model "
+      "broke convergence of the J3 hot-plug case even with them disconnected; they now sit in marked blocks that the "
+      "runner removes. A first version of that removal also deleted Q1 and D3 (the marker text appeared inside a "
+      "comment); this was caught by a missing measurement, fixed by anchoring the markers to whole lines, and is now "
+      "guarded by an assertion. Review 2 confirmed the as-built netlists match rev 1 as circuits.")
+    a("7. **Option isolation.** In the first LM66100 runs the idealised option's path was still connected (its "
+      "isolation tested `q1gd > 2.5` instead of `q1gd == 3`), which made the LM66100 look dip-free. Caught by probing "
+      "VBUS, BAT and the enable node; each option now connects only its own elements (checked element by element in "
+      "review 2).")
+    a("8. **Ideal-diode model formulation.** A behavioural B-source version converged to a false operating point "
+      "(VSYS ~606 V, held by D3's 600 V reverse breakdown). Replaced by a voltage-controlled switch (80 mΩ) in series "
+      "with a near-ideal diode (~30 mV at 0.2 A).")
+    a("9. **LM66100 switch-on** (review 2): a one-step switch made a ~1 A current spike at turn-on that the text "
+      "dismissed without evidence. The switch is now 8 parallel stages closing over the enable ramp; the spike falls "
+      "to the LED board's capacitors recharging and is reported with its size. (A continuous B-source conductance "
+      "was tried first and did not converge.)")
+    a("10. **Parts-survey claim corrected.** The survey expected the LM66100 to cut the dip to ~40 µs. The simulation "
+      "shows its body diode carries the lamp until VBUS falls 150 mV below the cell, so the dip keeps its depth and "
+      "lasts a few milliseconds (under 1 ms with R5 1k).")
+    a("11. **The detector option has a second stable state** (latched at plug-in, ~1 A from USB into the cell); it "
+      "is a property of the circuit, not of the solver, and is why that option is rejected.")
+    a("12. **E15 could no longer trigger D3 remedy B** (review 2): run on a 5.0 V charger, VSYS stays above the "
+      "3.70 V resume level, so a late wake cannot show. E15 now adds an informational wake check on the weakest "
+      "charger Matt actually uses.")
+    a("")
+    a("### How rev 2 was checked")
+    a("")
+    a("- As-built results: every rev 1 check gives the same value in rev 2 apart from the corrections listed above "
+      "(19 pass, 5 marginal, 4 fail, 7 info).")
+    a("- Each new variant was run on its own first and its waveforms inspected (the D1 figures); two anomalies were "
+      "investigated before being reported (a 37-48 µs LED-current blip at switch-over, which is real and invisible; "
+      "the detector latch, which is real and disqualifying).")
+    a("- Static checks on `sim/`: ruff (pyflakes rules) and mypy clean. The repo's `tests/test_consistency.py` gives "
+      "3 pass and 1 fail, the same failure as on the unchanged branch (`test_board_map_matches_led_netlist`, "
+      "needs KiCad's `pcbnew`).")
+    a("- Two independent diff reviews: of rev 1 (4 findings) and of the rev 2 changes (option isolation, the LM66100 "
+      "model against its datasheet figures, every rev 2 number against the results file, the document edits). "
+      "Review 2 found the termination metric (item 5), the E15 trigger (item 12), the switch-on spike (item 9), an "
+      "out-of-order list and small text issues; all fixed. It also asked for an LM66100 USB re-plug case, which "
+      "found the transient in D1.")
+    a(f"- Report files: `{stem}.md` and `.pdf`. Rev 1 is kept unchanged and marked as rev 1 "
+      "(`spice-report_main-v0.1_led-v0.2_rev1.md` / `.pdf`, figures in `spice_rev1/`).")
     a("")

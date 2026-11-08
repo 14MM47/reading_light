@@ -2,7 +2,7 @@
 * no reset). On USB, VSYS is fed through D3 and Q1 is held off by VBUS on its gate. After the unplug the load
 * drains C1 through D3 until Q1's body diode takes over; Q1's channel only turns on once R5 has pulled VBUS
 * below VSYS_RAW - |VGS(th)|.
-.param soc0=0.10 r5=10k q1gd=0 sch=0 vdet=4.3
+.param soc0=0.10 r5=10k q1gd=0 sch=0 vdet=4.3 usbid=0 ron_id=0.08
 .include models.inc
 .include boards.inc
 Xcell batraw 0 LIPO soc0={soc0}
@@ -14,7 +14,7 @@ Splug u2 vbusin plug 0 SPLUG
 Vplug plug 0 PWL(0 1 5m 1 5.001m 0)
 Vsw swon 0 1
 Vled ledon 0 1
-Xmb vbusin batraw vsys vled swon ledon vbus vsysraw bat MAINPWR r5={r5} q1gd={q1gd} sch={sch} vdet={vdet}
+Xmb vbusin batraw vsys vled swon ledon vbus vsysraw bat MAINPWR r5={r5} q1gd={q1gd} sch={sch} vdet={vdet} usbid={usbid} ron_id={ron_id}
 Xcab vled 0 vledb gb CABLE
 Vw dw 0 0.8875
 Vz dz 0 0

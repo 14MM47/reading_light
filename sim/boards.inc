@@ -16,14 +16,24 @@
 *   vled    VLED (J3 pin 2, main-board side)    swon    1 = slide switch ON      ledon 1 = PB2 low (Q4 on)
 *   vbus vsysraw bat: internal nodes brought out for probing
 .subckt MAINPWR vbusin batraw vsys vled swon ledon vbus vsysraw bat rptc=0.12 vto=-0.7 r5=10k cbulk=1p
-+ q1gd=0 rq1pd=100k sch=0 vdet=4.3
++ q1gd=0 rq1pd=100k sch=0 vdet=4.3 ron_id=0.08
 * --- A: USB input, TVS, charger
 RF1 vbusin vbus {rptc}
 D1 0 vbus DSMF5
 XC1 vbus 0 MLCC c0=10u v0=6 nexp=1.5
 R5 vbus 0 {r5}
+*>chgsense
+* charge case only: the charger output current is sensed by Vchg (the MCP73831 terminates on this, not on
+* the cell current); sim/spice.py keeps this block for the charge case and the plain one for every other case
+Bchg vbus chgo I = 0.5*(1+tanh((V(vbus)-3.75)/0.03)) * max(0, min( min( (V(bat) < 2.79 ? 0.0256 : 0.256),
++   (4.20 - V(bat))/0.02), (V(vbus) - V(bat))/0.35 ))
+Vchg chgo bat 0
+*<chgsense
+*>nochgsense
 Bchg vbus bat I = 0.5*(1+tanh((V(vbus)-3.75)/0.03)) * max(0, min( min( (V(bat) < 2.79 ? 0.0256 : 0.256),
 +   (4.20 - V(bat))/0.02), (V(vbus) - V(bat))/0.35 ))
+*<nochgsense
+
 Biq vbus 0 I = 0.5*(1+tanh((V(vbus)-3.75)/0.03)) * (0.5m + (V(bat) < 4.15 ? 3m : 0))
 XC2 bat 0 MLCC c0=10u v0=6 nexp=1.5
 * --- B: reverse-battery FET Q3 (G = R10 to GND, S = BAT, D = BAT_RAW), load share Q1 (G = VBUS, S = VSYS_RAW,
@@ -52,15 +62,53 @@ Bidraw iden_r 0 V = 0.5*(1 - tanh((V(vbus) - {vdet} - 0.05)/0.02))
 Rid iden_r iden 20k
 Cid iden 0 1n
 Sid bat idm iden 0 SIDEAL
-.model SIDEAL SW(VT=0.5 VH=0.05 RON=0.08 ROFF=1e9)
+.model SIDEAL SW(VT=0.5 VH=0.05 RON={ron_id} ROFF=1e9)
 Did idm idk DIDEAL
-Rid_en idk vsysraw {q1gd > 2.5 ? 1m : 1e9}
+Rid_en idk vsysraw {abs(q1gd - 3) < 0.5 ? 1m : 1e9}
 .model DIDEAL D(IS=1e-6 N=0.1 RS=0)
+* q1gd=4: TI LM66100 in place of Q1 (SLVSEZ8A): VIN = BAT, VOUT = VSYS_RAW, CE = VBUS (TI's OR-ing circuit).
+* Datasheet figures: RON 91 mOhm typ at 3.6 V; body diode ~0.5 V typ (VIN -> VOUT); CE comparator against VIN:
+* on when CE < VIN - 150 mV, off when CE > VIN + 35 mV; turn-on 40 us, turn-off 2 us; conducts both ways when on.
+Blmst lmst 0 V = (V(bat) - V(vbus) > (V(lmen) > 0.5 ? -0.035 : 0.15)) ? 1 : 0
+Rlmon lmst lmen 40k
+Clmen lmen 0 1n
+Dlmoff lmen lmoffk DIDEAL
+Rlmoff lmoffk lmst 2k
+* switch: 8 parallel stages (8 x 0.728 Ohm = 91 mOhm) closing at staggered enable levels, so the on-resistance
+* ramps as the enable node rises (~40 us) instead of switching in one step; off in ~2 us
+Slm0 bat lmo lmen 0 SLM0
+.model SLM0 SW(VT=0.1 VH=0.02 RON=0.728 ROFF=1e10)
+Slm1 bat lmo lmen 0 SLM1
+.model SLM1 SW(VT=0.2 VH=0.02 RON=0.728 ROFF=1e10)
+Slm2 bat lmo lmen 0 SLM2
+.model SLM2 SW(VT=0.3 VH=0.02 RON=0.728 ROFF=1e10)
+Slm3 bat lmo lmen 0 SLM3
+.model SLM3 SW(VT=0.4 VH=0.02 RON=0.728 ROFF=1e10)
+Slm4 bat lmo lmen 0 SLM4
+.model SLM4 SW(VT=0.5 VH=0.02 RON=0.728 ROFF=1e10)
+Slm5 bat lmo lmen 0 SLM5
+.model SLM5 SW(VT=0.6 VH=0.02 RON=0.728 ROFF=1e10)
+Slm6 bat lmo lmen 0 SLM6
+.model SLM6 SW(VT=0.7 VH=0.02 RON=0.728 ROFF=1e10)
+Slm7 bat lmo lmen 0 SLM7
+.model SLM7 SW(VT=0.8 VH=0.02 RON=0.728 ROFF=1e10)
+Rlmo lmo vsysraw {abs(q1gd - 4) < 0.5 ? 1m : 1e9}
+Dlmbd bat lmbd DLMBODY
+Rlmbd lmbd vsysraw {abs(q1gd - 4) < 0.5 ? 1m : 1e9}
+.model DLMBODY D(IS=7.4e-9 N=1.25 RS=0.05)
 * sch=1: a 1 A Schottky across Q1 (anode BAT, cathode VSYS_RAW)
 Rsch bat schA {sch > 0.5 ? 1m : 1e9}
 Dsch schA vsysraw DSCH1A
 *<redesign
+*>nousbid
 D3 vbus vsysraw DS1J
+*<nousbid
+*>usbid
+* usbid=1 (redesign): D3 replaced by a second reverse-blocking ideal diode, always enabled (ron_id)
+Sud vbus udm uen 0 SIDEAL
+Vuen uen 0 1
+Dud udm vsysraw DIDEAL
+*<usbid
 XC3 vsysraw 0 MLCC c0=10u v0=6 nexp=1.5
 XQ2 vsys swgate vsysraw DMG2305 vto={vto}
 R6 vsysraw swgate 1Meg

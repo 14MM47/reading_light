@@ -53,9 +53,15 @@ def run(case: str, variant: str = "base", params: dict | None = None, die: str =
     boards = (SIM / "boards.inc").read_text()
     for a, b in DIE[die].items():
         boards = boards.replace(a, b)
-    if not any(float(str((params or {}).get(k, 0))) for k in ("q1gd", "sch")):
-        boards = re.sub(r"^\*>redesign$.*?^\*<redesign$\n", "", boards, flags=re.S | re.M)
-        assert "XQ1 " in boards and "D3 vbus vsysraw" in boards, "redesign strip removed board parts"
+    on = lambda k: bool(float(str((params or {}).get(k, 0))))  # noqa: E731
+    keep = {"redesign": on("q1gd") or on("sch") or on("usbid"), "usbid": on("usbid"), "nousbid": not on("usbid"),
+            "chgsense": case == "charge", "nochgsense": case != "charge"}
+    for name, k in keep.items():
+        if not k:
+            boards = re.sub(rf"^\*>{name}$.*?^\*<{name}$\n", "", boards, flags=re.S | re.M)
+    assert "XQ1 " in boards, "block strip removed Q1"
+    assert boards.count("Bchg ") == 1, "charger selection wrong"
+    assert ("D3 vbus vsysraw" in boards) != on("usbid"), "D3 / USB ideal diode selection wrong"
     (d / "boards.inc").write_text(boards)
     dat = f"{case}.dat"
     (d / f"{case}.cir").write_text(src.replace("@DAT@", dat))

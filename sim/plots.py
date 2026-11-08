@@ -136,7 +136,7 @@ def make_all(R) -> dict[str, str]:
 
     # ---- handover redesign options (D1)
     fig, ax = plt.subplots(2, 1, figsize=(7.5, 5.2), sharex=True)
-    for k, v in enumerate(("r5_10k", "r5_1k", "sch", "idd")):
+    for k, v in enumerate(("r5_10k", "r5_1k", "sch", "lm_r5_1k", "idd")):
         r = g("usb_unplug", v)
         t = (r.x - 5e-3) * 1e3
         ax[0].plot(t, r.col("v(vsys)"), color=S[k], label=lab("usb_unplug", v))
@@ -148,7 +148,7 @@ def make_all(R) -> dict[str, str]:
     ax[1].set_xlabel("time after USB is pulled (ms)")
     ax[0].legend(loc="upper right", fontsize=8)
     ax[0].set_xlim(-1, 25)
-    f["handover_options"] = save(fig, "handover_options", "USB unplug: the as-built handover and three alternatives",
+    f["handover_options"] = save(fig, "handover_options", "USB unplug: the as-built handover and the alternatives",
                                  "Cell 3.6 V, 4000 K full. Options other than R5 are not on the v0.1 board")
     # ---- detector hazard on a weak source (D1)
     fig, ax = plt.subplots(figsize=(7.5, 3.4))

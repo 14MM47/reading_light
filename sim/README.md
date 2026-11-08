@@ -1,7 +1,8 @@
 # sim/: SPICE simulations of the moon reading light
 
 `python3 sim/run_sims.py` runs every case, checks the results against their limits and writes
-`docs/verification/spice-report_main-v<rev>_led-v<rev>.md` and `.pdf` (board revisions read from
+`docs/verification/spice-report_main-v<rev>_led-v<rev>_rev<N>.md` and `.pdf` (report revision `REPORT_REV` in
+`sim/report.py`; earlier revisions are kept; board revisions read from
 `hardware/*/design.py`; PDF via WeasyPrint) with its figures in `docs/verification/spice/`. It takes about 30 s.
 
 Needs ngspice (42 tested; XSPICE not required), numpy, matplotlib, schemdraw, markdown, weasyprint (PDF; skipped if missing). kicad-cli and pdftoppm

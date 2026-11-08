@@ -94,7 +94,8 @@ on its bottom silk.
 2. **VERIFY E1 again on the real cell: + must be on J2 pin 1.** From the back of the PCB, pass the cell's plug up
    through the 6.4 × 5.0 mm slot beside J2, mate it with J2, and let it lie flat over the slot. Lay the slack lead
    flat in the bay's end gap, clear of the two screw heads (VERIFY M13).
-3. Fit the button caps into the front shell. Plug the JST-SH into J3. Leave a 10–15 mm service loop, then fix the
+3. Fit the button caps into the front shell. **Check SW1 is OFF**, then plug the JST-SH into J3: J3 is mated once,
+   here, and never with VLED live (plugging it live can reset the MCU at a low battery: SPICE report D2). Leave a 10–15 mm service loop, then fix the
    cable to the gooseneck bore entrance in the neck block with a dab of silicone. A pull on the neck is then taken
    there and never reaches the JST-SH, which has no latch. Screw the PCB onto the bosses with 2 × M2×6.
 4. Battery into the bay. Hook the back-plate tabs into the slots, then fit 2 × M2×12 through the clip root and the
@@ -111,6 +112,8 @@ on its bottom silk.
 4. Light and colour: VERIFY **O1–O7** as equipment allows. A phone lux app is good enough for O3.
 
 ## 6. User notes (for whoever uses the lamp)
+- Charge from a 5 V USB-C charger rated 1 A or more. On a weak source (an unpowered hub, a long thin cable) the
+  lamp can show a low-battery warning while plugged in; it is harmless (SPICE report D3).
 - Charge at room temperature (the charger has no cell-temperature sensing). The red LED means charging. It flickers
   when no battery is connected, which is normal.
 - The side switch is the only off. Switch off when you put the lamp down.

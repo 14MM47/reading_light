@@ -2,7 +2,7 @@
 * battery at 4000 K full. The cable inductance rings with C1 (10 uF, VBUS). Checks VBUS against the TVS and the
 * MCP73831 abs max (7 V), and VSYS / VLED against the ATtiny and LP5012 abs max (6 V).
 * USB cable: rusb (VBUS + GND, 0.1 Ohm short/heavy ... 0.3 Ohm long/thin) and 1 uH loop (PROVISIONAL).
-.param soc0=0.30 rusb=0.1 vusb=5.25
+.param soc0=0.30 rusb=0.1 vusb=5.25 q1gd=0 sch=0 vdet=4.3 usbid=0 ron_id=0.08
 .include models.inc
 .include boards.inc
 Xcell batraw 0 LIPO soc0={soc0}
@@ -14,7 +14,7 @@ Splug u2 vbusin plug 0 SPLUG
 Vplug plug 0 PWL(0 0 100u 0 100.01u 1)
 Vsw swon 0 1
 Vled ledon 0 1
-Xmb vbusin batraw vsys vled swon ledon vbus vsysraw bat MAINPWR
+Xmb vbusin batraw vsys vled swon ledon vbus vsysraw bat MAINPWR q1gd={q1gd} sch={sch} vdet={vdet} usbid={usbid} ron_id={ron_id}
 Xcab vled 0 vledb gb CABLE
 Vw dw 0 0.8875
 Vz dz 0 0
@@ -23,12 +23,14 @@ Xlb vledb gb dw dz dz dz LEDBOARD
 .control
 run
 let iusb = i(lusb)
+let icell_in = -i(v.xcell.vsense)
+meas tran icell_in_max max icell_in from=100u to=400u
 meas tran vbus_max max v(vbus) from=100u to=400u
 meas tran vbusin_max max v(vbusin) from=100u to=400u
 meas tran iusb_pk max iusb from=100u to=400u
 meas tran vsys_max max v(vsys) from=100u to=400u
 meas tran vledb_max max v(vledb) from=100u to=400u
 meas tran vsys_end find v(vsys) at=399u
-wrdata @DAT@ iusb v(vbus) v(vsys) v(vledb)
+wrdata @DAT@ iusb v(vbus) v(vsys) v(vledb) icell_in
 .endc
 .end

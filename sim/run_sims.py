@@ -3,8 +3,8 @@
 
     python3 sim/run_sims.py            # needs ngspice (42 tested), numpy, matplotlib, schemdraw
 
-Outputs: docs/verification/spice-report_main-v<rev>_led-v<rev>.md + .pdf (board revisions from
-hardware/*/design.py) + docs/verification/spice/*.png (committed), sim/out/ (netlists as run,
+Outputs: docs/verification/spice-report_main-v<rev>_led-v<rev>_rev<N>.md + .pdf (board revisions from
+hardware/*/design.py, report revision REPORT_REV in report.py) + docs/verification/spice/*.png (committed), sim/out/ (netlists as run,
 ngspice logs, raw data, results.json, report.html; not committed). Predictions, not evidence: every PROVISIONAL
 model value is listed in the report, and the bench measurements in docs/verification/VERIFY.md replace them.
 """
@@ -36,7 +36,11 @@ CASES: dict[str, list[tuple[str, str, dict, str]]] = {
                    ("low", "cell 3.49 V", {"soc0": 0.055}, "typ"),
                    ("low_bulk47", "cell 3.49 V, + 47 uF on VSYS", {"soc0": 0.055, "cbulk": "47u"}, "typ")],
     "usb_hotplug": [("r01", "5.25 V, cable 0.1 Ohm", {"rusb": 0.1}, "typ"),
-                    ("r03", "5.25 V, cable 0.3 Ohm", {"rusb": 0.3}, "typ")],
+                    ("r03", "5.25 V, cable 0.3 Ohm", {"rusb": 0.3}, "typ"),
+                    ("lm_r01", "5.25 V, 0.1 Ohm, LM66100 (re-plug while it is on)", {"rusb": 0.1, "q1gd": 4},
+                     "typ"),
+                    ("dual_r01", "5.25 V, 0.1 Ohm, ideal diodes for Q1 and D3", {"rusb": 0.1, "q1gd": 3, "vdet": 3.9,
+                                                                               "usbid": 1}, "typ")],
     "usb_unplug": [("r5_10k", "R5 10k (as built)", {"r5": "10k"}, "typ"),
                    ("r5_4k7", "R5 4.7k (E12 remedy)", {"r5": "4.7k"}, "typ"),
                    ("r5_1k", "R5 1k", {"r5": "1k"}, "typ"),
@@ -44,7 +48,11 @@ CASES: dict[str, list[tuple[str, str, dict, str]]] = {
                    ("gd", "gate diode + 100k pull-down", {"q1gd": 1}, "typ"),
                    ("sch", "Schottky across Q1", {"sch": 1}, "typ"),
                    ("det43", "4.3 V detector drives Q1's gate", {"q1gd": 2}, "typ"),
-                   ("idd", "ideal diode replaces Q1", {"q1gd": 3, "vdet": 3.9}, "typ")],
+                   ("idd", "ideal diode replaces Q1", {"q1gd": 3, "vdet": 3.9}, "typ"),
+                   ("dual", "ideal diodes for Q1 and D3", {"q1gd": 3, "vdet": 3.9, "usbid": 1}, "typ"),
+                   ("lm", "LM66100, CE on VBUS, R5 10k", {"q1gd": 4}, "typ"),
+                   ("lm_r5_4k7", "LM66100, CE on VBUS, R5 4.7k", {"q1gd": 4, "r5": "4.7k"}, "typ"),
+                   ("lm_r5_1k", "LM66100, CE on VBUS, R5 1k", {"q1gd": 4, "r5": "1k"}, "typ")],
     "charge": [("lamp", "4000 K full on, USB 5.0 V", {"lamp": 1}, "typ"),
                ("dark", "lamp off, USB 5.0 V", {"lamp": 0}, "typ"),
                ("lamp_weak", "lamp on, USB 4.75 V, PTC 0.2 Ohm (cold max)", {"lamp": 1, "vusb": 4.75, "rptc": 0.2}, "typ"),
@@ -56,7 +64,12 @@ CASES: dict[str, list[tuple[str, str, dict, str]]] = {
                ("weak_det43", "4.75 V, 4.3 V detector", {"lamp": 1, "vusb": 4.75, "rptc": 0.2, "q1gd": 2}, "typ"),
                ("weak_idd", "4.75 V, ideal diode", {"lamp": 1, "vusb": 4.75, "rptc": 0.2, "q1gd": 3, "vdet": 3.9}, "typ"),
                ("v44_idd", "4.4 V, ideal diode", {"lamp": 1, "vusb": 4.4, "rptc": 0.2, "q1gd": 3, "vdet": 3.9}, "typ"),
-               ("v44_idd435", "4.4 V, ideal diode enabled below 4.35 V", {"lamp": 1, "vusb": 4.4, "rptc": 0.2, "q1gd": 3}, "typ")],
+               ("v44_idd435", "4.4 V, ideal diode enabled below 4.35 V", {"lamp": 1, "vusb": 4.4, "rptc": 0.2, "q1gd": 3}, "typ"),
+               ("lm_weak", "4.75 V, LM66100", {"lamp": 1, "vusb": 4.75, "rptc": 0.2, "q1gd": 4}, "typ"),
+               ("lm_44", "4.4 V, LM66100", {"lamp": 1, "vusb": 4.4, "rptc": 0.2, "q1gd": 4}, "typ"),
+               ("dual_5", "5.0 V, ideal diodes for Q1 and D3", {"lamp": 1, "q1gd": 3, "vdet": 3.9, "usbid": 1}, "typ"),
+               ("dual_44", "4.4 V, ideal diodes for Q1 and D3", {"lamp": 1, "vusb": 4.4, "rptc": 0.2, "q1gd": 3,
+                                                                  "vdet": 3.9, "usbid": 1}, "typ")],
     "runtime": [("4000k", "4000 K full", {"dwv": 0.8875, "drv": 0, "iqv": "6.8m", "tstop": 30000, "tmax": 20}, "typ"),
                 ("soft10", "soft white level 10", {"dwv": 0.095, "drv": 0, "iqv": "6.8m", "tstop": 250000,
                                                    "tmax": 60}, "typ"),
@@ -107,8 +120,14 @@ def derive(R):
             deep = after & (y < r.meas["vsys_bat"] - 0.3)
             dim = after & (i < 0.9 * r.meas["iled_usb"])
             r.meas["dip"] = r.meas["vsys_bat"] - r.meas["vsys_min"]
+            r.meas["vbus_usb"] = float(np.interp(4.9e-3, t, r.col("v(vbus)")))
+            r.meas["iled_max_after"] = float(i[after].max())
             r.meas["t_deep_ms"] = float(np.ptp(t[deep]) * 1e3) if deep.any() else 0.0
             r.meas["t_dim_ms"] = float(np.ptp(t[dim]) * 1e3) if dim.any() else 0.0
+        elif c == "usb_hotplug":
+            t, ic = r.x, r.col("icell_in")
+            hi = (t > 100e-6) & (ic > 0.3)
+            r.meas["t_icell_hi_us"] = float(np.ptp(t[hi]) * 1e6) if hi.any() else 0.0
         elif c == "charge":
             t, v, iu = r.x, r.col("v(vsys)"), r.col("iusb")
             r.meas["h_below_345"] = float(np.ptp(t[v < 3.45]) / 3600) if (v < 3.45).any() else 0.0
