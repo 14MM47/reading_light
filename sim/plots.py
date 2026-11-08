@@ -134,6 +134,37 @@ def make_all(R) -> dict[str, str]:
     f["usb_unplug"] = save(fig, "usb_unplug", "USB unplug handover to the battery (4000 K full, cell 3.6 V)",
                            "Q1's body diode carries the load until R5 pulls VBUS low enough to turn Q1's channel on")
 
+    # ---- handover redesign options (D1)
+    fig, ax = plt.subplots(2, 1, figsize=(7.5, 5.2), sharex=True)
+    for k, v in enumerate(("r5_10k", "r5_1k", "sch", "idd")):
+        r = g("usb_unplug", v)
+        t = (r.x - 5e-3) * 1e3
+        ax[0].plot(t, r.col("v(vsys)"), color=S[k], label=lab("usb_unplug", v))
+        ax[1].plot(t, r.col("iled") * 1e3, color=S[k], label=lab("usb_unplug", v))
+    vb = g("usb_unplug", "r5_10k").meas["vsys_bat"]
+    limit(ax[0], vb - 0.3, "E12 limit", va="top")
+    ax[0].set_ylabel("VSYS (V)")
+    ax[1].set_ylabel("LED-board current (mA)")
+    ax[1].set_xlabel("time after USB is pulled (ms)")
+    ax[0].legend(loc="upper right", fontsize=8)
+    ax[0].set_xlim(-1, 25)
+    f["handover_options"] = save(fig, "handover_options", "USB unplug: the as-built handover and three alternatives",
+                                 "Cell 3.6 V, 4000 K full. Options other than R5 are not on the v0.1 board")
+    # ---- detector hazard on a weak source (D1)
+    fig, ax = plt.subplots(figsize=(7.5, 3.4))
+    for k, v in ((2, "weak_det43"), (3, "weak_idd")):
+        r = g("charge", v)
+        sel = r.x <= 150
+        ax.plot(r.x[sel], r.col("ichg")[sel] * 1e3, color=S[k], label=lab("charge", v),
+                lw=1.2 if v == "weak_det43" else 1.8)
+    limit(ax, 256, "charger setting 256 mA")
+    ax.set_xlabel("time from plug-in (s), empty cell")
+    ax.set_ylabel("cell current (mA)")
+    ax.legend(loc="upper right", fontsize=8)
+    f["handover_hazard"] = save(fig, "handover_hazard", "Why a raised switch-over threshold needs reverse blocking",
+                                "4.75 V source, lamp on: a detector-driven Q1 latches on at plug-in and USB charges the "
+                                "cell through D3 + Q1, past the charger")
+
     # ---- charge
     fig, ax = plt.subplots(3, 1, figsize=(7.5, 6.6), sharex=True)
     for k, v in enumerate(("lamp", "dark", "lamp_weak")):

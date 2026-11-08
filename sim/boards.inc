@@ -16,6 +16,7 @@
 *   vled    VLED (J3 pin 2, main-board side)    swon    1 = slide switch ON      ledon 1 = PB2 low (Q4 on)
 *   vbus vsysraw bat: internal nodes brought out for probing
 .subckt MAINPWR vbusin batraw vsys vled swon ledon vbus vsysraw bat rptc=0.12 vto=-0.7 r5=10k cbulk=1p
++ q1gd=0 rq1pd=100k sch=0 vdet=4.3
 * --- A: USB input, TVS, charger
 RF1 vbusin vbus {rptc}
 D1 0 vbus DSMF5
@@ -29,7 +30,36 @@ XC2 bat 0 MLCC c0=10u v0=6 nexp=1.5
 *        D = BAT), D3 S1J VBUS -> VSYS_RAW, C3, power switch Q2 (G = SW_GATE, S = VSYS_RAW, D = VSYS), C4
 XQ3 batraw q3g bat DMG2305 vto={vto}
 R10 q3g 0 10k
-XQ1 bat vbus vsysraw DMG2305 vto={vto}
+* Q1. As built: gate on VBUS. The redesign options for decision D1 (q1gd = 1, 2, 3 and sch = 1) sit between
+* the two redesign marker lines below; sim/spice.py strips that block unless a variant sets q1gd or sch, so the
+* as-built netlist is exactly the board.
+Rq1link vbus q1g {q1gd > 0.5 ? 1e9 : 1m}
+XQ1 q1d q1g vsysraw DMG2305 vto={vto}
+Rq1d bat q1d {q1gd > 2.5 ? 1e9 : 1m}
+*>redesign
+* q1gd=1: gate fed from VBUS through a small Schottky (BAT54-class) with its own pull-down rq1pd.
+Dq1g vbus q1gd1 DBAT54
+Rq1gd1 q1gd1 q1g {abs(q1gd - 1) < 0.5 ? 1m : 1e9}
+Rq1pd q1g 0 {abs(q1gd - 1) < 0.5 ? rq1pd : 1e9}
+* q1gd=2: a VBUS voltage detector (behavioural stand-in for a supervisor IC, threshold vdet, 100 mV hysteresis)
+* drives the gate: gate = VBUS while VBUS is good, 0 V once VBUS falls below vdet.
+Bdet det 0 V = V(vbus) > ({vdet} + 0.1*V(detst)) ? V(vbus) : 0
+Bdetst detst 0 V = V(det) > 1 ? 0 : 1
+Rdet det q1g {q1gd > 1.5 ? 10k : 1e9}
+* q1gd=3: Q1 replaced by a reverse-blocking ideal diode (LM66100-class: ~80 mOhm switch + near-ideal diode),
+* enabled while VBUS < ~4.35 V (smooth step), ~20 us enable response.
+Bidraw iden_r 0 V = 0.5*(1 - tanh((V(vbus) - {vdet} - 0.05)/0.02))
+Rid iden_r iden 20k
+Cid iden 0 1n
+Sid bat idm iden 0 SIDEAL
+.model SIDEAL SW(VT=0.5 VH=0.05 RON=0.08 ROFF=1e9)
+Did idm idk DIDEAL
+Rid_en idk vsysraw {q1gd > 2.5 ? 1m : 1e9}
+.model DIDEAL D(IS=1e-6 N=0.1 RS=0)
+* sch=1: a 1 A Schottky across Q1 (anode BAT, cathode VSYS_RAW)
+Rsch bat schA {sch > 0.5 ? 1m : 1e9}
+Dsch schA vsysraw DSCH1A
+*<redesign
 D3 vbus vsysraw DS1J
 XC3 vsysraw 0 MLCC c0=10u v0=6 nexp=1.5
 XQ2 vsys swgate vsysraw DMG2305 vto={vto}

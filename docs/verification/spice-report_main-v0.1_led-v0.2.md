@@ -2,7 +2,7 @@
 
 **Board versions:** main board **v0.1**, LED board **v0.2** (`REV` in `hardware/*/design.py`, the KiCad title blocks and `fab/<board>/v<rev>/`). Report file: `spice-report_main-v0.1_led-v0.2`.
 
-Generated 2026-11-08 by `python3 sim/run_sims.py` (ngspice-42, 33 runs over 10 circuits plus a model check). **These are predictions, not evidence**: every value nobody has measured is listed under *Assumptions* with the VERIFY item that replaces it.
+Generated 2026-11-08 by `python3 sim/run_sims.py` (ngspice-42, 45 runs over 10 circuits plus a model check). **These are predictions, not evidence**: every value nobody has measured is listed under *Assumptions* with the VERIFY item that replaces it.
 
 ## Summary
 
@@ -10,8 +10,8 @@ Generated 2026-11-08 by `python3 sim/run_sims.py` (ngspice-42, 33 runs over 10 c
 
 What needs a decision:
 
-1. **USB unplug dips VSYS by 0.64 V for about 21 ms** (VERIFY E12 allows 0.3 V). Q1's body diode carries the lamp until R5 has pulled VBUS down far enough to turn Q1's channel on. The MCU stays up (minimum 2.89 V against the 2.6 V BOD), but the LED-board current drops from 185 mA to about 130 mA for that time, which may show as a blink. E12's own remedy (R5 4.7k) only shortens it (10 ms; 2.5 ms with 1k): the depth is the body diode's drop and no R5 value changes it. Options: accept and re-word E12 to "no reset"; R5 1k (costs 5 mA from USB while plugged in); or drive Q1's gate actively in the next revision.
-2. **Hot-plugging the LED-board cable resets the MCU at a low battery** (VSYS falls to 2.30 V at 3.49 V; 2.74 V on a full cell, just above the 2.6 V BOD). The cable is inside the gooseneck, so this is a bench situation, but VERIFY E13 asks for it. E13's remedy (47 µF on VSYS) brings the low-battery case to 2.72 V and raises the power-on inrush from 0.64 A to 1.69 A. Simplest: drop the hot-plug step from E13 (plug J3 with the switch off).
+1. **USB unplug dips VSYS by 0.64 V for about 21 ms** (VERIFY E12 allows 0.3 V). Q1's body diode carries the lamp until R5 has pulled VBUS down far enough to turn Q1's channel on. The MCU stays up (minimum 2.89 V against the 2.6 V BOD), but the LED-board current drops from 185 mA to about 130 mA for that time, which may show as a blink. E12's own remedy (R5 4.7k) only shortens it (10 ms; 2.5 ms with 1k): the depth is the body diode's drop and no R5 value changes it. See D1 below: accept for v0.1 (R5 1k if the dim shows); a reverse-blocking ideal diode in place of Q1 removes it in the next revision.
+2. **Hot-plugging the LED-board cable resets the MCU at a low battery** (VSYS falls to 2.30 V at 3.49 V; 2.74 V on a full cell, just above the 2.6 V BOD). The cable is inside the gooseneck, so this is a bench situation, but VERIFY E13 asks for it. E13's remedy (47 µF on VSYS) brings the low-battery case to 2.72 V and raises the power-on inrush from 0.64 A to 1.68 A. Simplest: drop the hot-plug step from E13 (plug J3 with the switch off).
 3. **On a weak USB source VSYS falls below E15's 3.9 V**: 3.71 V at 4.75 V USB through a 0.2 Ω cable with F1 at its 0.2 Ω maximum (about 3.80 V without the cable). Q1's body diode then sees 0.47 V forward and leaks 0.5 mA from the cell, too little to upset the charge termination. At 5.0 V VSYS is 4.00 V. E15 should name the source voltage (5.0 V nominal).
 
 What the simulation confirms:
@@ -25,76 +25,121 @@ What the simulation confirms:
 
 ## Findings and decisions to make
 
-Each finding below is for main board v0.1 / LED board v0.2. The options give the simulated effect where it was simulated; "not simulated" marks an engineering estimate. Nothing has been changed in the design: every option is Matt's call. *If no decision* says what happens by default.
+For main board v0.1 / LED board v0.2. Options give the simulated effect where it was simulated; "not simulated" marks an engineering estimate. Nothing in the design has been changed; each open item is Matt's call. *If no decision* says what happens by default.
 
-| # | Finding | Severity | Decision needed | Recommendation |
+| # | Finding | Severity | Status | Recommendation |
 |---|---|---|---|---|
-| D1 | USB unplug: VSYS dips 0.64 V for 21 ms | **FAIL** (E12) | accept, change R5, or redesign the handover | accept for v0.1, re-word E12; R5 1k if the blink is visible |
-| D2 | J3 hot-plug at 3.5 V: VSYS 2.30 V, below BOD | **FAIL** (E13 step) | change the test or add bulk capacitance | change the test (plug J3 with SW1 off) |
-| D3 | VSYS 3.71 V on a weak USB source | **MARGINAL** (E15) | define the E15 source | E15 on a 5.0 V source; no hardware change |
-| D4 | Max-VF white dies lose regulation at VSYS 3.40 V | **MARGINAL** | RIREF / LED bin (already open as VERIFY E9) | decide after E9 |
-| D5 | I²C 419 ns at 150 pF | **MARGINAL** for fast mode only | bus speed | keep 100 kHz (no change) |
-| D6 | Q4 charging current 36 mA vs the 15-25 mA in the design note | INFO | documentation | correct the note in `electronics.md` §1 |
+| D1 | USB unplug: VSYS dips 0.64 V for 21 ms | **FAIL** (E12) | open | v0.1: accept, re-word E12 (R5 1k if the dim shows). Next revision: reverse-blocking ideal diode |
+| D2 | J3 hot-plug at 3.5 V: VSYS 2.30 V, below BOD | **FAIL** (E13 step) | open: Matt confirms J3 is mated once at assembly | acceptable; mate J3 with SW1 off and drop the step from E13 |
+| D3 | VSYS falls with the USB source voltage (3.71 V at 4.75 V, 3.36 V at 4.4 V) | **MARGINAL** (E15) | open | specify a 5 V / ≥ 1 A charger; E15 on 5.0 V; optional firmware tweak |
+| D4 | Max-VF white dies dim slightly below VSYS 3.40 V | **MARGINAL** | open (VERIFY E9) | accept; decide after E9 |
+| D5 | I²C 419 ns at 150 pF | MARGINAL for fast mode only | **decided 2026-11-08**: keep 100 kHz | none |
+| D6 | Q4 charging current 36 mA vs 15-25 mA in the design note | INFO | **done 2026-11-08**: `electronics.md` §1 corrected | none |
 
 ### D1. USB unplug handover (VERIFY E12)
 
-**Finding.** Pulling USB with the lamp at 4000 K full drops VSYS from 3.99 V to 2.89 V, 0.64 V below the 3.53 V it settles at on the battery, for 21 ms. The LED-board current falls from 185 mA to about 130 mA for that time. The MCU stays above its 2.6 V BOD. Figure: section 5.
+**Finding.** Pulling USB with the lamp at 4000 K full drops VSYS from 3.99 V to 2.89 V, 0.64 V below the 3.53 V it settles at on the battery, for 21 ms. The LED-board current falls from 185 mA to about 130 mA (−30 %) for 20 ms. The MCU stays above its 2.6 V BOD, so nothing resets; the risk is a visible dim at the moment of unplugging.
 
-**Cause.** Q1's gate sits on VBUS. After the unplug the lamp runs through Q1's body diode (about 0.65 V) until R5 has discharged VBUS below VSYS_RAW − |VGS(th)|. R5 sets how long that takes, not how deep the dip is.
+**What happens, step by step** (figure in section 5):
 
-| Option | Simulated effect | Cost / risk |
-|---|---|---|
-| A. Accept; re-word E12 to "no reset, dip ≤ 0.7 V for ≤ 25 ms" | as built: 21 ms dip | a possible visible dim at unplug |
-| B. R5 4.7k (E12's listed remedy) | 10 ms, same depth | +0.6 mA from USB while plugged |
-| C. R5 1k | 2.5 ms, same depth | +4.5 mA from USB while plugged (25 mW in R5); a value change only |
-| D. Next revision: drive Q1's gate actively (e.g. a comparator or ideal-diode controller) | not simulated; removes the body-diode phase | new part, layout change, standby-drain review (R17) |
+1. On USB, VSYS_RAW is fed through D3 at about VBUS − 0.85 V. Q1's gate sits on VBUS, so Q1 is off and the cell only charges.
+2. At the unplug, the lamp drains C1 through D3 and VBUS falls quickly (4.85 → ~3.7 V in ~50 µs).
+3. Once VSYS_RAW falls below the cell voltage minus ~0.65 V, Q1's **body diode** starts to carry the lamp. VSYS_RAW is then pinned at about 2.9 V and the diode drop sets the depth of the dip.
+4. Q1's channel only turns on when VBUS < VSYS_RAW − |VGS(th)| ≈ 2.2 V. VBUS now sits on C1 (10 µF) and only R5 discharges it, so the time to get there is set by R5·C1. That is why R5 changes the length of the dip and not its depth.
 
-**Recommendation.** A for v0.1, and look for the dim during the E12 bench check. If it is visible, C is a one-resistor change that cuts it to a couple of milliseconds. Consider D in the next revision.
+The root cause is the **switch-over threshold**: Q1 waits for VBUS to collapse to ~2.2 V, while USB has really gone as soon as VBUS drops below ~4 V. A fix either shortens step 4 or makes the switch-over happen at a higher VBUS.
 
-**If no decision.** E12 will be marked failed at the bench against its current 0.3 V limit.
+![Handover options](spice/handover_options.png)
+
+*VSYS and LED current after the unplug for the as-built handover and the alternatives that were simulated.*
+
+**Options simulated** (cell 3.6 V, lamp at 4000 K full; the weak-source column is the 4.75 V charge case):
+
+| Option | Dip depth / time beyond 0.3 V | LED dims for | Charging on a 4.75 V source | Parts, cost, risk |
+|---|---|---|---|---|
+| As built (R5 10k) | 0.64 V / 20.8 ms | 20.14 ms | as built (5.1 h) | - |
+| R5 4.7k (E12's remedy) | 0.64 V / 10.2 ms | 9.87 ms | as built (5.1 h) | value change; +0.6 mA from USB while plugged |
+| R5 1k | 0.64 V / 2.4 ms | 2.32 ms | as built (5.1 h) | value change; +4.5 mA (25 mW) from USB while plugged |
+| Gate via a small Schottky, own 100k pull-down | 0.64 V / 15.2 ms | 14.56 ms | as built (5.1 h) | 2 parts; **does not help**: VBUS itself stays up |
+| 1 A Schottky across Q1 (BAT → VSYS_RAW) | 0.28 V / 0.0 ms | 0.08 ms | terminates at 6.1 h | 1 part (SOD-123); the battery shares the lamp whenever VSYS_RAW < BAT − 0.3 V |
+| 4.3 V detector drives Q1's gate | 0.00 V / 0.0 ms | 0.04 ms | **unsafe**: latches with Q1 on at plug-in; USB charges the cell through D3 + Q1 at up to 1.2 A, past the charger | detector IC + resistor |
+| Reverse-blocking ideal diode replaces Q1, enabled below ~3.9 V VBUS | 0.00 V / 0.0 ms | 0.05 ms | terminates at 5.1 h | ideal-diode IC (LM66100-class, SC-70-6) + VBUS detection on its enable pin; layout change |
+
+![Detector hazard](spice/handover_hazard.png)
+
+*The detector option on a weak source. Q1 is a bidirectional switch: once it is on while USB is present, D3 + Q1 form a path from USB straight into the cell. With a weak source this is a second stable state: the ~1 A it draws holds VBUS below the detector's release level, so the circuit stays latched (here for ~96 s, until the cell voltage rises). The current design avoids this only because Q1 waits for VBUS to collapse. A raised threshold therefore needs a switch that blocks reverse current.*
+
+**Discussion.**
+
+- *R5* (B, C) is the only change possible on the v0.1 board without new parts. It cannot reduce the depth. With 1k the dim lasts 2.3 ms, probably too short to notice.
+- *Schottky across Q1* brings the dip to 0.28 V, just inside E12. Its cost is the D3 interaction: on a weak source the cell feeds part of the lamp through the Schottky (charge ends at 6.1 h instead of 5.1 h). Its reverse leakage into the cell while on USB is µA-level at 25 °C and rises with temperature (not simulated). Note that the 2026-11-02 decision rejected a Schottky for D3 because of leakage with the switch off; across Q1 there is no bias with the switch off, so that concern does not apply here.
+- *A detector on Q1's gate* removes the dip but is unsafe as shown above: rejected.
+- *An ideal-diode IC* (e.g. TI LM66100: ~80 mΩ, reverse-current blocking, active-low enable, SC-70-6; check the datasheet and stock before choosing it) removes the dip completely (LED dim 0.05 ms) and keeps the weak-source charge unchanged (5.1 h). **The enable threshold matters**: VBUS falls to ~3.7 V within ~50 µs of an unplug, so a ~3.9 V threshold still catches it at once, while a higher one (4.35 V was tried) enables the ideal diode on a 4.4 V charger and hands the whole lamp to the cell: it then gains only ~70 mA net after 4 h and does not finish charging. It needs VBUS detection on its enable pin (a divider, or a voltage detector), a re-check of the standby drain (R17: its shutdown current adds to the ≤ 10 µA budget) and of the reversed-battery case, and a layout change. It is also a part that the hand-assembly rule R21 has to allow (SC-70 is fine by hand).
+- *A charger with built-in power path* (MCP73871, BQ2407x) is the other next-revision route; those are QFN parts (R21) and were not simulated.
+
+**Recommendation.** For v0.1, leave the hardware alone and re-word E12 to "no reset; note the dim". If the dim is visible at the bench, fit R5 = 1k. For the next main-board revision, replace Q1 with a reverse-blocking ideal diode enabled from VBUS.
+
+**If no decision.** E12 fails at the bench against its 0.3 V limit; the lamp works.
 
 ### D2. Hot-plugging the LED-board cable (VERIFY E13)
 
 **Finding.** Plugging J3 while VLED is live sags VSYS to 2.30 V at a 3.49 V cell (below the 2.6 V BOD: expect a reset) and to 2.74 V on a full cell. The cable carries a 19 A pulse about 1.5 µs wide. Figure: section 3.
 
-**Cause.** The main board has no bulk capacitance on VLED, so the LED board's empty MLCCs (about 11 µF unbiased) take their charge from C4 on VSYS faster than the cell can supply it through its resistance and lead.
+**Matt's context (2026-11-08):** J3 is mated once during assembly, then stays connected inside the casing where it cannot be reached.
 
-| Option | Simulated effect | Cost / risk |
-|---|---|---|
-| A. Remove the hot-plug step from E13; plug J3 only with SW1 off | the case does not occur in use (the cable is inside the gooseneck) | none |
-| B. 47 µF on VSYS (E13's listed remedy) | VSYS min 2.72 V (0.12 V above BOD; depends on the assumed 0.1 Ω ESR) | power-on inrush 0.64 → 1.69 A; board space and a new part |
-| C. Firmware: keep Q4 off until the cable is known to be connected | not simulated | only helps if the cable is plugged before power-up |
+**Is that acceptable?** Yes, with two conditions:
 
-**Recommendation.** A. B buys little margin and costs inrush.
+1. **Mate J3 with SW1 off** (VSYS is then 0 V and nothing is hot-plugged). Better still, mate it before the battery is plugged in. Then the case never happens in normal use.
+2. **The connection must not come loose.** An intermittent J3 contact (for example from the gooseneck flexing) would repeat the hot-plug each time it reconnects: an MCU reset at a low battery, and the light coming back in its power-on mode. JST-SH has a friction lock only, so route the cable with strain relief and no tension on the plug. This is an annoyance, not a hazard: the 19 A pulse lasts ~1.5 µs (I²t ≈ 3 × 10⁻⁴ A²s), far too short to heat the contacts.
 
-**If no decision.** The E13 hot-plug step will likely show a reset at a low battery.
+Bulk capacitance on VSYS (47 µF) would only lift the low-battery case to 2.72 V and raises the power-on inrush from 0.64 A to 1.68 A, so it is not worth adding for a connector that is mated once.
+
+**Recommendation.** Accept. Remove the hot-plug step from E13, and add "mate J3 with SW1 off" and a strain-relief note to the assembly handoff (05).
 
 ### D3. VSYS on a weak USB source (VERIFY E15)
 
-**Finding.** At 4.75 V USB (the bottom of the 5 V ±5 % band) through a 0.2 Ω cable with F1 at its 0.2 Ω maximum, VSYS is 3.71 V while charging with the lamp on; on 5.0 V it is 4.00 V. Q1's body diode then leaks 0.46 mA from the cell, which does not stop the charge from terminating. Figure: section 6.
+**Finding.** On USB, VSYS = VBUS − (cable + F1 drop) − D3's ~0.85 V, so it follows the charger's voltage and the cable. The firmware reads VSYS as "battery voltage", so a low VSYS on USB looks like a low battery to it. Charging with the lamp at 4000 K full (all cases through a 0.2 Ω cable, F1 at its 0.2 Ω maximum):
 
-| Option | Effect | Cost / risk |
-|---|---|---|
-| A. Specify E15 on a 5.0 V source | E15 passes (4.00 V) | none |
-| B. Accept lower VSYS on weak sources | the whites stay regulated down to VSYS 3.10 V (typical dies), so the lamp is unaffected | none |
+| Source at the plug | VSYS (min) | Firmware sees | Cell current through Q1's body diode | Charge time |
+|---|---|---|---|---|
+| 5.0 V | 4.00 V | normal | 0.0 mA | 5.1 h |
+| 4.75 V (USB minimum at the port) | 3.71 V | normal | 0.5 mA | 5.1 h |
+| 4.5 V | 3.46 V | normal | 94.5 mA | 5.3 h |
+| 4.4 V (USB 2.0 bus-powered hub minimum) | 3.36 V | **low battery** for 4.6 h (35 % cap, warning blinks) | 157.5 mA | 5.8 h |
 
-**Recommendation.** A and B together: re-word E15. No hardware change.
+With the lamp off on a 4.4 V source VSYS is 3.65 V, below the firmware's 3.70 V resume level (VBAT_RESUME_MV): a lamp that went to empty-sleep would not wake until the charge current tapers.
+
+**Discussion.**
+
+- Nothing is unsafe at any of these voltages. The charger still regulates the cell, and when VSYS_RAW falls more than ~0.6 V below the cell, Q1's body diode lets the cell help carry the lamp (up to 158 mA at 4.4 V), which only stretches the charge.
+- The user-visible effects are firmware ones: a false low-battery warning and a 35 % brightness cap on very weak sources, and a late wake from empty-sleep.
+- A good USB-C charger delivers 5.0-5.2 V, and handoff 02 already asks for a ≥ 1 A charger. Weak sources are laptop ports through long thin cables, and bus-powered hubs.
+- Firmware could avoid the false warning if it knew USB was present. The v0.1 board has no VBUS sense pin on the MCU (VBUS → divider → ADC would need a board change), so a firmware-only fix would have to infer USB from VSYS rising above the cell's possible range, which is not reliable.
+- The D1 ideal-diode redesign (threshold ~3.9 V) does not raise VSYS on a weak source, since the lamp still runs through D3, but it stops the cell from feeding the lamp through Q1's body diode, so the charge at 4.4 V ends at 5.1 h instead of 5.8 h.
+
+**Options.** (A) Specify the source: run E15 on a 5.0 V charger and state "5 V ≥ 1 A USB-C charger" in the user notes (no cost). (B) Lower VBAT_RESUME_MV to 3600 mV (E15's own remedy; firmware constant, costs a little hysteresis against bouncing out of empty-sleep). (C) Next revision: VBUS sense to an MCU pin, so the firmware can tell USB from a low battery.
+
+**Recommendation.** A now; B if E15 shows the late wake on the chargers Matt uses; C with the D1 redesign.
 
 ### D4. White-LED headroom with maximum-VF dies (VERIFY E9)
 
-**Finding.** With the highest-VF white dies and the worst LP5012 saturation voltage, the whites start to dim at VSYS 3.40 V, just under the firmware's 3.45 V brightness cap (typical dies: 3.10 V). Figure: section 8.
+**Finding.** Each white channel needs VLED ≥ VF + VSAT for its full 25 mA. With typical dies that holds down to VSYS 3.10 V. With the highest-VF dies (2.92 V at 25 mA) **and** the worst LP5012 saturation voltage (0.45 V, assumed: not specified at 25 mA) it holds down to VSYS 3.40 V, just below the firmware's 3.45 V brightness cap. Figure: section 8.
 
-**Decision.** Already open as VERIFY E9 (measure the received dies; option RIREF 3.65 kΩ for 20 mA). This adds the white channels to what E9 should measure. No action before E9.
+**How much it matters.** Worst-case channel current from the headroom sweep: 24.2 mA (-3%) at the 3.45 V cap, 23.8 mA at 3.40 V, 22.5 mA (-10%) at the 3.30 V empty cut. This only happens in the last ~7% of the charge (at 4000 K full the cap arrives at 6.0 h, the cut at 6.7 h), when the firmware has already reduced brightness to 35 %, so a further few-percent dimming is hard to see. The cap lowers the average current but not the 25 mA peak per channel, so it does not restore the headroom by itself.
 
-### D5. I²C speed
+The one visible effect could be **colour**: if the 2700 K and 5000 K dies come from different VF bins, the higher-VF group dims first, and mixed whites drift slightly in the last few percent of the battery (not simulated; estimated as small next to the step from the 35 % cap).
 
-**Finding.** Rise times 168 / 280 / 419 ns for 60 / 100 / 150 pF: inside standard mode (1000 ns) at every value, inside fast mode (300 ns) only at 60-100 pF.
+**Options.** (A) Accept. (B) Raise VBAT_LOW_MV from 3450 to ~3500 mV, so the cap arrives before any channel can drop out (firmware constant; costs a little time at full brightness). (C) RIREF 3.65 kΩ (20 mA per channel, −20 % light), already listed under E9 for the green/blue dies. (D) Order a known low-VF bin (Bridgelux VF bins B-E); the stocked part is the full-distribution code, so this depends on availability.
 
-**Decision.** None needed while the firmware stays at 100 kHz. Moving to 400 kHz would need a measured bus capacitance below about 100 pF or stronger pull-ups.
+**Recommendation.** A, and add the whites to E9: measure the received white dies' VF at 25 mA alongside G/B. If they sit near the top of the range, B is a one-line firmware change.
 
-### D6. Documentation correction
+### D5. I²C speed: decided
 
-`docs/design/electronics.md` §1 says Q4's soft turn-on charges the LED board with 15-25 mA. The simulation gives up to 36 mA, because the MLCCs start near their unbiased value. Harmless (VSYS moves by about 12 mV). Decide whether to correct the note.
+Rise times 168 / 280 / 419 ns for 60 / 100 / 150 pF are inside standard mode (1000 ns). **Decision (Matt, 2026-11-08): keep 100 kHz.** Moving to 400 kHz would need a measured bus capacitance below about 100 pF or stronger pull-ups.
+
+### D6. Documentation correction: done
+
+`docs/design/electronics.md` §1 said Q4's soft turn-on charges the LED board with 15-25 mA. The simulation gives up to 36 mA, because the MLCCs start near their unbiased value. **Done (2026-11-08):** the note now gives the simulated 25-36 mA and the reason.
 
 ## All checks
 
@@ -102,7 +147,7 @@ Each finding below is for main board v0.1 / LED board v0.2. The options give the
 |---|---|---|---|---|---|
 | P1-full | Power-on (SW1) | Cell inrush peak, cell 4.18 V | 0.64 A | < ~3 A (typical DW01-class PCM over-current trip, PROVISIONAL); Q2 IDM 15 A | **PASS** |
 | P1-low | Power-on (SW1) | Cell inrush peak, cell 3.49 V | 0.49 A | < ~3 A (typical DW01-class PCM over-current trip, PROVISIONAL); Q2 IDM 15 A | **PASS** |
-| P1-full_bulk47 | Power-on (SW1) | Cell inrush peak, cell 4.18 V, + 47 uF on VSYS | 1.69 A | < ~3 A (typical DW01-class PCM over-current trip, PROVISIONAL); Q2 IDM 15 A | **PASS** |
+| P1-full_bulk47 | Power-on (SW1) | Cell inrush peak, cell 4.18 V, + 47 uF on VSYS | 1.68 A | < ~3 A (typical DW01-class PCM over-current trip, PROVISIONAL); Q2 IDM 15 A | **PASS** |
 | P2 | Power-on (SW1) | VSYS rise 10-90 % and overshoot | 76 us, overshoot 0 mV | monotonic, no overshoot | **PASS** |
 | Q1 | Q4 soft turn-on | VLED ramp at the LED board (10-90 %), cell 3.49 V | 1.06 ms, 2.66 V/ms max | ramps over ~1-2 ms (E13); 2.5 V/ms design | **PASS** |
 | Q2 | Q4 soft turn-on | VSYS dip, worst of 4 corners | 12 mV | <= 200 mV (E13) | **PASS** |
@@ -130,7 +175,7 @@ Each finding below is for main board v0.1 / LED board v0.2. The options give the
 | R1-night | Runtime | Battery life, red night level 4 | 118.2 h to the empty cut (4.51 Wh delivered; brightness cap after 115.1 h) | estimate 100-150 h (electronics.md 3) | **INFO** |
 | D1 | LED headroom | Whites stay regulated down to the low-battery cut (8 on together) | 95 % point at VSYS 3.10 V / cell OCV 3.17 V (typ); VSYS 3.40 V / OCV 3.47 V (max-VF dies, VSAT 0.45 V) | VSYS edge < 3.45 V (VBAT_LOW is measured on VSYS under load) | **MARGINAL** |
 | D2 | LED headroom | Green/blue regulation edge (VLED at the board) | typ die 3.57 V; max-VF die 4.12 V | design: ~3.65 V typ, ~4.05-4.15 V max die (round3 R3-E3) | **INFO** |
-| W1-d50 | PWM ripple | Ripple, all whites in phase, 50 % duty | VLED 81 mV p-p (min 3.65 V); VSYS 59 mV p-p | LP5012 VCC >= 2.7 V; VSYS > 2.6 V | **PASS** |
+| W1-d50 | PWM ripple | Ripple, all whites in phase, 50 % duty | VLED 82 mV p-p (min 3.65 V); VSYS 59 mV p-p | LP5012 VCC >= 2.7 V; VSYS > 2.6 V | **PASS** |
 | W1-d89 | PWM ripple | Ripple, all whites in phase, 88.75 % duty (4000 K full) | VLED 48 mV p-p (min 3.64 V); VSYS 30 mV p-p | LP5012 VCC >= 2.7 V; VSYS > 2.6 V | **PASS** |
 | I1-c60 | I2C | Rise time 30-70 %, 60 pF | 168 ns | <= 1000 ns (standard mode, 100 kHz) | **PASS** |
 | I1-c100 | I2C | Rise time 30-70 %, 100 pF | 280 ns | <= 1000 ns (standard mode, 100 kHz) | **PASS** |
@@ -158,7 +203,7 @@ SPICE subcircuits in `sim/boards.inc` follow the reference designators of the tw
 
 SW1 pulls Q2's gate down through R7 10k; C5 (100 nF) sits gate-to-source, so the gate voltage falls with a 1 ms time constant and Q2 turns on hard once it passes its threshold. The VSYS capacitors (C4 10 µF, C7 1 µF, C6 100 nF; about 7 µF at 4 V) then charge through the cell, Q3, Q1 and Q2.
 
-Peak cell current 0.64 A (full cell) and 0.49 A (3.49 V); VSYS rises 10-90 % in 76 µs with no overshoot. Round 1 had predicted 0.7-1.3 A into 14-21 µF; the LED board now sits behind Q4, so Q2 sees less capacitance. With 47 µF added on VSYS (the E13 remedy) the peak rises to 1.69 A, still well below the FET's 15 A pulse rating but closer to the cell PCM's over-current trip (typically ~3 A on DW01-class protectors; not documented for this cell).
+Peak cell current 0.64 A (full cell) and 0.49 A (3.49 V); VSYS rises 10-90 % in 76 µs with no overshoot. Round 1 had predicted 0.7-1.3 A into 14-21 µF; the LED board now sits behind Q4, so Q2 sees less capacitance. With 47 µF added on VSYS (the E13 remedy) the peak rises to 1.68 A, still well below the FET's 15 A pulse rating but closer to the cell PCM's over-current trip (typically ~3 A on DW01-class protectors; not documented for this cell).
 
 ![1. Power-on inrush (slide switch, Q2)](spice/poweron.png)
 
@@ -222,7 +267,7 @@ The whites hold 95 % of 25 mA down to VSYS 3.10 V (typical) and 3.40 V (worst ca
 
 All eight whites switching together at the LP5012's 29 kHz, which is the worst case: the datasheet extract does not say whether the LP5012 staggers its outputs. 50 % duty gives the largest ripple; 88.75 % is 4000 K full.
 
-At 50 % duty, VLED at the LP5012 swings 81 mV p-p (minimum 3.65 V) and VSYS 59 mV p-p. Far from the LP5012's 2.7 V minimum and the MCU's BOD; the ATtiny's ADC reading of VDD will see this ripple, which the firmware averages.
+At 50 % duty, VLED at the LP5012 swings 82 mV p-p (minimum 3.65 V) and VSYS 59 mV p-p. Far from the LP5012's 2.7 V minimum and the MCU's BOD; the ATtiny's ADC reading of VDD will see this ripple, which the firmware averages.
 
 ![9. PWM ripple at 29 kHz](spice/pwm_ripple.png)
 

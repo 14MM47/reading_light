@@ -194,6 +194,11 @@ full duty instead of two at half current) and dim gracefully below ~3.7 V of bat
   Nothing changed in the design. Findings for Matt: the USB-unplug handover dips VSYS 0.64 V for ~21 ms (Q1 body
   diode; E12's R5 remedy only shortens it); hot-plugging J3 at a low battery can reset the MCU (E13); VSYS on a
   4.75 V source is 3.71 V (E15 assumes 5.0 V).
+- 2026-11-08 — SPICE decisions (report §"Findings and decisions"). D5: keep I²C at 100 kHz (Matt). D6: the Q4
+  soft-start current note in electronics.md §1 corrected to the simulated 25–36 mA (Matt). D2: Matt states J3 is
+  mated once at assembly and stays inside the casing; recommended acceptable if mated with SW1 off and strain-relieved
+  (awaiting the E13/handoff wording). D1, D3, D4 open, with the redesign study in the report (a reverse-blocking ideal
+  diode in place of Q1 for the next main-board revision; a detector-driven Q1 was simulated and rejected as unsafe).
 
 ## 5. Open questions / VERIFY
 

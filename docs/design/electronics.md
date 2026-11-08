@@ -25,8 +25,9 @@ Datasheet extracts with page references: `docs/datasheets/KEYSPECS.md`. Review f
 * **Q4 LED-board switch** (DMG2305UX, gate Q4_G driven from PB2 through R13 10 k, with C8 100 nF gate–drain and R12
   100 k pull-up to VSYS): off in reset and in the empty-battery sleep, so a flat cell is not drained by the LED board.
   VLED = VSYS − I·R_DS(on) (≈ 10–20 mV at 180 mA). **Soft turn-on** (round2 R2-E1): R13 into C8 holds the Miller
-  plateau, so VLED ramps at about 2.5 V/ms. Charging the LED board's ~6 µF effective (v0.2; v0.1 ~9 µF) then takes
-  about 15–25 mA, where the
+  plateau, so VLED ramps at about 2.5 V/ms. Charging the LED board's MLCCs then takes about 25–36 mA peak (SPICE,
+  `docs/verification/spice-report_main-v0.1_led-v0.2.md` §2; corrected 2026-11-08 from the earlier 15–25 mA estimate:
+  the MLCCs start near their unbiased ~11 µF and fall to ~4.5 µF at 3.5 V, so the start of the ramp draws most), where the
   unslowed gate gave multi-amp peaks that sagged VSYS, the MCU's supply, below its BOD level. Bench check: VERIFY E13.
   The I²C pull-ups (R8/R9 3.3 k) sit on VLED, so an unpowered LED board is never back-fed through SDA/SCL.
 * **J4 pin 1 is VREF** (VSYS through R11 1 k) for the programmer's level sense only: never power the board from a

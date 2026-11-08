@@ -73,6 +73,12 @@ Vsense k p 0
 * SMF5.0A (D1): VBR 6.4-7.0 V @ 10 mA, VC 9.2 V @ 21.7 A (Littelfuse; KEYSPECS 7 notes the PDF was not retrieved).
 .model DSMF5 D(IS=1e-12 N=1.0 RS=0.12 BV=6.7 IBV=10m CJO=1.5n)
 
+* Redesign options only (not on the v0.1 board). PROVISIONAL typical values:
+* BAT54-class small Schottky: VF ~0.24 V @ 0.1 mA, ~0.32 V @ 1 mA, CJO 10 pF.
+.model DBAT54 D(IS=1e-7 N=1.05 RS=1.5 CJO=10p)
+* 1 A Schottky (SS14/PMEG-class): VF ~0.29 V @ 0.19 A, ~5 uA reverse at a few hundred mV, 25 C.
+.model DSCH1A D(IS=5e-6 N=1.05 RS=0.05 CJO=100p)
+
 * ---------------------------------------------------------------------------------------------------------------
 * LEDs (KEYSPECS 2, 3). Typical die; *_MAX are the maximum-VF dies.
 * Bridgelux Thrive 2835 white: 2.70 V @10 mA, 2.77 @30, 2.85 @50 (Fig. 9). Max die +0.15 V (VF max 3.30 vs typ 3.13

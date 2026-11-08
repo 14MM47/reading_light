@@ -20,6 +20,7 @@ from pathlib import Path
 SIM = Path(__file__).resolve().parent
 sys.path.insert(0, str(SIM))
 import spice  # noqa: E402
+import numpy as np  # noqa: E402
 
 # case -> [(variant, label, params, die)]
 CASES: dict[str, list[tuple[str, str, dict, str]]] = {
@@ -38,10 +39,24 @@ CASES: dict[str, list[tuple[str, str, dict, str]]] = {
                     ("r03", "5.25 V, cable 0.3 Ohm", {"rusb": 0.3}, "typ")],
     "usb_unplug": [("r5_10k", "R5 10k (as built)", {"r5": "10k"}, "typ"),
                    ("r5_4k7", "R5 4.7k (E12 remedy)", {"r5": "4.7k"}, "typ"),
-                   ("r5_1k", "R5 1k", {"r5": "1k"}, "typ")],
+                   ("r5_1k", "R5 1k", {"r5": "1k"}, "typ"),
+                   # handover redesign options (not on the v0.1 board): see the D1 decision
+                   ("gd", "gate diode + 100k pull-down", {"q1gd": 1}, "typ"),
+                   ("sch", "Schottky across Q1", {"sch": 1}, "typ"),
+                   ("det43", "4.3 V detector drives Q1's gate", {"q1gd": 2}, "typ"),
+                   ("idd", "ideal diode replaces Q1", {"q1gd": 3, "vdet": 3.9}, "typ")],
     "charge": [("lamp", "4000 K full on, USB 5.0 V", {"lamp": 1}, "typ"),
                ("dark", "lamp off, USB 5.0 V", {"lamp": 0}, "typ"),
-               ("lamp_weak", "lamp on, USB 4.75 V, PTC 0.2 Ohm (cold max)", {"lamp": 1, "vusb": 4.75, "rptc": 0.2}, "typ")],
+               ("lamp_weak", "lamp on, USB 4.75 V, PTC 0.2 Ohm (cold max)", {"lamp": 1, "vusb": 4.75, "rptc": 0.2}, "typ"),
+               # source-voltage sweep (D3) and the handover options on a weak source (D1)
+               ("v45", "lamp on, USB 4.5 V", {"lamp": 1, "vusb": 4.5, "rptc": 0.2}, "typ"),
+               ("v44", "lamp on, USB 4.4 V", {"lamp": 1, "vusb": 4.4, "rptc": 0.2}, "typ"),
+               ("v44_dark", "lamp off, USB 4.4 V", {"lamp": 0, "vusb": 4.4, "rptc": 0.2}, "typ"),
+               ("weak_sch", "4.75 V, Schottky across Q1", {"lamp": 1, "vusb": 4.75, "rptc": 0.2, "sch": 1}, "typ"),
+               ("weak_det43", "4.75 V, 4.3 V detector", {"lamp": 1, "vusb": 4.75, "rptc": 0.2, "q1gd": 2}, "typ"),
+               ("weak_idd", "4.75 V, ideal diode", {"lamp": 1, "vusb": 4.75, "rptc": 0.2, "q1gd": 3, "vdet": 3.9}, "typ"),
+               ("v44_idd", "4.4 V, ideal diode", {"lamp": 1, "vusb": 4.4, "rptc": 0.2, "q1gd": 3, "vdet": 3.9}, "typ"),
+               ("v44_idd435", "4.4 V, ideal diode enabled below 4.35 V", {"lamp": 1, "vusb": 4.4, "rptc": 0.2, "q1gd": 3}, "typ")],
     "runtime": [("4000k", "4000 K full", {"dwv": 0.8875, "drv": 0, "iqv": "6.8m", "tstop": 30000, "tmax": 20}, "typ"),
                 ("soft10", "soft white level 10", {"dwv": 0.095, "drv": 0, "iqv": "6.8m", "tstop": 250000,
                                                    "tmax": 60}, "typ"),
@@ -86,6 +101,19 @@ def derive(R):
         elif c == "q4_softstart":
             y, fin = r.col("v(vledb)"), r.meas["vled_end"]
             r.meas["t10"], r.meas["t90"] = (spice.cross(r.x, y, k * fin, 1e-3) for k in (0.1, 0.9))
+        elif c == "usb_unplug":
+            t, y, i = r.x, r.col("v(vsys)"), r.col("iled")
+            after = t > 5e-3
+            deep = after & (y < r.meas["vsys_bat"] - 0.3)
+            dim = after & (i < 0.9 * r.meas["iled_usb"])
+            r.meas["dip"] = r.meas["vsys_bat"] - r.meas["vsys_min"]
+            r.meas["t_deep_ms"] = float(np.ptp(t[deep]) * 1e3) if deep.any() else 0.0
+            r.meas["t_dim_ms"] = float(np.ptp(t[dim]) * 1e3) if dim.any() else 0.0
+        elif c == "charge":
+            t, v, iu = r.x, r.col("v(vsys)"), r.col("iusb")
+            r.meas["h_below_345"] = float(np.ptp(t[v < 3.45]) / 3600) if (v < 3.45).any() else 0.0
+            r.meas["n_usb_over_05"] = float((iu > 0.5).sum())
+            r.meas["ichg_4h"] = float(np.interp(4 * 3600, t, r.col("ichg")))
         elif c == "i2c_rise":
             y = r.col("v(sda)")
             r.meas["t30"], r.meas["t70"] = (spice.cross(r.x, y, k * 4.2, 10e-6) for k in (0.3, 0.7))

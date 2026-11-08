@@ -53,6 +53,9 @@ def run(case: str, variant: str = "base", params: dict | None = None, die: str =
     boards = (SIM / "boards.inc").read_text()
     for a, b in DIE[die].items():
         boards = boards.replace(a, b)
+    if not any(float(str((params or {}).get(k, 0))) for k in ("q1gd", "sch")):
+        boards = re.sub(r"^\*>redesign$.*?^\*<redesign$\n", "", boards, flags=re.S | re.M)
+        assert "XQ1 " in boards and "D3 vbus vsysraw" in boards, "redesign strip removed board parts"
     (d / "boards.inc").write_text(boards)
     dat = f"{case}.dat"
     (d / f"{case}.cir").write_text(src.replace("@DAT@", dat))
