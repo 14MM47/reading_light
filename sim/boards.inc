@@ -16,11 +16,18 @@
 *   vled    VLED (J3 pin 2, main-board side)    swon    1 = slide switch ON      ledon 1 = PB2 low (Q4 on)
 *   vbus vsysraw bat: internal nodes brought out for probing
 .subckt MAINPWR vbusin batraw vsys vled swon ledon vbus vsysraw bat rptc=0.12 vto=-0.7 r5=10k cbulk=1p
-+ q1gd=0 rq1pd=100k sch=0 vdet=4.3 ron_id=0.08 ce_r=1m ce_c=1f snub=0 snub_r=1 snub_c=22u
++ q1gd=0 rq1pd=100k sch=0 vdet=4.3 ron_id=0.08 ce_r=1m ce_c=1f snub=0 snub_r=1 snub_c=22u c1esr=0.5
 * --- A: USB input, TVS, charger
 RF1 vbusin vbus {rptc}
 D1 0 vbus DSMF5
+*>noc1tant
 XC1 vbus 0 MLCC c0=10u v0=6 nexp=1.5
+*<noc1tant
+*>c1tant
+* c1tant=1 (D7 option): C1 as a 10 uF tantalum/polymer part, no DC-bias loss, series ESR c1esr
+Rc1esr vbus nc1 {c1esr}
+Cc1t nc1 0 10u
+*<c1tant
 R5 vbus 0 {r5}
 *>chgsense
 * charge case only: the charger output current is sensed by Vchg (the MCP73831 terminates on this, not on

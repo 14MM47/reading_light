@@ -2,7 +2,7 @@
 * battery at 4000 K full. The cable inductance rings with C1 (10 uF, VBUS). Checks VBUS against the TVS and the
 * MCP73831 abs max (7 V), and VSYS / VLED against the ATtiny and LP5012 abs max (6 V).
 * USB cable: rusb (VBUS + GND, 0.1 Ohm short/heavy ... 0.3 Ohm long/thin) and 1 uH loop (PROVISIONAL).
-.param soc0=0.30 rusb=0.1 vusb=5.25 lusb=1u q1gd=0 sch=0 vdet=4.3 usbid=0 ron_id=0.08 ce_r=1m ce_c=1f snub=0
+.param soc0=0.30 rusb=0.1 vusb=5.25 lusb=1u q1gd=0 sch=0 vdet=4.3 usbid=0 ron_id=0.08 ce_r=1m ce_c=1f snub=0 c1esr=0.5 c1tant=0 rptc=0.12
 .include models.inc
 .include boards.inc
 Xcell batraw 0 LIPO soc0={soc0}
@@ -14,7 +14,7 @@ Splug u2 vbusin plug 0 SPLUG
 Vplug plug 0 PWL(0 0 100u 0 100.01u 1)
 Vsw swon 0 1
 Vled ledon 0 1
-Xmb vbusin batraw vsys vled swon ledon vbus vsysraw bat MAINPWR q1gd={q1gd} sch={sch} vdet={vdet} usbid={usbid} ron_id={ron_id} ce_r={ce_r} ce_c={ce_c} snub={snub}
+Xmb vbusin batraw vsys vled swon ledon vbus vsysraw bat MAINPWR q1gd={q1gd} sch={sch} vdet={vdet} usbid={usbid} ron_id={ron_id} ce_r={ce_r} ce_c={ce_c} snub={snub} c1esr={c1esr} rptc={rptc}
 Xcab vled 0 vledb gb CABLE
 Vw dw 0 0.8875
 Vz dz 0 0

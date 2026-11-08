@@ -55,12 +55,14 @@ def run(case: str, variant: str = "base", params: dict | None = None, die: str =
         boards = boards.replace(a, b)
     on = lambda k: bool(float(str((params or {}).get(k, 0))))  # noqa: E731
     keep = {"redesign": on("q1gd") or on("sch") or on("usbid") or on("snub"), "usbid": on("usbid"), "nousbid": not on("usbid"),
-            "chgsense": case == "charge", "nochgsense": case != "charge"}
+            "chgsense": case == "charge", "nochgsense": case != "charge",
+            "c1tant": on("c1tant"), "noc1tant": not on("c1tant")}
     for name, k in keep.items():
         if not k:
             boards = re.sub(rf"^\*>{name}$.*?^\*<{name}$\n", "", boards, flags=re.S | re.M)
     assert "XQ1 " in boards, "block strip removed Q1"
     assert boards.count("Bchg ") == 1, "charger selection wrong"
+    assert boards.count("XC1 vbus") + boards.count("Cc1t ") == 1, "C1 selection wrong"
     assert ("D3 vbus vsysraw" in boards) != on("usbid"), "D3 / USB ideal diode selection wrong"
     (d / "boards.inc").write_text(boards)
     dat = f"{case}.dat"
