@@ -4,8 +4,8 @@ Every value below was taken from a datasheet, a seller listing or a model. Nobod
 says how to check it and what to change if it is off. Work top to bottom: the first two sections gate the rest.
 Tick an item by noting the measured value and the date here.
 
-SPICE predictions (`docs/verification/spice-report_main-v0.1_led-v0.2_rev2.md` and `.pdf`, rev 2, 2026-11-08) for several items: E12 is predicted to fail its
-0.3 V limit (0.64 V dip for ~21 ms; R5 4.7k shortens it, does not reduce it); E13's hot-plug step is predicted to
+SPICE predictions (`docs/verification/spice-report_main-v0.1_led-v0.2_rev3.md` and `.pdf`, rev 3, 2026-11-08) for several items: E12's old 0.3 V limit would fail
+(0.64 V dip for ~21 ms; R5 shortens it, does not reduce it), so E12 now checks for no reset and a visible dim; E13's hot-plug step is predicted to
 reset the MCU at 3.5 V (VSYS ~2.3 V; the step has been removed, D2), the power-on and empty-sleep steps to pass (VLED 10-90 % in ~1.0 ms, VSYS dip
 ~12 mV); E15 passes on a 5.0 V source (4.00 V) but not at 4.75 V through a 0.2 Ω cable with F1 at its 0.2 Ω maximum (3.71 V). Record the measured value
 beside the prediction, and update `sim/` with it.
@@ -41,7 +41,7 @@ beside the prediction, and update `sim/` with it.
 | E9 | G/B regulation (M1, F10; v0.2) | First measure the received G and B dies' V_F at 25 mA, **and one 2700 K and one 5000 K white** (SPICE D4: worst-case whites start to dim just below the 3.45 V cap; if a white reads > ~2.85 V at 25 mA, raise `VBAT_LOW_MV` to 3500) (bench supply + 1 Ω, D9 on a spare board or before reflow). Then Green mode at max, VLED swept 4.2 → 3.4 V; scope across 1 Ω in series with the G die and read the **peak**, not the average (PWM). The LP5012 has no per-channel current step, so G/B always run at the 25 mA peak | Peak 25 mA held down to VLED ≈ V_F(measured) + 0.35–0.45 V (typical die ≈ 3.65 V; a maximum-V_F die (~3.7 V at 25 mA) needs ~4.05–4.15 V, i.e. it is never fully regulated: round3 R3-E3) | Accept (G/B dim gracefully below that), or RIREF 3.65 kΩ (20 mA for every channel) |
 | E10 | Charge current | USB in, cell at ~3.7 V: current into J2 | 256 mA ± 10 % | Check R3 3.9 k |
 | E11 | USB current draw (M4) | USB meter, charging + 4000 K full | Note the value (expect ~0.5–0.6 A) | Use a ≥ 1 A charger (handoff 02) |
-| E12 | Unplug handover (m1) | Scope VSYS while pulling USB at 3.6 V battery | Dip ≤ 0.3 V, no reset | Lower R5 further (4.7 k) |
+| E12 | Unplug handover (m1) | Scope VSYS while pulling USB at 3.6 V battery, lamp at 4000 K full; watch the moon at the same time | No reset (VSYS stays above 2.6 V). Record the dip (SPICE predicts ~0.64 V for ~21 ms through Q1's body diode) and whether the lamp visibly dims (SPICE D1; re-worded by Matt 2026-11-08: the 0.3 V limit is not met by this design) | If the dim is visible: R5 = 1 kΩ (shortens it to ~2.5 ms; +4.9 mA from USB while plugged in) |
 | E13 | Q4 soft turn-on (round2 R2-E1) | Scope VSYS (TP3) and VLED (TP7) at power-on and on the empty-sleep wake, at 3.5 V battery. J3 is not hot-plugged: it is mated once at assembly with SW1 off (SPICE D2, Matt 2026-11-08) | VLED ramps over ~1–2 ms; VSYS dips ≤ 0.2 V; no reset | Raise C8 (220 nF) or add 47 µF bulk on VSYS |
 | E14 | F1 PTC when warm (round2 R2-E3) | USB in, charging, 4000 K full for 30 min, pack closed; contact thermometer on F1 | No trip; F1 ≤ 60 °C | Move F1 away from U1/D3 in v0.2 |
 | E15 | VSYS on USB (round2 note) | USB in from a 5.0 V, ≥ 1 A USB-C charger, 4000 K full: meter TP3; then let the lamp reach empty sleep and plug the same charger in (SPICE D3, Matt 2026-11-08: the limit applies to a 5.0 V source; weak sources are expected to read lower) | VSYS ≥ 3.9 V on the 5.0 V source; wakes from empty sleep on USB. Informational: repeat the wake check on the weakest charger Matt actually uses (laptop port, hub); a late wake there is what triggers the remedy (D3 option B) | Lower `VBAT_RESUME_MV` to 3600 in `lightcore.h` |

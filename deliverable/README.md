@@ -1,7 +1,7 @@
 # Moon reading light v0.2 (main board v0.1, LED board v0.2): deliverable pack
 
 This folder holds everything needed to manufacture, print, flash, assemble and test the lamp, in build order. It is
-**generated** by `python3 tools/build_deliverable.py` from commit `910de4c`.
+**generated** by `python3 tools/build_deliverable.py` from commit `e71b476`.
 Don't edit it by hand: change the design, then re-run the generator. `MANIFEST.txt` lists every file with its
 SHA-256 and its source in the repo.
 
