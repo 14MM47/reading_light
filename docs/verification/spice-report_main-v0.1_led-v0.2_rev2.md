@@ -1,5 +1,7 @@
 # SPICE simulation report: moon reading light (main board v0.1 · LED board v0.2 · report rev 2)
 
+> **Report rev 2** (2026-11-08, commit 910de4c). Superseded by rev 3: `spice-report_main-v0.1_led-v0.2_rev3.md` / `.pdf`. Kept unchanged as the record; its figures are in `spice_rev2/`.
+
 **Board versions:** main board **v0.1**, LED board **v0.2** (`REV` in `hardware/*/design.py`, the KiCad title blocks and `fab/<board>/v<rev>/`). Report file: `spice-report_main-v0.1_led-v0.2_rev2`.
 
 | Report rev | Date | Changes |
@@ -56,7 +58,7 @@ For main board v0.1 / LED board v0.2. Options give the simulated effect where it
 
 The root cause is the **switch-over threshold**: Q1 waits for VBUS to collapse to ~2.2 V, while USB has really gone as soon as VBUS drops below ~4 V. A fix either shortens step 4 or makes the switch-over happen at a higher VBUS.
 
-![Handover options](spice/handover_options.png)
+![Handover options](spice_rev2/handover_options.png)
 
 *VSYS and LED current after the unplug for the as-built handover and the alternatives that were simulated.*
 
@@ -74,7 +76,7 @@ The root cause is the **switch-over threshold**: Q1 waits for VBUS to collapse t
 | Same, R5 1k | 0.53 V / 0.6 ms | 0.65 ms | charger terminates at 5.1 h | as above, +4.9 mA from USB while plugged |
 | Idealised reverse-blocking switch, fixed 3.9 V switch-over (stands in for a TPS2116-class power mux) | 0.00 V / 0.0 ms | 0.05 ms | charger terminates at 5.1 h | see the chip discussion below |
 
-![Detector hazard](spice/handover_hazard.png)
+![Detector hazard](spice_rev2/handover_hazard.png)
 
 *The detector option on a weak source. Q1 is a bidirectional switch: once it is on while USB is present, D3 + Q1 form a path from USB straight into the cell. With a weak source this is a second stable state: the ~1 A it draws holds VBUS below the detector's release level, so the circuit stays latched (here for ~96 s, until the cell voltage rises). The current design avoids this only because Q1 waits for VBUS to collapse. A raised threshold therefore needs a switch that blocks reverse current.*
 
@@ -293,15 +295,15 @@ MARGINAL means inside the limit with less margin than this report's own rule of 
 
 SPICE subcircuits in `sim/boards.inc` follow the reference designators of the two boards. Device models are in `sim/models.inc`; each is fitted to datasheet points (checked in the *Model check* table below).
 
-![Main-board power path as simulated](spice/sch_power_path.png)
+![Main-board power path as simulated](spice_rev2/sch_power_path.png)
 
 *Main-board power path: cell model, reverse-battery FET Q3, load-share FET Q1 (gate on VBUS), D3 from USB, the slide-switch FET Q2 with its R7/C5 soft start, and the VSYS loads. The charger is a behavioural CC/CV source.*
 
-![LED-board path as simulated](spice/sch_led_path.png)
+![LED-board path as simulated](spice_rev2/sch_led_path.png)
 
 *Q4 with its Miller soft start (R13 into C8), the neck cable (both conductors), and the LED board: bulk and bypass MLCCs, LP5012 supply current, and the LED channels as LED + LP5012 sink.*
 
-![Behavioural models](spice/sch_models.png)
+![Behavioural models](spice_rev2/sch_models.png)
 
 *Behavioural models: the cell (open-circuit voltage from the state of charge), one LP5012 channel, and the bias-dependent MLCC.*
 
@@ -311,7 +313,7 @@ SW1 pulls Q2's gate down through R7 10k; C5 (100 nF) sits gate-to-source, so the
 
 Peak cell current 0.64 A (full cell) and 0.49 A (3.49 V); VSYS rises 10-90 % in 76 µs with no overshoot. Round 1 had predicted 0.7-1.3 A into 14-21 µF; the LED board now sits behind Q4, so Q2 sees less capacitance. With 47 µF added on VSYS (the E13 remedy) the peak rises to 1.68 A, still well below the FET's 15 A pulse rating but closer to the cell PCM's over-current trip (typically ~3 A on DW01-class protectors; not documented for this cell).
 
-![1. Power-on inrush (slide switch, Q2)](spice/poweron.png)
+![1. Power-on inrush (slide switch, Q2)](spice_rev2/poweron.png)
 
 ## 2. Q4 soft turn-on of the LED board
 
@@ -319,7 +321,7 @@ PB2 drives Q4's gate through R13 10k with C8 100 nF from gate to drain: the Mill
 
 At 3.49 V (the E13 condition) VLED takes 1.06 ms from 10 to 90 %, peak 2.66 V/ms, and the charging current peaks at 29 mA (36 mA worst corner). VSYS moves by 10 mV. The current is higher than the design note's 15-25 mA because the MLCCs start at their unbiased value (about 11 µF at 0 V, falling to about 4.5 µF at 3.5 V); it is still harmless.
 
-![2. Q4 soft turn-on of the LED board](spice/q4_softstart.png)
+![2. Q4 soft turn-on of the LED board](spice_rev2/q4_softstart.png)
 
 ## 3. Hot-plugging the LED-board cable
 
@@ -327,7 +329,7 @@ With Q4 on, plugging the cable connects the LED board's empty MLCCs straight to 
 
 The cable current peaks at 19 A in a pulse about 1.5 µs wide. VSYS falls to 2.74 V on a full cell and to 2.30 V at 3.49 V, below the ATtiny's 2.6 V BOD level, so expect a reset. With 47 µF on VSYS the 3.49 V case bottoms at 2.72 V. The BOD's response time to a dip of a few microseconds is not modelled; a short dip may not trip it, so treat this as the worst case. The LED board never exceeds VSYS (no overshoot).
 
-![3. Hot-plugging the LED-board cable](spice/j3_hotplug.png)
+![3. Hot-plugging the LED-board cable](spice_rev2/j3_hotplug.png)
 
 ## 4. Plugging in USB while the lamp runs
 
@@ -335,7 +337,7 @@ A 5.25 V source (top of the USB tolerance) through a 1 µH cable is connected wh
 
 With a 0.1 Ω cable, VBUS peaks at 5.77 V (MCP73831 abs max 7 V; the TVS does not conduct) and VSYS at 4.78 V (ATtiny and LP5012 abs max 6 V). With 0.3 Ω the peaks are 5.06 V / 4.20 V. The charger supplies a 10 A peak for a few microseconds; USB 2.0 asks a device to present no more than 10 µF at attach, and C1 is 10 µF nominal, but D3 adds C3/C4 while VSYS_RAW sits below VBUS − 0.85 V. Most chargers ride through it; no action proposed.
 
-![4. Plugging in USB while the lamp runs](spice/usb_hotplug.png)
+![4. Plugging in USB while the lamp runs](spice_rev2/usb_hotplug.png)
 
 ## 5. Unplugging USB (handover to the battery)
 
@@ -343,7 +345,7 @@ On USB, VSYS comes through D3 and Q1 is held off because its gate sits on VBUS. 
 
 VSYS falls from 3.99 V to 2.89 V, 0.64 V below the 3.53 V it settles at on the battery, for 21 ms with R5 10k. R5 4.7k and 1k shorten this to 10 ms and 2.5 ms but do not reduce the depth. The MCU stays above its BOD; the whites lose headroom and the LED-board current drops by about 30 % for that time.
 
-![5. Unplugging USB (handover to the battery)](spice/usb_unplug.png)
+![5. Unplugging USB (handover to the battery)](spice_rev2/usb_unplug.png)
 
 ## 6. Charging with the lamp on (load sharing)
 
@@ -351,7 +353,7 @@ A full charge from an empty cell (3.0 V) on a 5.0 V source, with the lamp at 400
 
 The cell current is the same with and without the lamp: the lamp is fed from D3, so the charger sees only the cell and reaches its 31 mA termination after 5.1 h either way (R18). Peak USB current 0.45 A (lamp on) and 0.26 A (off); charger dissipation peaks at 0.46 W. VSYS stays at 4.00 V or more on the 5.0 V source but drops to 3.71 V on the weak one.
 
-![6. Charging with the lamp on (load sharing)](spice/charge.png)
+![6. Charging with the lamp on (load sharing)](spice_rev2/charge.png)
 
 ## 7. Battery life per mode
 
@@ -359,7 +361,7 @@ Discharge from full at a fixed mode until VSYS (which the firmware measures unde
 
 4000 K full: 6.7 h (brightness cap after 6.0 h; estimate 6.5 h). Soft white level 10: 42 h (estimate 45 h). Red night level 4: 118 h (estimate 100-150 h; 94-158 h for 12-7 mA of electronics, which dominate at this level). Every mode delivers about 4.45 Wh before the cut.
 
-![7. Battery life per mode](spice/runtime.png)
+![7. Battery life per mode](spice_rev2/runtime.png)
 
 ## 8. LED channel headroom
 
@@ -367,7 +369,7 @@ DC sweep of the cell's open-circuit voltage with 0.2 Ω cell resistance and the 
 
 The whites hold 95 % of 25 mA down to VSYS 3.10 V (typical) and 3.40 V (worst case), so they are regulated wherever the firmware runs at full brightness. Green needs VLED 3.57 V at the board with a typical die (design note: ~3.65 V) and 4.12 V with a maximum-VF die (design note: 4.05-4.15 V). A worst-case die reaches only 15 mA at a 3.7 V cell. VERIFY E9 measures the received dies.
 
-![8. LED channel headroom](spice/headroom.png)
+![8. LED channel headroom](spice_rev2/headroom.png)
 
 ## 9. PWM ripple at 29 kHz
 
@@ -375,7 +377,7 @@ All eight whites switching together at the LP5012's 29 kHz, which is the worst c
 
 At 50 % duty, VLED at the LP5012 swings 82 mV p-p (minimum 3.65 V) and VSYS 59 mV p-p. Far from the LP5012's 2.7 V minimum and the MCU's BOD; the ATtiny's ADC reading of VDD will see this ripple, which the firmware averages.
 
-![9. PWM ripple at 29 kHz](spice/pwm_ripple.png)
+![9. PWM ripple at 29 kHz](spice_rev2/pwm_ripple.png)
 
 ## 10. I²C rise time
 
@@ -383,9 +385,9 @@ R8/R9 3.3 kΩ to VLED against the bus capacitance (MCU pin, 200 mm cable, LP5012
 
 Rise time (30-70 %): 168 / 280 / 419 ns for 60 / 100 / 150 pF, against 1000 ns for standard mode, where the firmware runs the bus (100 kHz). Fast mode (400 kHz, 300 ns) would pass at 60 pF only, so the bus should stay at 100 kHz.
 
-![10. I²C rise time](spice/i2c_rise.png)
+![10. I²C rise time](spice_rev2/i2c_rise.png)
 
-![I2C pull-up as simulated](spice/sch_i2c.png)
+![I2C pull-up as simulated](spice_rev2/sch_i2c.png)
 
 *I²C test circuit: an open-drain pin releases SDA at 10 µs.*
 
@@ -450,6 +452,6 @@ Netlists as run, ngspice logs and raw waveforms land in `sim/out/<case>/<variant
 
 Exported from the generated KiCad schematics for comparison with the simulated circuits above.
 
-![main-board schematic](spice/kicad_main-board.png)
+![main-board schematic](spice_rev2/kicad_main-board.png)
 
-![led-board schematic](spice/kicad_led-board.png)
+![led-board schematic](spice_rev2/kicad_led-board.png)

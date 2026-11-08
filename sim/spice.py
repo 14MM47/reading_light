@@ -54,7 +54,7 @@ def run(case: str, variant: str = "base", params: dict | None = None, die: str =
     for a, b in DIE[die].items():
         boards = boards.replace(a, b)
     on = lambda k: bool(float(str((params or {}).get(k, 0))))  # noqa: E731
-    keep = {"redesign": on("q1gd") or on("sch") or on("usbid"), "usbid": on("usbid"), "nousbid": not on("usbid"),
+    keep = {"redesign": on("q1gd") or on("sch") or on("usbid") or on("snub"), "usbid": on("usbid"), "nousbid": not on("usbid"),
             "chgsense": case == "charge", "nochgsense": case != "charge"}
     for name, k in keep.items():
         if not k:

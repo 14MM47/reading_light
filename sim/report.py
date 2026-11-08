@@ -28,14 +28,18 @@ def board_revs() -> dict[str, str]:
     return out
 
 
-REPORT_REV = 2
+REPORT_REV = 3
 REV_HISTORY = [  # (rev, date, what changed)
     (1, "2026-11-08", "First issue (commit 19607f7): 33 runs, 35 checks, findings D1-D6; then the first "
      "discussion of D1-D4 with the handover options and source sweep (commit ca6c974). Kept unchanged as "
      "`spice-report_main-v0.1_led-v0.2_rev1.md` / `.pdf`, figures in `spice_rev1/`."),
     (2, "2026-11-08", "Matt's decisions on D1-D6 recorded; D1 handover redesign study (ideal-diode options, "
-     "parts survey); D3 source-voltage sweep; D4 tail analysis; document rework for D2, D3, D4, D6; "
-     "simulation rework and checks since rev 1 (section *Rev 2: rework and checks*)."),
+     "parts survey, LM66100 model); D3 source-voltage sweep; D4 tail analysis; document rework for D2, D3, D4, D6; "
+     "simulation corrections (section *Rev 2: rework and checks*). Kept as `_rev2.md` / `_rev2.pdf`, figures in "
+     "`spice_rev2/`."),
+    (3, "2026-11-08", "D1 v0.1 decision recorded and E12 re-worded; LM66100 CE-pin rating checked against the "
+     "datasheet with a charger/cable sweep; new finding D7 (USB plug-in overshoot over that sweep, as built) and "
+     "its mitigations; check U4 added (section *Rev 3: changes*)."),
 ]
 
 
@@ -103,16 +107,17 @@ def write(R, checks, figs, sch, model_points, cases, ngspice_ver):
     a("")
     a(f"**{n['PASS']} pass, {n['MARGINAL']} marginal, {n['FAIL']} fail, {n['INFO']} for information** "
       f"({len(checks)} checks against datasheet limits and the pass criteria in `docs/verification/VERIFY.md`). "
-      "The FAIL rows are two issues: the USB-unplug dip (as built, plus the two R5 values tried as remedies) and "
-      "the J3 hot-plug at a low battery.")
+      + ("The FAIL row" + ("s are " if n["FAIL"] > 1 else " is ") + "the J3 hot-plug at a low battery (D2: accepted, "
+         "J3 is mated once with SW1 off). The USB-unplug dip passes E12 as re-worded (no reset; the old 0.3 V limit "
+         "is not met, D1)." if n["FAIL"] else ""))
     a("")
     a("Decisions (details in *Findings and decisions*; what changed since rev 1 in *Rev 2: rework and checks*):")
     a("")
     a(f"1. **D1, USB unplug dip** ({dip:.2f} V for ~{dur(h10):.0f} ms; E12 allows 0.3 V). The MCU stays up (minimum "
       f"{h10['vsys_min']:.2f} V); the lamp dims ~30 % for that time. R5 can only shorten it ({dur(h47):.0f} ms with "
-      f"4.7k, {dur(h1):.1f} ms with 1k). **Next revision:** an LM66100 ideal diode in place of Q1 (CE on VBUS) with "
-      "R5 1k, which cuts it to under 1 ms. **v0.1 handling still to confirm** (recommended: re-word E12, R5 1k if "
-      "the dim shows).")
+      f"4.7k, {dur(h1):.1f} ms with 1k). **v0.1 (decided):** E12 re-worded to \"no reset; note the dim\"; fit R5 1k if "
+      "the dim is visible. **Next revision:** an LM66100 ideal diode in place of Q1 (CE on VBUS), R5 1k and a VBUS "
+      "snubber (D7), which cuts it to ~2 ms.")
     a(f"2. **D2, J3 hot-plug** resets the MCU at a low battery (VSYS {j3l['vsys_min']:.2f} V). **Accepted** with "
       "conditions: J3 is mated once at assembly with SW1 off and strain-relieved; E13 and handoff 05 updated.")
     a(f"3. **D3, weak USB sources**: VSYS {chw['vsys_min']:.2f} V at 4.75 V and a false low-battery indication at "
@@ -120,6 +125,11 @@ def write(R, checks, figs, sch, model_points, cases, ngspice_ver):
       "for the next revision.")
     a("4. **D4, white headroom with max-VF dies**: **accepted**; whites added to E9.")
     a("5. **D5, I²C**: keep 100 kHz. 6. **D6**: Q4 note corrected in `electronics.md`.")
+    sw = [m("usb_hotplug", f"sw_ab_{_swn(v, r, l)}") for v, r, l in _SWEEP]
+    a(f"7. **D7 (new in rev 3), USB plug-in overshoot**: over 18 charger/cable combinations VBUS peaks at up to "
+      f"{max(x['vbus_max'] for x in sw):.2f} V and the LED board at up to {max(x['vledb_max'] for x in sw):.2f} V "
+      "(LP5012 recommended max 5.5 V, abs max 6 V); only a 5.5 V charger on a low-resistance, high-inductance cable "
+      "gets there. **Open**: accept for v0.1 with normal chargers, VBUS snubber in the next revision.")
     a("")
     a("What the simulation confirms:")
     a("")
@@ -144,6 +154,7 @@ def write(R, checks, figs, sch, model_points, cases, ngspice_ver):
                                                                        ("low", "full", "low_vth05", "low_vth09")),
                       m=m, figs=figs, hw_max_run=R[("headroom", "white_max")][1],
                       rt4000_run=R[("runtime", "4000k")][1]), revs)
+    rev3_section(a, m, revs, report_stem())
     rev2_section(a, m, revs, report_stem())
     a("## All checks")
     a("")
@@ -473,6 +484,13 @@ def terminates(x) -> bool:
     return v == v
 
 
+_SWEEP = [(v, r, l) for v in (5.25, 5.5) for r in (0.05, 0.1, 0.3) for l in ("0.5u", "1u", "2u")]
+
+
+def _swn(v, r, l):
+    return f"{v}_{r}_{l}".replace(".", "p")
+
+
 def term(x) -> str:
     """Charge time to the MCP73831's own termination (31 mA at its output), or a plain statement if it never comes."""
     v = x.get("t_term", float("nan"))
@@ -497,9 +515,10 @@ def decisions(a, d, revs):
     a("")
     a("| # | Finding | Severity | Status | Recommendation |")
     a("|---|---|---|---|---|")
-    a(f"| D1 | USB unplug: VSYS dips {u['r5_10k']['dip']:.2f} V for {u['r5_10k']['t_deep_ms']:.0f} ms | **FAIL** (E12) | "
-      "next-revision chip discussed; v0.1 handling still to confirm | v0.1: accept, re-word E12 (R5 1k if the dim "
-      "shows). Next revision: battery-side ideal diode |")
+    a(f"| D1 | USB unplug: VSYS dips {u['r5_10k']['dip']:.2f} V for {u['r5_10k']['t_deep_ms']:.0f} ms | **FAIL** against "
+      "E12's old 0.3 V limit; passes as re-worded | "
+      "**decided 2026-11-08**: v0.1 E12 re-worded; next-revision part chosen | v0.1: R5 1k if the dim shows. Next "
+      "revision: LM66100 (CE on VBUS) + R5 1k + VBUS snubber |")
     a(f"| D2 | J3 hot-plug at 3.5 V: VSYS {j3l['vsys_min']:.2f} V, below BOD | **FAIL** (E13 step) | **decided "
       "2026-11-08**: accepted with conditions; E13 and handoff 05 updated | mate J3 once, SW1 off, strain-relieved |")
     a(f"| D3 | VSYS falls with the USB source voltage ({chw['vsys_min']:.2f} V at 4.75 V, "
@@ -511,6 +530,10 @@ def decisions(a, d, revs):
       "100 kHz | none |")
     a(f"| D6 | Q4 charging current {d['q4max'] * 1e3:.0f} mA vs 15-25 mA in the design note | INFO | **done "
       "2026-11-08**: `electronics.md` §1 corrected | none |")
+    swn = [m("usb_hotplug", f"sw_ab_{_swn(v, r, l)}") for v, r, l in _SWEEP]
+    a(f"| D7 | USB plug-in overshoot over the charger/cable sweep: LED board up to "
+      f"{max(x['vledb_max'] for x in swn):.2f} V | **MARGINAL** (new in rev 3) | open | v0.1: accept with normal "
+      "chargers/cables; next revision: VBUS snubber |")
     a("")
 
     # ------------------------------------------------------------------ D1
@@ -645,8 +668,9 @@ def decisions(a, d, revs):
       f"time USB reaches the cell through D3 and the LM66100: {hp['icell_in_max']:.1f} A for about "
       f"{hp['t_icell_hi_us']:.0f} µs (a few µC). That is far too short to matter to the cell or its protection "
       "circuit, but it means the part blocks reverse current in steady state, not instantaneously.")
-    a(f"- USB plug-in puts up to {hp['vbus_max']:.2f} V on CE (VBUS); confirm it against the LM66100's absolute "
-      "maximum ratings (not extracted in this survey).")
+    a(f"- USB plug-in overshoot reaches CE (it sits on VBUS): {hp['vbus_max']:.2f} V with the rev 1 cable, and up "
+      f"to {max(m('usb_hotplug', f'sw_lm_{_swn(v, r, l)}')['vce_max'] for v, r, l in _SWEEP):.2f} V over the charger/cable sweep, above its 6 V absolute maximum. "
+      "See *LM66100 CE pin rating (rev 3)* below: the next revision needs a VBUS snubber or eFuse with it.")
     a("- Battery current 0.15-0.3 µA: the standby budget is essentially unchanged.")
     a("- On a 4.4 V source (outside the D3 spec) the switch never turns on (VBUS stays above the cell), but its body "
       "diode carries part of the lamp from the cell throughout the charge, as Q1's does today, and the charger "
@@ -671,22 +695,35 @@ def decisions(a, d, revs):
     a("- Battery current 1.35 µA typ, 3.7 µA max when hot: a large share of the 10 µA standby budget. The switch-over "
       "threshold spreads ±8 % (3.6-4.2 V for a 3.9 V setting) and has no specified hysteresis.")
     a("")
+    lm_ce(a, m, figs)
     a("**Recommendation for the next revision.** Replace Q1 with an **LM66100, CE straight to VBUS**, keep the S1J "
-      f"for USB, and lower R5 to 1k (dip under 1 ms, invisible; +{i_r5 * 1e3:.1f} mA from USB while plugged in). It is the "
+      f"for USB, and lower R5 to 1k (dip ~{m('usb_unplug', 'mit_lmsnub_1k')['t_deep_ms']:.1f} ms with the snubber "
+      f"below, {u['lm_r5_1k']['t_deep_ms']:.1f} ms without; +{i_r5 * 1e3:.1f} mA from USB while plugged in). It is the "
       "smallest change: one SC-70 part in Q1's place and a resistor value. It keeps VSYS and the LED-board thermal "
       "design as they are, adds ~0.3 µA at most to the standby drain, and cannot charge the cell past the charger "
       "except for the microseconds of its turn-off at a USB re-plug. "
       "Add the VBUS sense to an MCU pin at the same time (D3, option C). Check LM66100 stock first (none at DigiKey "
       "UK until 21 Dec 2026). The TPS2116 is the alternative if a single part for both inputs is wanted; it "
-      "needs the thermal and 5.5 V questions above answered first.")
+      "needs the thermal and 5.5 V questions above answered first. **Rev 3 addition:** fit the VBUS snubber "
+      "(1 Ω + 22 µF) as well, so that CE stays under its 6 V absolute maximum on every charger and cable in the "
+      "sweep (see *LM66100 CE pin rating* above and D7).")
     a("")
-    a("**For v0.1** (not yet confirmed): leave the hardware alone and re-word E12 to \"no reset; note the dim\"; fit "
-      "R5 = 1k if the dim is visible at the bench.")
+    lo = {v: m("usb_unplug", v) for v in ("r5_10k", "cell_05", "cell_02")}
+    a("**Margin at a low cell (rev 3).** On USB the firmware sees ~4 V whatever the cell holds, so the lamp can be at "
+      "full brightness when USB is pulled from a nearly empty cell. VSYS minimum during the dip: "
+      f"{lo['r5_10k']['vsys_min']:.2f} V with the cell at {lo['r5_10k']['vsys_bat']:.2f} V (the E12 condition), "
+      f"{lo['cell_05']['vsys_min']:.2f} V at {lo['cell_05']['vsys_bat']:.2f} V and {lo['cell_02']['vsys_min']:.2f} V "
+      f"at {lo['cell_02']['vsys_bat']:.2f} V, against the 2.6 V BOD. So the no-reset criterion holds down to the "
+      "firmware's 3.30 V empty cut, but with only ~0.1-0.2 V of margin near it (before BOD tolerance). E12's bench "
+      "test at 3.6 V does not show this; an unplug near empty is the case to watch.")
     a("")
-    a("**If no decision.** E12 fails at the bench against its 0.3 V limit; the lamp works.")
+    a("**Decision for v0.1 (Matt, 2026-11-08):** leave the hardware alone; VERIFY E12 is re-worded to \"no reset "
+      "(VSYS stays above 2.6 V); note whether the dim is visible\", and R5 = 1k is fitted if the dim is visible at "
+      "the bench.")
     a("")
 
     # ------------------------------------------------------------------ D2
+    d7(a, m, figs)
     a("### D2. Hot-plugging the LED-board cable (VERIFY E13)")
     a("")
     a(f"**Finding.** Plugging J3 while VLED is live sags VSYS to {j3l['vsys_min']:.2f} V at a 3.49 V cell (below "
@@ -937,4 +974,140 @@ def rev2_section(a, m, revs, stem):
       "found the transient in D1.")
     a(f"- Report files: `{stem}.md` and `.pdf`. Rev 1 is kept unchanged and marked as rev 1 "
       "(`spice-report_main-v0.1_led-v0.2_rev1.md` / `.pdf`, figures in `spice_rev1/`).")
+    a("")
+
+
+def lm_ce(a, m, figs):
+    """Rev 3: the LM66100 CE pin against its rating (datasheet SLVSEZ8A), over the charger/cable sweep."""
+    a("#### LM66100 CE pin rating (rev 3)")
+    a("")
+    a("Datasheet SLVSEZ8A (rev. June 2019), *Absolute Maximum Ratings*: VCE −0.3 to **6 V**, VIN −6 to 6 V, VOUT −0.3 "
+      "to 6 V, CE pin current 1 mA. *Recommended Operating Conditions*: VCE 0 to **5.5 V**. In TI's OR-ing circuit CE "
+      "sits directly on VBUS, so it sees every plug-in overshoot. USB-C chargers may deliver up to 5.5 V (USB PD "
+      "vSafe5V); cables range from short and thick (low resistance, little damping) to long (more inductance).")
+    a("")
+    a("**Sweep:** CE peak with the LM66100 fitted, 5.25 V and 5.5 V chargers, cable loop resistance 0.05 / 0.1 / "
+      "0.3 Ω and inductance 0.5 / 1 / 2 µH (bold: above the 6 V absolute maximum).")
+    a("")
+    a("| Charger | Cable R | 0.5 µH | 1 µH | 2 µH |")
+    a("|---|---|---|---|---|")
+    for v in (5.25, 5.5):
+        for r in (0.05, 0.1, 0.3):
+            cells = []
+            for l in ("0.5u", "1u", "2u"):
+                x = m("usb_hotplug", f"sw_lm_{_swn(v, r, l)}")["vce_max"]
+                cells.append(f"**{x:.2f} V**" if x > 6.0 else f"{x:.2f} V")
+            a(f"| {v} V | {r} Ω | " + " | ".join(cells) + " |")
+    a("")
+    n_over = sum(m("usb_hotplug", f"sw_lm_{_swn(v, r, l)}")["vce_max"] > 6.0 for v, r, l in _SWEEP)
+    n_rec = sum(m("usb_hotplug", f"sw_lm_{_swn(v, r, l)}")["vce_max"] > 5.5 for v, r, l in _SWEEP)
+    a(f"CE exceeds its 6 V absolute maximum in {n_over} of 18 combinations and its 5.5 V recommended maximum in "
+      f"{n_rec}. A 0.3 Ω cable never exceeds 6 V. So with the LM66100 wired as TI shows, a fast-ringing plug-in can "
+      "overstress CE: the overshoot has to be dealt with.")
+    a("")
+    a("**Mitigations simulated** (worst cable: 5.5 V, 0.05 Ω, 2 µH; unplug dip with the lamp at 4000 K full):")
+    a("")
+    a("| Option | CE peak | LED board peak | Cell current at re-plug | Unplug dip beyond 0.3 V |")
+    a("|---|---|---|---|---|")
+
+    def mrow(name, hp, up):
+        h = m("usb_hotplug", hp)
+        x = m("usb_unplug", up)
+        ce = h.get("vce_max", h["vbus_max"])
+        a(f"| {name} | {ce:.2f} V | {h['vledb_max']:.2f} V | {h['icell_in_max']:.2f} A | {x['t_deep_ms']:.1f} ms "
+          f"(R5 {'1k' if '1k' in up or up == 'mit_lmrc' else '10k'}) |")
+
+    mrow("LM66100, CE straight to VBUS (TI circuit)", "sw_lm_5p5_0p05_2u", "lm_r5_1k")
+    mrow("LM66100 + RC filter on CE (10 kΩ, 10 nF)", "mit_lmrc", "mit_lmrc")
+    mrow("LM66100 + VBUS snubber (1 Ω + 22 µF)", "mit_lmsnub", "mit_lmsnub_1k")
+    a("")
+    a(f"![USB plug-in overshoot]({figs['usb_overshoot']})")
+    a("")
+    a("- **RC filter on CE** (CE draws < 1 µA, so 10 kΩ costs nothing in level): CE stays low, but the filter also "
+      "delays CE rising at a re-plug, so the LM66100 stays on longer while USB is back and the USB-to-cell surge "
+      f"through D3 and the LM66100 grows to {m('usb_hotplug', 'mit_lmrc')['icell_in_max']:.1f} A. Rejected.")
+    a("- **VBUS snubber** (1 Ω in series with 22 µF across VBUS, next to C1): damps the cable ringing itself, so CE, "
+      "VBUS and the LED board all stay low; it also fixes D7 for the rest of the board. Its cost is extra charge on "
+      f"VBUS, which R5 has to drain at an unplug: the dip lasts {m('usb_unplug', 'mit_lmsnub')['t_deep_ms']:.0f} ms "
+      f"with R5 10k and {m('usb_unplug', 'mit_lmsnub_1k')['t_deep_ms']:.1f} ms with R5 1k (still too short to see). "
+      "It also adds attach capacitance (USB 2.0 asks for ≤ 10 µF; the board already exceeds that through D3, see U3).")
+    a("- **An input eFuse with slew-rate control and OVP** (already on the next-revision list in `electronics.md` "
+      "§1, TPS2595-class) would remove the overshoot at the source and protect against a faulty > 6 V charger; not "
+      "simulated.")
+    a("")
+    vo = max(m("usb_hotplug", f"sw_lm_{_swn(v, r, l)}")["vsysraw_max"] for v, r, l in _SWEEP)
+    a(f"VOUT (VSYS_RAW) also has a 6 V absolute / 5.5 V recommended limit; without a mitigation it peaks at {vo:.2f} V "
+      "in the sweep (inside the absolute maximum, above the recommended one). The snubber brings it down with CE.")
+    a("")
+    sn = m("usb_hotplug", "mit_lmsnub")
+    a("**Conclusion.** With the LM66100, fit the VBUS snubber (or the eFuse) and keep R5 1k. In the worst case CE "
+      f"then peaks at {sn['vce_max']:.2f} V, VOUT (VSYS_RAW) at {sn['vsysraw_max']:.2f} V and VIN at ≤ 4.2 V (the "
+      "cell). That is inside the 6 V absolute maximum with ~0.4 V margin; CE sits just above the 5.5 V recommended "
+      "maximum for a few microseconds in that one corner, and below it for every other combination.")
+    a("")
+
+
+def d7(a, m, figs):
+    """Rev 3: USB plug-in overshoot over the charger/cable sweep, as built."""
+    a("### D7. USB plug-in overshoot over chargers and cables (new in rev 3)")
+    a("")
+    a("**Finding.** Rev 1 checked USB plug-in with one cable (1 µH, 0.1 / 0.3 Ω, 5.25 V). Sweeping chargers and cables "
+      "(as built, no LM66100) gives:")
+    a("")
+    a("| Charger | Cable R | 0.5 µH | 1 µH | 2 µH |")
+    a("|---|---|---|---|---|")
+    for v in (5.25, 5.5):
+        for r in (0.05, 0.1, 0.3):
+            cells = []
+            for l in ("0.5u", "1u", "2u"):
+                x = m("usb_hotplug", f"sw_ab_{_swn(v, r, l)}")
+                led = f"**{x['vledb_max']:.2f}**" if x["vledb_max"] > 5.5 else f"{x['vledb_max']:.2f}"
+                cells.append(f"{x['vbus_max']:.2f} / {led} V")
+            a(f"| {v} V | {r} Ω | " + " | ".join(cells) + " |")
+    a("")
+    a("*Each cell: VBUS peak / LED-board peak. Bold: above the LP5012's 5.5 V recommended maximum.*")
+    a("")
+    sw = [m("usb_hotplug", f"sw_ab_{_swn(v, r, l)}") for v, r, l in _SWEEP]
+    a(f"The worst case (5.5 V charger, 0.05 Ω, 2 µH) puts {max(x['vbus_max'] for x in sw):.2f} V on VBUS (MCP73831 "
+      f"abs max 7 V; the SMF5.0A TVS only starts to conduct at 6.4 V) and {max(x['vledb_max'] for x in sw):.2f} V on "
+      "the LED board (LP5012 abs max 6 V, recommended 5.5 V; the ATtiny's abs max is also 6 V). Nothing exceeds an "
+      f"absolute maximum, but the margins are {7 - max(x['vbus_max'] for x in sw):.2f} V (VBUS) and "
+      f"{6 - max(x['vledb_max'] for x in sw):.2f} V (LED board). A 5.25 V charger on a cable of ≥ 0.1 Ω and ≤ 1 µH "
+      f"(about 1 m or less) stays at or below "
+      f"{max(m('usb_hotplug', f'sw_ab_{_swn(5.25, r, l)}')['vbus_max'] for r in (0.1, 0.3) for l in ('0.5u', '1u')):.2f} V "
+      "on VBUS and "
+      f"{max(m('usb_hotplug', f'sw_ab_{_swn(5.25, r, l)}')['vledb_max'] for r in (0.1, 0.3) for l in ('0.5u', '1u')):.2f} V "
+      "on the LED board. The cable's inductance (length) matters as much as its resistance: at 2 µH even a 0.1 Ω "
+      f"cable reaches {m('usb_hotplug', 'sw_ab_5p25_0p1_2u')['vbus_max']:.2f} V on VBUS.")
+    a("")
+    a("**Options.** (A) Accept for v0.1: the worst corner needs a 5.5 V charger with an unusually low-resistance cable, "
+      "and it stays inside the absolute maxima. (B) Bodge a snubber onto the v0.1 board (1 Ω + 22 µF across C1); "
+      f"it brings the worst case to {m('usb_hotplug', 'mit_snub')['vbus_max']:.2f} V / "
+      f"{m('usb_hotplug', 'mit_snub')['vledb_max']:.2f} V, but lengthens the as-built unplug dip to "
+      f"{m('usb_unplug', 'mit_snub')['t_deep_ms']:.0f} ms ({m('usb_unplug', 'mit_snub_1k')['t_deep_ms']:.1f} ms if "
+      "R5 is also changed to 1k, still longer than R5 1k alone). (C) Next revision: the VBUS snubber "
+      "(or the eFuse) on the board, together with the D1 LM66100 change, which needs it anyway.")
+    a("")
+    a("**Recommendation.** A for v0.1, C for the next revision. **Open**: Matt's decision.")
+    a("")
+
+
+def rev3_section(a, m, revs, stem):
+    a("## Rev 3: changes")
+    a("")
+    a("- **D1 v0.1 decided (Matt, 2026-11-08):** VERIFY E12 re-worded to \"no reset (VSYS > 2.6 V); note whether the "
+      "dim is visible\", with R5 = 1k as the remedy if it is.")
+    a("- **LM66100 CE pin rating:** the absolute-maximum and recommended limits were read from the datasheet "
+      "(SLVSEZ8A); the hot-plug case gained a cable-inductance parameter, CE is now an explicit node of the LM66100 "
+      "model (so a CE filter can be tried), and the sweep and mitigations above were run (36 sweep runs, 8 "
+      "mitigation runs).")
+    a("- **New finding D7** from the same sweep (as built) and **new check U4** (worst case of the sweep, MARGINAL).")
+    a("- **Unplug at a low cell** (review 3): two H1 rows added with the cell nearly empty and at the empty cut; "
+      "the no-reset criterion holds with a small margin (D1).")
+    a("- **Review 3** (independent diff review of rev 3): confirmed every new number against the results and the "
+      "as-built netlists unchanged; found a stale CE sentence, a dip figure that ignored the snubber, an unsimulated "
+      "option-B claim (now run), an over-broad cable statement and stale comments; all fixed.")
+    a("- The rev 2 report is kept unchanged as `_rev2` with its figures in `spice_rev2/`.")
+    a("- **Checks re-judged:** the three unplug rows (H1) now use E12 as re-worded (no reset), so they change from "
+      "FAIL to PASS; U4 is new. Every other check result is unchanged from rev 2. ruff (pyflakes) and mypy clean.")
     a("")

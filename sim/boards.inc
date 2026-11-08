@@ -16,7 +16,7 @@
 *   vled    VLED (J3 pin 2, main-board side)    swon    1 = slide switch ON      ledon 1 = PB2 low (Q4 on)
 *   vbus vsysraw bat: internal nodes brought out for probing
 .subckt MAINPWR vbusin batraw vsys vled swon ledon vbus vsysraw bat rptc=0.12 vto=-0.7 r5=10k cbulk=1p
-+ q1gd=0 rq1pd=100k sch=0 vdet=4.3 ron_id=0.08
++ q1gd=0 rq1pd=100k sch=0 vdet=4.3 ron_id=0.08 ce_r=1m ce_c=1f snub=0 snub_r=1 snub_c=22u
 * --- A: USB input, TVS, charger
 RF1 vbusin vbus {rptc}
 D1 0 vbus DSMF5
@@ -41,7 +41,7 @@ XC2 bat 0 MLCC c0=10u v0=6 nexp=1.5
 XQ3 batraw q3g bat DMG2305 vto={vto}
 R10 q3g 0 10k
 * Q1. As built: gate on VBUS. The redesign options for decision D1 (q1gd = 1, 2, 3 and sch = 1) sit between
-* the two redesign marker lines below; sim/spice.py strips that block unless a variant sets q1gd or sch, so the
+* the two redesign marker lines below; sim/spice.py strips that block unless a variant sets q1gd, sch, usbid or snub, so the
 * as-built netlist is exactly the board.
 Rq1link vbus q1g {q1gd > 0.5 ? 1e9 : 1m}
 XQ1 q1d q1g vsysraw DMG2305 vto={vto}
@@ -69,7 +69,10 @@ Rid_en idk vsysraw {abs(q1gd - 3) < 0.5 ? 1m : 1e9}
 * q1gd=4: TI LM66100 in place of Q1 (SLVSEZ8A): VIN = BAT, VOUT = VSYS_RAW, CE = VBUS (TI's OR-ing circuit).
 * Datasheet figures: RON 91 mOhm typ at 3.6 V; body diode ~0.5 V typ (VIN -> VOUT); CE comparator against VIN:
 * on when CE < VIN - 150 mV, off when CE > VIN + 35 mV; turn-on 40 us, turn-off 2 us; conducts both ways when on.
-Blmst lmst 0 V = (V(bat) - V(vbus) > (V(lmen) > 0.5 ? -0.035 : 0.15)) ? 1 : 0
+* CE pin: straight to VBUS (TI's circuit, ce_r 1 mOhm, ce_c 1 fF) or through an RC filter (ce_r, ce_c)
+Rlmce vbus lmce {ce_r}
+Clmce lmce 0 {ce_c}
+Blmst lmst 0 V = (V(bat) - V(lmce) > (V(lmen) > 0.5 ? -0.035 : 0.15)) ? 1 : 0
 Rlmon lmst lmen 40k
 Clmen lmen 0 1n
 Dlmoff lmen lmoffk DIDEAL
@@ -99,6 +102,9 @@ Rlmbd lmbd vsysraw {abs(q1gd - 4) < 0.5 ? 1m : 1e9}
 * sch=1: a 1 A Schottky across Q1 (anode BAT, cathode VSYS_RAW)
 Rsch bat schA {sch > 0.5 ? 1m : 1e9}
 Dsch schA vsysraw DSCH1A
+* snub=1: RC snubber across VBUS (snub_r in series with snub_c; electrolytic/polymer-like) to damp the cable ring
+Rsnub vbus nsnub {snub > 0.5 ? snub_r : 1e9}
+Csnub nsnub 0 {snub_c}
 *<redesign
 *>nousbid
 D3 vbus vsysraw DS1J

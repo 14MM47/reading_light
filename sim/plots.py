@@ -165,6 +165,26 @@ def make_all(R) -> dict[str, str]:
                                 "4.75 V source, lamp on: a detector-driven Q1 latches on at plug-in and USB charges the "
                                 "cell through D3 + Q1, past the charger")
 
+    # ---- USB plug-in overshoot, worst cable (D7) and the mitigations
+    fig, ax = plt.subplots(2, 1, figsize=(7.5, 5.2), sharex=True)
+    for k, v in enumerate(("sw_ab_5p5_0p05_2u", "sw_lm_5p5_0p05_2u", "mit_lmrc", "mit_lmsnub")):
+        r = g("usb_hotplug", v)
+        t = (r.x - 100e-6) * 1e6
+        ax[0].plot(t, r.col("v(vbus)"), color=S[k], label=lab("usb_hotplug", v))
+        ax[1].plot(t, r.col("v(vledb)"), color=S[k], label=lab("usb_hotplug", v))
+    limit(ax[0], 6.0, "LM66100 CE / VIN abs max 6.0 V")
+    limit(ax[0], 7.0, "MCP73831 abs max 7.0 V")
+    limit(ax[1], 5.5, "LP5012 recommended max 5.5 V")
+    ax[0].set_ylabel("VBUS = LM66100 CE (V)")
+    ax[1].set_ylabel("LED board (V)")
+    ax[1].set_xlabel("time after the USB plug makes contact (us)")
+    ax[0].set_ylim(3.0, 7.4)
+    ax[1].set_ylim(3.0, 6.2)
+    ax[1].legend(loc="lower right", fontsize=7.5)
+    ax[1].set_xlim(-2, 60)
+    f["usb_overshoot"] = save(fig, "usb_overshoot", "USB plug-in overshoot: worst charger and cable (5.5 V, 0.05 Ohm, 2 uH)",
+                              "With the CE RC filter, VBUS and CE differ: the top panel shows VBUS; CE peaks lower")
+
     # ---- charge
     fig, ax = plt.subplots(3, 1, figsize=(7.5, 6.6), sharex=True)
     for k, v in enumerate(("lamp", "dark", "lamp_weak")):

@@ -90,6 +90,36 @@ CASES: dict[str, list[tuple[str, str, dict, str]]] = {
 }
 
 
+# Rev 3: USB plug-in overshoot over a range of chargers and cables (D7), as built and with the LM66100 (its CE pin
+# sits on VBUS: abs max 6 V, recommended max 5.5 V, SLVSEZ8A), plus the mitigations for both.
+SWEEP = [(v, r, l) for v in (5.25, 5.5) for r in (0.05, 0.1, 0.3) for l in ("0.5u", "1u", "2u")]
+
+
+def _sw(v, r, l):
+    return f"{v}_{r}_{l}".replace(".", "p")
+
+
+for _v, _r, _l in SWEEP:
+    CASES["usb_hotplug"].append((f"sw_ab_{_sw(_v, _r, _l)}", f"as built, {_v} V, {_r} Ohm, {_l}H",
+                                 {"vusb": _v, "rusb": _r, "lusb": _l}, "typ"))
+    CASES["usb_hotplug"].append((f"sw_lm_{_sw(_v, _r, _l)}", f"LM66100, {_v} V, {_r} Ohm, {_l}H",
+                                 {"vusb": _v, "rusb": _r, "lusb": _l, "q1gd": 4}, "typ"))
+_W1 = {"vusb": 5.5, "rusb": 0.05, "lusb": "2u"}
+CASES["usb_hotplug"] += [
+    ("mit_lmrc", "LM66100 + CE RC 10k/10nF, worst cable", {**_W1, "q1gd": 4, "ce_r": "10k", "ce_c": "10n"}, "typ"),
+    ("mit_snub", "as built + VBUS snubber 1 Ohm/22 uF, worst cable", {**_W1, "snub": 1}, "typ"),
+    ("mit_lmsnub", "LM66100 + VBUS snubber, worst cable", {**_W1, "q1gd": 4, "snub": 1}, "typ"),
+]
+CASES["usb_unplug"] += [
+    ("mit_lmrc", "LM66100 + CE RC, R5 1k", {"q1gd": 4, "r5": "1k", "ce_r": "10k", "ce_c": "10n"}, "typ"),
+    ("mit_snub", "as built + VBUS snubber", {"snub": 1}, "typ"),
+    ("mit_lmsnub", "LM66100 + VBUS snubber, R5 10k", {"q1gd": 4, "snub": 1}, "typ"),
+    ("mit_lmsnub_1k", "LM66100 + VBUS snubber, R5 1k", {"q1gd": 4, "snub": 1, "r5": "1k"}, "typ"),
+    ("mit_snub_1k", "as built + VBUS snubber, R5 1k", {"snub": 1, "r5": "1k"}, "typ"),
+    ("cell_05", "R5 10k (as built), cell nearly empty", {"soc0": 0.05}, "typ"),
+    ("cell_02", "R5 10k (as built), cell at the empty cut", {"soc0": 0.02}, "typ"),
+]
+
 def run_all() -> dict:
     jobs = [(c, v, lab, p, die) for c, vs in CASES.items() for (v, lab, p, die) in vs]
 
@@ -204,15 +234,23 @@ def checks(R) -> list[dict]:
     add("U3", "USB plug-in", "Attach inrush peak from the charger", f"{u['iusb_pk']:.1f} A", "USB 2.0: <= 10 uF at "
         "attach without inrush limiting", "INFO", "USB 2.0 spec 7.2.4.1",
         "C1 is 10 uF nominal; D3 also charges C3/C4 when VSYS_RAW < VBUS - 0.85 V")
+    # rev 3: plug-in overshoot over the charger/cable sweep (D7)
+    sw = [m("usb_hotplug", f"sw_ab_{_sw(v, r, l)}") for v, r, l in SWEEP]
+    vb, vl = max(x["vbus_max"] for x in sw), max(x["vledb_max"] for x in sw)
+    add("U4", "USB plug-in", "Worst peak over 18 charger/cable combinations (5.25-5.5 V, 0.05-0.3 Ohm, 0.5-2 uH)",
+        f"VBUS {vb:.2f} V / LED board {vl:.2f} V", "VBUS < 7.0 V (MCP73831); LED board < 6.0 V abs max, "
+        "5.5 V recommended (LP5012)", verdict(vb < 7.0 and vl < 6.0, vl <= 5.5 and vb < 6.5), "KEYSPECS; USB PD "
+        "vSafe5V up to 5.5 V", "Only low-resistance, high-inductance cables reach 5.5 V or more (D7)")
     # USB unplug
-    for v in ("r5_10k", "r5_4k7", "r5_1k"):
+    for v in ("r5_10k", "r5_4k7", "r5_1k", "cell_05", "cell_02"):
         h = m("usb_unplug", v)
         dip = h["vsys_bat"] - h["vsys_min"]
         dur = (h.get("t_over", 0.005) - 0.005) * 1e3
         add(f"H1-{v}", "USB unplug", f"VSYS dip below battery level, {R[('usb_unplug', v)][0]}",
             f"{dip:.2f} V for {max(dur, 0):.0f} ms (>0.3 V); min {h['vsys_min']:.2f} V",
-            "<= 0.3 V, no reset (E12); BOD 2.6 V", verdict(dip <= 0.3) if h["vsys_min"] > 2.6 else "FAIL",
-            "VERIFY E12", "The dip is Q1's body diode carrying the load until R5 discharges VBUS")
+            "no reset: VSYS > 2.6 V (E12 as re-worded 2026-11-08; was dip <= 0.3 V)",
+            verdict(h["vsys_min"] > 2.6, h["vsys_min"] > 2.8), "VERIFY E12; decision D1",
+            "The dip is Q1's body diode carrying the load until R5 discharges VBUS; a visible dim is noted at the bench")
     h = m("usb_unplug", "r5_10k")
     add("H2", "USB unplug", "LED current during the handover (4000 K full)",
         f"{h['iled_usb'] * 1e3:.0f} mA -> {h['iled_min'] * 1e3:.0f} mA", "no visible step (no spec)", "INFO",
